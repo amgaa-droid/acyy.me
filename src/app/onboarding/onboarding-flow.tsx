@@ -1,0 +1,249 @@
+"use client";
+
+import { ChevronLeft, Lock } from "lucide-react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
+
+import { ConstellationArt } from "@/components/app/constellation";
+import { DatePicker } from "@/components/app/date-picker";
+import { Button } from "@/components/ui/button";
+import { mn } from "@/i18n/mn";
+import type { Gender } from "@/lib/domain";
+import { cn } from "@/lib/utils";
+import { createSelfAction, type OnboardingResult } from "./actions";
+
+type Avatar = { seed: string; uri: string };
+type Done = Extract<OnboardingResult, { ok: true }>;
+
+const t = mn.onboarding;
+const GENDER_OPTIONS: Gender[] = ["female", "male", "unspecified"];
+
+export function OnboardingFlow({ avatars }: { avatars: Avatar[] }) {
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [birthDate, setBirthDate] = useState("2000-01-01");
+  const [gender, setGender] = useState<Gender>("unspecified");
+  const [avatarSeed, setAvatarSeed] = useState(avatars[0]?.seed ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<Done | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const back = () => {
+    setError(null);
+    setStep((s) => Math.max(0, s - 1));
+  };
+
+  const submit = () =>
+    startTransition(async () => {
+      setError(null);
+      const res = await createSelfAction({ name, birthDate, gender, avatarSeed });
+      if (res.ok) setResult(res);
+      else {
+        setError(t.errors[res.error]);
+        if (res.error === "name") setStep(0);
+        if (res.error === "birthDate") setStep(1);
+      }
+    });
+
+  if (result) return <ResultStep result={result} name={name.trim()} />;
+
+  const nameValid = name.trim().length >= 1 && name.trim().length <= 40;
+  const primary = [
+    { label: mn.common.next, disabled: !nameValid, onClick: () => setStep(1) },
+    { label: mn.common.next, disabled: false, onClick: () => setStep(2) },
+    { label: mn.common.next, disabled: false, onClick: () => setStep(3) },
+    { label: t.finish, disabled: !avatarSeed || pending, onClick: submit },
+  ][step];
+
+  return (
+    <div className="flex flex-1 flex-col px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] lg:p-8">
+      <div className="flex h-11 items-center gap-3">
+        <button
+          type="button"
+          aria-label={mn.common.back}
+          onClick={back}
+          disabled={step === 0}
+          className="flex size-11 items-center justify-center rounded-full bg-surface disabled:opacity-0 lg:bg-subtle"
+        >
+          <ChevronLeft className="size-5" aria-hidden />
+        </button>
+        <ol className="flex flex-1 gap-1.5" aria-label={`${step + 1} / ${t.steps.length}`}>
+          {t.steps.map((label, i) => (
+            <li
+              key={label}
+              className={cn("h-1.5 flex-1 rounded-full", i <= step ? "bg-highlight" : "bg-border")}
+            >
+              <span className="sr-only">{label}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="flex flex-1 flex-col pt-8">
+        {step === 0 && (
+          <Step title={t.nameTitle} hint={t.nameHint}>
+            <input
+              autoFocus
+              aria-label={t.namePlaceholder}
+              placeholder={t.namePlaceholder}
+              maxLength={40}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && nameValid && setStep(1)}
+              className="h-14 w-full rounded-2xl bg-surface px-5 text-xl outline-none focus-visible:ring-2 focus-visible:ring-ring lg:bg-subtle"
+            />
+          </Step>
+        )}
+
+        {step === 1 && (
+          <Step title={t.birthTitle}>
+            <div className="rounded-3xl bg-surface p-3 lg:bg-subtle">
+              <DatePicker value={birthDate} onChange={setBirthDate} />
+            </div>
+            <p className="mt-4 flex items-start gap-2.5 rounded-2xl bg-tint-2 px-4 py-3 text-sm">
+              <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
+              {t.birthWarning}
+            </p>
+          </Step>
+        )}
+
+        {step === 2 && (
+          <Step title={t.genderTitle} hint={t.genderHint}>
+            <div className="flex flex-col gap-2" role="radiogroup" aria-label={t.genderTitle}>
+              {GENDER_OPTIONS.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  role="radio"
+                  aria-checked={gender === g}
+                  onClick={() => setGender(g)}
+                  className={cn(
+                    "h-14 rounded-2xl px-5 text-left text-lg font-medium ring-2 transition-shadow",
+                    gender === g
+                      ? "bg-surface ring-highlight"
+                      : "bg-surface ring-transparent lg:bg-subtle",
+                  )}
+                >
+                  {t.genders[g]}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="mt-2 h-11 self-start text-sm font-semibold text-muted-foreground"
+              onClick={() => {
+                setGender("unspecified");
+                setStep(3);
+              }}
+            >
+              {t.skip}
+            </button>
+          </Step>
+        )}
+
+        {step === 3 && (
+          <Step title={t.avatarTitle}>
+            <div className="grid grid-cols-5 gap-2.5" role="radiogroup" aria-label={t.avatarTitle}>
+              {avatars.map((a) => (
+                <button
+                  key={a.seed}
+                  type="button"
+                  role="radio"
+                  aria-checked={avatarSeed === a.seed}
+                  aria-label={a.seed}
+                  onClick={() => setAvatarSeed(a.seed)}
+                  className={cn(
+                    "aspect-square overflow-hidden rounded-full bg-surface ring-2 ring-offset-2 ring-offset-bg transition-shadow lg:bg-subtle",
+                    avatarSeed === a.seed ? "ring-highlight" : "ring-transparent",
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
+                  <img src={a.uri} alt="" className="size-full dark:invert" />
+                </button>
+              ))}
+            </div>
+          </Step>
+        )}
+
+        {error && (
+          <p
+            role="alert"
+            className="mt-4 rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            {error}
+          </p>
+        )}
+
+        <Button
+          size="lg"
+          className="mt-auto rounded-full lg:mt-8"
+          disabled={primary.disabled}
+          onClick={primary.onClick}
+        >
+          {primary.label}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function Step({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col">
+      <h1 className="text-[40px] leading-none font-semibold">{title}</h1>
+      {hint && <p className="mt-2 text-sm text-muted-foreground">{hint}</p>}
+      <div className="mt-6 flex flex-col">{children}</div>
+    </section>
+  );
+}
+
+function ResultStep({ result, name }: { result: Done; name: string }) {
+  const { sign, period } = result;
+  return (
+    <div className="flex flex-1 flex-col gap-5 px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] lg:p-8">
+      <section className="relative flex h-96 flex-col justify-end overflow-hidden rounded-[32px] bg-tint-1 p-6">
+        <ConstellationArt sign={sign.code} className="absolute -top-4 -right-12 size-80" />
+        <span className="relative text-xs font-semibold tracking-widest text-highlight uppercase">
+          {name} · {t.resultLabel}
+        </span>
+        <span className="relative font-heading text-7xl leading-[0.95] font-semibold">
+          {sign.nameMn}
+        </span>
+        <span className="relative mt-2 text-sm text-muted-foreground">
+          {sign.startMd} – {sign.endMd} · {period.no}-р {t.periodLabel}
+        </span>
+      </section>
+      <div className="rounded-3xl bg-surface p-5 lg:bg-subtle">
+        <h2 className="text-2xl font-semibold">{t.addPeopleTitle}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t.addPeopleHint}</p>
+      </div>
+      <div className="mt-auto grid grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          size="lg"
+          className="rounded-full"
+          render={<Link href="/home" />}
+          nativeButton={false}
+        >
+          {t.later}
+        </Button>
+        <Button
+          size="lg"
+          className="rounded-full"
+          render={<Link href="/people" />}
+          nativeButton={false}
+        >
+          {t.addPeople}
+        </Button>
+      </div>
+    </div>
+  );
+}

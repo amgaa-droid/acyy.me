@@ -2,12 +2,14 @@ import { Header } from "@/components/app/header";
 import { Sidebar } from "@/components/app/sidebar";
 import { TabBar } from "@/components/app/tab-bar";
 import { APP_NAME } from "@/env";
+import { requireOnboardedUser } from "@/server/auth/current";
 
 /**
- * App shell. Mobile: sticky header + bottom tab bar, single column.
- * Desktop (lg+): left sidebar with nav and wallet, wide content area.
+ * App shell for signed-in, onboarded users.
+ * Mobile: header + floating tab bar. Desktop (lg+): floating sidebar with nav and wallet.
  */
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  await requireOnboardedUser();
   const balance = 0; // C5: real wallet balance
 
   return (

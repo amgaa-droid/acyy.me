@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+try {
+  process.loadEnvFile(); // SEED_PASSWORD for test-account logins
+} catch {
+  // optional
+}
+
 const PORT = Number(process.env.E2E_PORT ?? 3000);
 
 export default defineConfig({

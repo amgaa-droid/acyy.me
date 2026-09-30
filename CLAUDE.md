@@ -19,6 +19,7 @@
 ## Командууд
 ```bash
 docker compose up -d          # Postgres + Mailpit (http://localhost:8025)
+pnpm db:local                 # Docker-гүй: PGlite Postgres :54320 (DATABASE_POOL_MAX=1, имэйл → /dev/mail)
 pnpm dev                      # http://localhost:3000
 pnpm db:generate              # схемээс migration үүсгэх
 pnpm db:migrate

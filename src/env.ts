@@ -1,15 +1,38 @@
 import { z } from "zod";
 
-/** Server-side environment. Validated lazily so builds without a DB still work. */
+const bool = (fallback: "true" | "false") =>
+  z
+    .enum(["true", "false"])
+    .default(fallback)
+    .transform((v) => v === "true");
+
+const optional = z
+  .string()
+  .optional()
+  .transform((v) => (v ? v : undefined));
+
+/** Server-side environment. Validated lazily so importing modules never requires a full env. */
 const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_NAME: z.string().min(1).default("Зурхай"),
   APP_URL: z.url().default("http://localhost:3000"),
   DATABASE_URL: z.string().min(1),
-  AUTH_PASSWORD_ENABLED: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((v) => v === "true"),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).default(10),
+
+  BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET: openssl rand -base64 32"),
+  AUTH_PASSWORD_ENABLED: bool("false"),
+  GOOGLE_CLIENT_ID: optional,
+  GOOGLE_CLIENT_SECRET: optional,
+  FACEBOOK_CLIENT_ID: optional,
+  FACEBOOK_CLIENT_SECRET: optional,
+  ADMIN_OWNER_EMAILS: z.string().default(""),
+  ADMIN_EDITOR_EMAILS: z.string().default(""),
+
+  EMAIL_TRANSPORT: z.enum(["smtp", "resend", "console"]).default("console"),
+  SMTP_URL: z.string().default("smtp://localhost:1025"),
+  RESEND_API_KEY: optional,
+  EMAIL_FROM: z.string().default("Зурхай <no-reply@localhost>"),
+
   QPAY_MODE: z.enum(["mock", "sandbox", "production"]).default("mock"),
 });
 

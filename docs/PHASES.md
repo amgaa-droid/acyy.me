@@ -56,14 +56,14 @@
 
 ## C2 — Нэвтрэлт v1 + onboarding (~2 өдөр)
 
-- [ ] Better Auth: Drizzle adapter, `emailAndPassword` (`AUTH_PASSWORD_ENABLED` flag-аар), DB session 30 хоног
-- [ ] Social provider-уудыг env байвал л идэвхжүүлэх бүтэц (Google/FB-ийн код C9-д), `emailOTP` plugin-ийн суурь (Mailpit-ээр илгээнэ)
-- [ ] `/login`: dev үед имэйл+нууц үг форм + "Имэйлээр код авах"
-- [ ] Middleware: `(app)` route-уудыг хамгаалах, "Би" байхгүй бол → `/onboarding`
-- [ ] `/onboarding`: нэр → огноо (засагдахгүй гэсэн анхааруулга) → хүйс → avatar → "Таны орд" дэлгэц → хүн нэмэх санал
-- [ ] Админ role helper (`ADMIN_OWNER_EMAILS`, `ADMIN_EDITOR_EMAILS`)
-- [ ] Seed: тестийн 4 данс (SPEC §5)
-- [ ] `/me`: профайл харах, гарах
+- [x] Better Auth: Drizzle adapter, `emailAndPassword` (`AUTH_PASSWORD_ENABLED` flag-аар), DB session 30 хоног
+- [x] Social provider-уудыг env байвал л идэвхжүүлэх бүтэц (Google/FB-ийн код C9-д), `emailOTP` plugin-ийн суурь (Mailpit-ээр илгээнэ)
+- [x] `/login`: dev үед имэйл+нууц үг форм + "Имэйлээр код авах"
+- [x] Middleware: `(app)` route-уудыг хамгаалах, "Би" байхгүй бол → `/onboarding`
+- [x] `/onboarding`: нэр → огноо (засагдахгүй гэсэн анхааруулга) → хүйс → avatar → "Таны орд" дэлгэц → хүн нэмэх санал
+- [x] Админ role helper (`ADMIN_OWNER_EMAILS`, `ADMIN_EDITOR_EMAILS`)
+- [x] Seed: тестийн 4 данс (SPEC §5) — `user@test.local`-ийн 5,000₮ үлдэгдэл C5-д `wallet.credit()`-ээр
+- [x] `/me`: профайл харах, гарах
 
 **Дууссаны шалгуур:** `user@test.local`-аар нэвтэрнэ; шинэ данс → onboarding → "Би" үүснэ. OTP имэйл Mailpit-д ирж нэвтэрч болно. Нэвтрээгүй хүн `/home` руу орж чадахгүй.
 

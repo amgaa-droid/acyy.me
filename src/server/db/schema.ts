@@ -54,7 +54,7 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
   "expired",
 ]);
 
-// ---------- Auth (Better Auth core `user`; session/account/verification come in C2) ----------
+// ---------- Auth (Better Auth: user, session, account, verification) ----------
 
 export const user = pgTable("user", {
   id: uuid().primaryKey().defaultRandom(),
@@ -70,6 +70,67 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const session = pgTable(
+  "session",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    token: text().notNull().unique(),
+    ipAddress: text(),
+    userAgent: text(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("session_user_idx").on(t.userId)],
+);
+
+export const account = pgTable(
+  "account",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: text().notNull(),
+    providerId: text().notNull(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text(),
+    refreshToken: text(),
+    idToken: text(),
+    accessTokenExpiresAt: timestamp({ withTimezone: true }),
+    refreshTokenExpiresAt: timestamp({ withTimezone: true }),
+    scope: text(),
+    password: text(),
+    createdAt: createdAt(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("account_user_idx").on(t.userId)],
+);
+
+export const verification = pgTable(
+  "verification",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    identifier: text().notNull(),
+    value: text().notNull(),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("verification_identifier_idx").on(t.identifier)],
+);
 
 // ---------- People ----------
 

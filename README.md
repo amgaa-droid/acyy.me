@@ -30,7 +30,7 @@ pnpm dev                      # http://localhost:3000
 | `pnpm db:generate`                             | Схемийн өөрчлөлтөөс migration үүсгэх (`drizzle/`)               |
 | `pnpm db:studio`                               | Drizzle Studio                                                  |
 
-`/dev/ui` — компонентуудын галерей (зөвхөн dev).
+`/dev/ui` — компонентуудын галерей, `/dev/mail` — илгээсэн имэйлүүд (зөвхөн dev).
 
 ## Бүтэц
 

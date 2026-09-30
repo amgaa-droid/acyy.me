@@ -7,10 +7,13 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { todayYmd } from "@/lib/birth-date";
 import { buildPlaceholderPeriods } from "@/server/astro/calendar";
 import { expectedKeys } from "@/server/content/keys";
 import * as schema from "./schema";
 import { PRODUCTS, ZODIAC_SIGNS, placeholderEntry } from "./seed-data";
+import { seedTestUsers } from "./seed-users";
+import type { AppDb } from "./types";
 
 try {
   process.loadEnvFile();
@@ -83,6 +86,17 @@ async function main() {
         `content +${inserted} (total ${total}).`,
     );
   });
+
+  // Test accounts: dev/staging only, and only when SEED_PASSWORD is set.
+  const password = process.env.SEED_PASSWORD;
+  if (process.env.NODE_ENV === "production") {
+    console.log("Skipping test accounts in production.");
+  } else if (!password) {
+    console.log("SEED_PASSWORD not set — skipping test accounts.");
+  } else {
+    const created = await seedTestUsers(db as unknown as AppDb, password, todayYmd());
+    console.log(`Test accounts: ${created.length ? created.join(", ") : "already present"}.`);
+  }
 }
 
 main()

@@ -46,3 +46,6 @@ next-env.d.ts
 /playwright-report/
 /playwright/.cache/
 /.claude/launch.json
+
+# local PGlite database (pnpm db:local)
+/.pglite/
