@@ -16,6 +16,9 @@ import { loadViewer, offersForPerson } from "@/server/catalog";
 import { db } from "@/server/db";
 import { PersonNotFoundError, getPerson } from "@/server/persons";
 import { DeletePersonButton, EditPersonButton } from "./person-actions";
+import { InviteSection } from "./invite-section";
+import { personLinkState } from "@/server/invitations";
+import { APP_NAME } from "@/env";
 
 export const metadata: Metadata = { title: mn.people.title };
 
@@ -30,8 +33,9 @@ async function loadPerson(userId: string, id: string) {
 
 export default async function PersonPage({ params }: PageProps<"/people/[id]">) {
   const { id } = await params;
-  const { user } = await requireOnboardedUser();
+  const { user, self } = await requireOnboardedUser();
   const person = await loadPerson(user.id, id);
+  const link = person.isSelf ? null : await personLinkState(db, user.id, person);
   const { sign, period } = describeBirthDate(person.birthDate, await loadAstroRefs(db));
   const offers = await offersForPerson(db, await loadViewer(db, user.id), person);
 
@@ -103,6 +107,19 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
               }))}
             />
           </section>
+
+          {link && (
+            <InviteSection
+              personId={person.id}
+              inviterName={self.name}
+              appName={APP_NAME}
+              state={
+                link.kind === "pending"
+                  ? { ...link, expiresAt: link.expiresAt.toISOString() }
+                  : link
+              }
+            />
+          )}
 
           <div className="flex flex-wrap gap-2">
             <EditPersonButton

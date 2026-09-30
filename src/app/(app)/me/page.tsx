@@ -6,6 +6,9 @@ import { Avatar } from "@/components/app/avatar";
 import { PageTitle } from "@/components/app/empty-state";
 import { SignOutButton } from "@/components/app/sign-out-button";
 import { AdultConfirm } from "@/components/readings/adult-confirm";
+import { UnlinkButton } from "@/components/app/unlink-button";
+import { peopleLinkedTo } from "@/server/invitations";
+import { getSelf } from "@/server/persons";
 import { ageOn, parseIsoDate, todayYmd } from "@/lib/birth-date";
 import { ThemePicker } from "@/components/app/theme-picker";
 import { formatMnt, mn } from "@/i18n/mn";
@@ -25,6 +28,12 @@ export default async function MePage() {
   const role = adminRoleOf(user.email);
   const balance = await getBalance(db, user.id);
   const selfAge = ageOn(parseIsoDate(self.birthDate)!, todayYmd());
+  const linkedTo = await Promise.all(
+    (await peopleLinkedTo(db, user.id)).map(async (p) => ({
+      ...p,
+      ownerName: (await getSelf(db, p.ownerUserId))?.name ?? "",
+    })),
+  );
   const adultState =
     selfAge < 18 ? "too_young" : user.adultConfirmedAt ? "confirmed" : "can_confirm";
 
@@ -63,7 +72,24 @@ export default async function MePage() {
         <div className="lg:col-start-1">
           <AdultConfirm state={adultState} />
         </div>
-        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-3 lg:row-start-1">
+        {linkedTo.length > 0 && (
+          <section className="flex flex-col gap-2 rounded-3xl bg-surface p-5 lg:col-start-1">
+            <h2 className="text-xl font-semibold">{mn.invite.linkedToMe}</h2>
+            <p className="text-sm text-muted-foreground">{mn.invite.linkedToMeHint}</p>
+            <ul className="flex flex-col divide-y divide-border">
+              {linkedTo.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2 py-2">
+                  <span className="text-sm">
+                    <span className="font-semibold">{p.ownerName}</span>
+                    <span className="text-muted-foreground"> · «{p.name}»</span>
+                  </span>
+                  <UnlinkButton personId={p.id} then="/me" />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-4 lg:row-start-1">
           <div>
             <h2 className="text-2xl font-semibold">{mn.me.appearance}</h2>
             <p className="text-sm text-muted-foreground">{mn.me.appearanceHint}</p>

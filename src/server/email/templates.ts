@@ -14,3 +14,29 @@ export function otpEmail(appName: string, code: string) {
 </div>`;
   return { subject, text, html };
 }
+
+const escapeHtml = (s: string) =>
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
+
+export function invitationEmail(appName: string, inviterName: string, link: string) {
+  const who = inviterName || "Таны найз";
+  const subject = `${who} таныг ${appName}-д урьж байна`;
+  const text = [
+    `${who} таныг ${appName}-д урьж байна.`,
+    "Хамтдаа ордны болон төрсөн үеийн нийцлээ хараарай.",
+    "",
+    link,
+    "",
+    "Урилга 7 хоногийн турш хүчинтэй бөгөөд нэг удаа ашиглагдана.",
+  ].join("\n");
+  const html = `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5">
+<p><b>${escapeHtml(who)}</b> таныг ${escapeHtml(appName)}-д урьж байна.</p>
+<p>Хамтдаа ордны болон төрсөн үеийн нийцлээ хараарай.</p>
+<p><a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#1d1b3f;color:#fff;text-decoration:none">Урилга хүлээн авах</a></p>
+<p style="color:#6b6880;font-size:13px">Урилга 7 хоногийн турш хүчинтэй бөгөөд нэг удаа ашиглагдана.</p>
+</div>`;
+  return { subject, text, html };
+}

@@ -21,3 +21,9 @@ export function avatarDataUri(seed: string): string {
 export function avatarOptions(): { seed: string; uri: string }[] {
   return AVATAR_SEEDS.map((seed) => ({ seed, uri: avatarDataUri(seed) }));
 }
+
+/** Base64 SVG data URI — for next/og share cards, which can't read DiceBear's utf8 URIs. */
+export function avatarBase64Uri(seed: string): string {
+  const svg = createAvatar(notionists, { seed }).toString();
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}

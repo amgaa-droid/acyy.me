@@ -39,6 +39,8 @@ export type Reading = {
   snapshot: PurchaseSnapshot;
   personIds: (string | null)[];
   viaLink: boolean;
+  /** For a linked viewer: which of the two people they are (for "Намайг хасах"). */
+  linkedPersonId: string | null;
   sections: ReadingSection[];
 };
 
@@ -80,6 +82,7 @@ export async function getReading(
   if (!p) throw new ReadingNotFoundError();
 
   let viaLink = false;
+  let linkedPersonId: string | null = null;
   if (p.userId !== viewerId) {
     if (p.productCode !== "synastry") throw new ReadingNotFoundError();
     const ids = [p.personAId, p.personBId].filter((x): x is string => Boolean(x));
@@ -91,6 +94,7 @@ export async function getReading(
       : [];
     if (linked.length === 0) throw new ReadingNotFoundError();
     viaLink = true;
+    linkedPersonId = linked[0].id;
   }
 
   const [product] = await db
@@ -106,6 +110,7 @@ export async function getReading(
     snapshot: p.snapshot,
     personIds: [p.personAId, p.personBId],
     viaLink,
+    linkedPersonId,
     sections: sections.map(({ section, key, row }) => ({
       section,
       key,

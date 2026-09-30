@@ -17,10 +17,16 @@ type Done = Extract<OnboardingResult, { ok: true }>;
 
 const t = mn.onboarding;
 
-export function OnboardingFlow({ avatars }: { avatars: AvatarOption[] }) {
+export function OnboardingFlow({
+  avatars,
+  prefill,
+}: {
+  avatars: AvatarOption[];
+  prefill?: { name: string; birthDate: string } | null;
+}) {
   const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [birthDate, setBirthDate] = useState("2000-01-01");
+  const [name, setName] = useState(prefill?.name ?? "");
+  const [birthDate, setBirthDate] = useState(prefill?.birthDate ?? "2000-01-01");
   const [gender, setGender] = useState<Gender>("unspecified");
   const [avatarSeed, setAvatarSeed] = useState(avatars[0]?.seed ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +102,11 @@ export function OnboardingFlow({ avatars }: { avatars: AvatarOption[] }) {
 
         {step === 1 && (
           <Step title={t.birthTitle}>
+            {prefill && (
+              <p className="mb-3 rounded-2xl bg-tint-1 px-4 py-3 text-sm" role="note">
+                {mn.invite.prefillNote}
+              </p>
+            )}
             <div className="rounded-3xl bg-surface p-3 lg:bg-subtle">
               <DatePicker value={birthDate} onChange={setBirthDate} />
             </div>

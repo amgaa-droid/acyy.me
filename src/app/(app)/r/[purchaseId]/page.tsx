@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 
 import { ConstellationArt } from "@/components/app/constellation";
 import { ScoreRing } from "@/components/readings/score-ring";
+import { ShareCardButton } from "@/components/readings/share-card-button";
+import { UnlinkButton } from "@/components/app/unlink-button";
 import { mn } from "@/i18n/mn";
 import { cn } from "@/lib/utils";
 import { loadAstroRefs } from "@/server/astro/refs";
@@ -133,9 +135,15 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
               )}
             </section>
           ))}
-          <p className="border-t border-border pt-4 text-xs text-muted-foreground">
-            {mn.common.entertainmentOnly} · {t.bought(dateFmt.format(reading.createdAt))}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <p className="text-xs text-muted-foreground">
+              {mn.common.entertainmentOnly} · {t.bought(dateFmt.format(reading.createdAt))}
+            </p>
+            <div className="flex items-center gap-2">
+              {reading.linkedPersonId && <UnlinkButton personId={reading.linkedPersonId} />}
+              <ShareCardButton purchaseId={reading.id} />
+            </div>
+          </div>
         </article>
       </div>
     </div>
