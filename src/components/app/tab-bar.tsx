@@ -1,30 +1,23 @@
 "use client";
 
-import { CircleUser, House, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { mn } from "@/i18n/mn";
 import { cn } from "@/lib/utils";
+import { NAV_ITEMS, isActive } from "./nav-items";
 
-const TABS = [
-  { href: "/home", label: mn.tabs.home, Icon: House },
-  { href: "/people", label: mn.tabs.people, Icon: Users },
-  { href: "/readings", label: mn.tabs.readings, Icon: Sparkles },
-  { href: "/me", label: mn.tabs.me, Icon: CircleUser },
-] as const;
-
+/** Mobile bottom navigation (hidden from `lg`, where the sidebar takes over). */
 export function TabBar() {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Үндсэн цэс"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
       <ul className="mx-auto grid h-(--tabbar-h) max-w-md grid-cols-4">
-        {TABS.map(({ href, label, Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+        {NAV_ITEMS.map(({ href, label, Icon }) => {
+          const active = isActive(pathname, href);
           return (
             <li key={href}>
               <Link

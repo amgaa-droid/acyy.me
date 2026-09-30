@@ -2,15 +2,13 @@
 
 import { Plus, Wallet } from "lucide-react";
 
-import { BottomSheet } from "@/components/app/bottom-sheet";
+import { TopUpSheet } from "@/components/app/top-up-sheet";
 import { formatMnt, mn } from "@/i18n/mn";
 
-/** Header chip `💰 3,500₮ +` — opens the top-up sheet (flow is implemented in C5). */
+/** Header chip `💰 3,500₮ +` — opens the top-up sheet. */
 export function WalletChip({ balance }: { balance: number }) {
   return (
-    <BottomSheet
-      title={mn.wallet.topUpSheetTitle}
-      description={mn.wallet.topUpSoon}
+    <TopUpSheet
       trigger={
         <button
           type="button"

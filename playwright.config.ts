@@ -7,7 +7,13 @@ export default defineConfig({
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   use: { baseURL: `http://localhost:${PORT}`, trace: "on-first-retry" },
-  projects: [{ name: "mobile-chrome", use: { ...devices["Pixel 7"] } }],
+  projects: [
+    { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
+    {
+      name: "desktop-chrome",
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
+    },
+  ],
   webServer: {
     command: `pnpm dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,

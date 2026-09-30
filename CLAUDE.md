@@ -44,6 +44,7 @@ pnpm test:e2e                 # Playwright
 - Mutation → **Server Actions** (Zod-оор шалгана). Гадны callback/cron → Route Handlers (`src/app/api/...`).
 - Бизнес логик `src/server/*` (UI-гүй, тестлэгдэхүйц цэвэр функц), React компонентод биш.
 - Mobile-first: 360–390px-ээс эхэлж зурна, товч ≥ 44px, гол үйлдэл доод хэсэгт, сонголтуудыг bottom sheet-ээр.
+- Desktop (`lg` ≥ 1024px): доод tab bar + header → зүүн **sidebar** (nav + хэтэвч), контент олон баганаар (`lg:grid-cols-…`), `BottomSheet` автоматаар төвийн **dialog** болно, унших текст ≤ 680px. Загвар: [Design canvas](https://claude.ai/artifact/RfYiDGgrnN2ERBYmpaRASy).
 - Дизайн: **цагаан хар, minimal** (Co–Star маягийн). Өнгийг CSS token-оор (`--bg`, `--fg`, `--muted`, `--border`), dark mode = урвуу.
 - Шинэ бизнес логик бүрт unit тест. Мөнгө, эрх, импортын логикт тест **заавал**.
 

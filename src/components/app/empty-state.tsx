@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 export function PageTitle({ children }: { children: ReactNode }) {
-  return <h1 className="mb-6 text-4xl font-semibold">{children}</h1>;
+  return <h1 className="mb-6 text-4xl font-semibold lg:mb-8 lg:text-5xl">{children}</h1>;
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {

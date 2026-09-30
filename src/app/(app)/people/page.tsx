@@ -12,7 +12,7 @@ export default function PeoplePage() {
     <>
       <PageTitle>{mn.people.title}</PageTitle>
       <EmptyState>{mn.people.empty}</EmptyState>
-      <Button size="lg" className="mt-6" disabled>
+      <Button size="lg" className="mt-6 lg:w-auto" disabled>
         <Plus aria-hidden /> {mn.people.add}
       </Button>
     </>
