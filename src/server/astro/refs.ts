@@ -2,7 +2,8 @@ import { asc } from "drizzle-orm";
 
 import type { AppDb } from "@/server/db/types";
 import { periods48, zodiacSigns } from "@/server/db/schema";
-import { getPeriod, getSign } from "./zodiac";
+import { getPeriod } from "./period48";
+import { getSign } from "./zodiac";
 
 export type AstroRefs = {
   signs: (typeof zodiacSigns.$inferSelect)[];

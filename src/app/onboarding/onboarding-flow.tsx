@@ -6,19 +6,18 @@ import { useState, useTransition } from "react";
 
 import { ConstellationArt } from "@/components/app/constellation";
 import { DatePicker } from "@/components/app/date-picker";
+import { AvatarPicker, GenderPicker, type AvatarOption } from "@/components/people/pickers";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
 import type { Gender } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { createSelfAction, type OnboardingResult } from "./actions";
 
-type Avatar = { seed: string; uri: string };
 type Done = Extract<OnboardingResult, { ok: true }>;
 
 const t = mn.onboarding;
-const GENDER_OPTIONS: Gender[] = ["female", "male", "unspecified"];
 
-export function OnboardingFlow({ avatars }: { avatars: Avatar[] }) {
+export function OnboardingFlow({ avatars }: { avatars: AvatarOption[] }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("2000-01-01");
@@ -109,25 +108,7 @@ export function OnboardingFlow({ avatars }: { avatars: Avatar[] }) {
 
         {step === 2 && (
           <Step title={t.genderTitle} hint={t.genderHint}>
-            <div className="flex flex-col gap-2" role="radiogroup" aria-label={t.genderTitle}>
-              {GENDER_OPTIONS.map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  role="radio"
-                  aria-checked={gender === g}
-                  onClick={() => setGender(g)}
-                  className={cn(
-                    "h-14 rounded-2xl px-5 text-left text-lg font-medium ring-2 transition-shadow",
-                    gender === g
-                      ? "bg-surface ring-highlight"
-                      : "bg-surface ring-transparent lg:bg-subtle",
-                  )}
-                >
-                  {t.genders[g]}
-                </button>
-              ))}
-            </div>
+            <GenderPicker value={gender} onChange={setGender} />
             <button
               type="button"
               className="mt-2 h-11 self-start text-sm font-semibold text-muted-foreground"
@@ -143,25 +124,12 @@ export function OnboardingFlow({ avatars }: { avatars: Avatar[] }) {
 
         {step === 3 && (
           <Step title={t.avatarTitle}>
-            <div className="grid grid-cols-5 gap-2.5" role="radiogroup" aria-label={t.avatarTitle}>
-              {avatars.map((a) => (
-                <button
-                  key={a.seed}
-                  type="button"
-                  role="radio"
-                  aria-checked={avatarSeed === a.seed}
-                  aria-label={a.seed}
-                  onClick={() => setAvatarSeed(a.seed)}
-                  className={cn(
-                    "aspect-square overflow-hidden rounded-full bg-surface ring-2 ring-offset-2 ring-offset-bg transition-shadow lg:bg-subtle",
-                    avatarSeed === a.seed ? "ring-highlight" : "ring-transparent",
-                  )}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
-                  <img src={a.uri} alt="" className="size-full dark:invert" />
-                </button>
-              ))}
-            </div>
+            <AvatarPicker
+              avatars={avatars}
+              value={avatarSeed}
+              onChange={setAvatarSeed}
+              label={t.avatarTitle}
+            />
           </Step>
         )}
 
@@ -238,7 +206,7 @@ function ResultStep({ result, name }: { result: Done; name: string }) {
         <Button
           size="lg"
           className="rounded-full"
-          render={<Link href="/people" />}
+          render={<Link href="/people/new" />}
           nativeButton={false}
         >
           {t.addPeople}

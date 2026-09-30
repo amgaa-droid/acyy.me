@@ -1,15 +1,28 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { birthDateSchema } from "@/lib/birth-date";
-import { GENDERS } from "@/lib/domain";
 import { isAvatarSeed } from "@/lib/avatar-seeds";
+import { birthDateSchema } from "@/lib/birth-date";
+import { GENDERS, RELATIONS } from "@/lib/domain";
 import type { AppDb } from "@/server/db/types";
 import { persons } from "@/server/db/schema";
 
-/** Person input rules (SPEC §2.1). Names are trimmed; the birth date is validated once, at creation. */
+/**
+ * People (SPEC §2.1). Every function takes the acting user's id and only ever touches rows
+ * with `owner_user_id = userId` (CLAUDE.md rule 4). Someone else's person behaves exactly
+ * like a missing one (PersonNotFoundError → 404), so ids can't be probed.
+ * The birth date is set once at creation and can never be updated (rule 2).
+ */
+
+export type Person = typeof persons.$inferSelect;
+
 export const personNameSchema = z.string().trim().min(1).max(40);
 export const avatarSeedSchema = z.string().refine(isAvatarSeed, "invalid_avatar");
+const relationLabelSchema = z.string().trim().min(1).max(20);
+const otherRelations = RELATIONS.filter((r) => r !== "self") as [
+  Exclude<(typeof RELATIONS)[number], "self">,
+  ...Exclude<(typeof RELATIONS)[number], "self">[],
+];
 
 export const selfInputSchema = z.object({
   name: personNameSchema,
@@ -19,13 +32,68 @@ export const selfInputSchema = z.object({
 });
 export type SelfInput = z.input<typeof selfInputSchema>;
 
+/** `relation_label` is required for "other" and dropped for every other relation. */
+function withRelationLabel<T extends { relation?: string; relationLabel?: string | null }>(
+  data: T,
+  ctx: z.RefinementCtx,
+) {
+  if (data.relation === "other" && !data.relationLabel) {
+    ctx.addIssue({ code: "custom", path: ["relationLabel"], message: "required" });
+  }
+}
+
+export const personInputSchema = z
+  .object({
+    name: personNameSchema,
+    birthDate: birthDateSchema,
+    gender: z.enum(GENDERS).default("unspecified"),
+    avatarSeed: avatarSeedSchema,
+    relation: z.enum(otherRelations),
+    relationLabel: relationLabelSchema.nullish(),
+  })
+  .superRefine(withRelationLabel)
+  .transform((d) => ({ ...d, relationLabel: d.relation === "other" ? d.relationLabel! : null }));
+export type PersonInput = z.input<typeof personInputSchema>;
+
+/** Editable fields only. `strictObject` rejects anything else — notably `birthDate`. */
+export const personUpdateSchema = z
+  .strictObject({
+    name: personNameSchema.optional(),
+    gender: z.enum(GENDERS).optional(),
+    avatarSeed: avatarSeedSchema.optional(),
+    relation: z.enum(otherRelations).optional(),
+    relationLabel: relationLabelSchema.nullish(),
+  })
+  .superRefine(withRelationLabel);
+export type PersonUpdate = z.input<typeof personUpdateSchema>;
+
 export class SelfAlreadyExistsError extends Error {
   constructor() {
     super("self_exists");
   }
 }
+export class PersonNotFoundError extends Error {
+  constructor() {
+    super("person_not_found");
+  }
+}
+export class SelfRelationError extends Error {
+  constructor() {
+    super("self_relation_immutable");
+  }
+}
+export class CannotDeleteSelfError extends Error {
+  constructor() {
+    super("cannot_delete_self");
+  }
+}
 
-export async function getSelf(db: AppDb, userId: string) {
+const uuid = z.uuid();
+
+const owned = (userId: string, personId: string) =>
+  and(eq(persons.id, personId), eq(persons.ownerUserId, userId), isNull(persons.deletedAt));
+
+export async function getSelf(db: AppDb, userId: string): Promise<Person | null> {
   const [self] = await db
     .select()
     .from(persons)
@@ -37,7 +105,7 @@ export async function getSelf(db: AppDb, userId: string) {
 }
 
 /** Creates the user's "Би". Exactly one per user (also enforced by a partial unique index). */
-export async function createSelf(db: AppDb, userId: string, input: SelfInput) {
+export async function createSelf(db: AppDb, userId: string, input: SelfInput): Promise<Person> {
   const data = selfInputSchema.parse(input);
   if (await getSelf(db, userId)) throw new SelfAlreadyExistsError();
   const [self] = await db
@@ -45,4 +113,76 @@ export async function createSelf(db: AppDb, userId: string, input: SelfInput) {
     .values({ ownerUserId: userId, isSelf: true, relation: "self", ...data })
     .returning();
   return self;
+}
+
+/** "Би" first, then everyone else newest first. Deleted people are hidden. */
+export async function listPeople(db: AppDb, userId: string): Promise<Person[]> {
+  return db
+    .select()
+    .from(persons)
+    .where(and(eq(persons.ownerUserId, userId), isNull(persons.deletedAt)))
+    .orderBy(desc(persons.isSelf), desc(persons.createdAt), asc(persons.name));
+}
+
+export async function getPerson(db: AppDb, userId: string, personId: string): Promise<Person> {
+  if (!uuid.safeParse(personId).success) throw new PersonNotFoundError();
+  const [person] = await db.select().from(persons).where(owned(userId, personId)).limit(1);
+  if (!person) throw new PersonNotFoundError();
+  return person;
+}
+
+export async function createPerson(db: AppDb, userId: string, input: PersonInput): Promise<Person> {
+  const data = personInputSchema.parse(input);
+  const [person] = await db
+    .insert(persons)
+    .values({ ownerUserId: userId, isSelf: false, ...data })
+    .returning();
+  return person;
+}
+
+/** Name, gender, avatar and (not for "Би") relation. Never the birth date. */
+export async function updatePerson(
+  db: AppDb,
+  userId: string,
+  personId: string,
+  input: PersonUpdate,
+): Promise<Person> {
+  const data = personUpdateSchema.parse(input);
+  const current = await getPerson(db, userId, personId);
+  if (current.isSelf && (data.relation !== undefined || data.relationLabel != null)) {
+    throw new SelfRelationError();
+  }
+
+  // Switching to "other" requires a label (schema); any other relation clears it.
+  const relation = data.relation ?? current.relation;
+  const relationChanged = data.relation !== undefined || data.relationLabel !== undefined;
+  const patch = {
+    ...(data.name !== undefined && { name: data.name }),
+    ...(data.gender !== undefined && { gender: data.gender }),
+    ...(data.avatarSeed !== undefined && { avatarSeed: data.avatarSeed }),
+    ...(data.relation !== undefined && { relation: data.relation }),
+    ...(relationChanged && {
+      relationLabel: relation === "other" ? (data.relationLabel ?? current.relationLabel) : null,
+    }),
+  };
+  if (Object.keys(patch).length === 0) return current;
+
+  const [updated] = await db.update(persons).set(patch).where(owned(userId, personId)).returning();
+  if (!updated) throw new PersonNotFoundError();
+  return updated;
+}
+
+/**
+ * Soft delete (SPEC §2.1). Past purchases keep their snapshot and stay readable.
+ * "Би" can't be deleted here — it anchors the account (account deletion is C10).
+ */
+export async function deletePerson(db: AppDb, userId: string, personId: string): Promise<void> {
+  const person = await getPerson(db, userId, personId);
+  if (person.isSelf) throw new CannotDeleteSelfError();
+  const res = await db
+    .update(persons)
+    .set({ deletedAt: new Date() })
+    .where(owned(userId, personId))
+    .returning({ id: persons.id });
+  if (res.length === 0) throw new PersonNotFoundError();
 }

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { ZODIAC_SIGNS } from "@/server/db/seed-data";
 import { buildPlaceholderPeriods } from "./calendar";
-import { getPeriod, getSign, inRange } from "./zodiac";
+import { getPeriod } from "./period48";
+import { getSign, inRange } from "./zodiac";
 
 const signOf = (date: string) => getSign(date, ZODIAC_SIGNS).code;
 const periods = buildPlaceholderPeriods();

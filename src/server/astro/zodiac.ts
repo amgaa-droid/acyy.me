@@ -40,13 +40,3 @@ export function getSign<T extends MonthDayRange & { code: string }>(
   if (!sign) throw new RangeNotFoundError("zodiac sign", md);
   return sign;
 }
-
-export function getPeriod<T extends MonthDayRange & { no: number }>(
-  isoDate: string,
-  periods: readonly T[],
-): T {
-  const md = monthDayOf(isoDate);
-  const period = findRange(md, periods);
-  if (!period) throw new RangeNotFoundError("period", md);
-  return period;
-}

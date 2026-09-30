@@ -26,7 +26,7 @@ export function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                aria-label={active ? undefined : label}
+                aria-label={label}
                 className={cn(
                   "flex h-12 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors",
                   active ? "bg-nav-active px-5 text-nav-active-fg" : "w-13 text-nav-fg",

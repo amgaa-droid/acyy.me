@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { AVATAR_SEEDS, avatarDataUri } from "@/lib/avatars";
+import { avatarOptions } from "@/lib/avatars";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { getSelf } from "@/server/persons";
@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
   if (await getSelf(db, user.id)) redirect("/home");
 
   // Render avatars on the server so the DiceBear renderer stays out of the client bundle.
-  const avatars = AVATAR_SEEDS.map((seed) => ({ seed, uri: avatarDataUri(seed) }));
+  const avatars = avatarOptions();
 
   return (
     <main className="flex min-h-dvh justify-center bg-bg lg:items-center lg:py-10">

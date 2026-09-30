@@ -71,14 +71,14 @@
 
 ## C3 — Хүмүүс + тооцоо (~3 өдөр)
 
-- [ ] `src/server/astro/zodiac.ts`: `getSign(date, signs)`, `src/server/astro/period48.ts`: `getPeriod(date, periods)` — жилийн заагтай, 02-29
-- [ ] `validateCoverage(ranges)`: 366 өдөр бүр яг нэг мужид (давхцал/цоорхой) — админ засвар, импортод ашиглана
-- [ ] **Unit тест:** бүх 12 ордын хил (эхлэл/төгсгөл), 12-26/01-02/01-03, 02-29, 12-31, coverage алдаа
-- [ ] `src/server/persons.ts`: create / update (огноо **хасагдсан** schema) / soft delete, эрхийн шалгалт
-- [ ] `src/lib/avatars.ts`: 30 seed, DiceBear render; AvatarPicker grid
-- [ ] `/people`, `/people/new` (харилцаа → avatar → мэдээлэл), `/people/[id]` (орд, үе, засах, устгах)
-- [ ] `/home`: миний карт, хүмүүсийн жагсаалт
-- [ ] **Unit тест:** өөр хэрэглэгчийн person-ийг засах/устгах → хориглогдоно; birth_date шинэчлэх оролдлого → үл тоомсорлогдоно/алдаа
+- [x] `src/server/astro/zodiac.ts`: `getSign(date, signs)`, `src/server/astro/period48.ts`: `getPeriod(date, periods)` — жилийн заагтай, 02-29 (C2-д onboarding-д зориулж эхэлсэн)
+- [x] `validateCoverage(ranges)`: 366 өдөр бүр яг нэг мужид (давхцал/цоорхой) — админ засвар, импортод ашиглана
+- [x] **Unit тест:** бүх 12 ордын хил (эхлэл/төгсгөл), 12-26/01-02/01-03, 02-29, 12-31, coverage алдаа
+- [x] `src/server/persons.ts`: create / update (огноо **хасагдсан** schema) / soft delete, эрхийн шалгалт
+- [x] `src/lib/avatars.ts`: 30 seed, DiceBear render; AvatarPicker grid
+- [x] `/people`, `/people/new` (харилцаа → avatar → мэдээлэл), `/people/[id]` (орд, үе, засах, устгах)
+- [x] `/home`: миний карт, хүмүүсийн жагсаалт
+- [x] **Unit тест:** өөр хэрэглэгчийн person-ийг засах/устгах → хориглогдоно; birth_date шинэчлэх оролдлого → үл тоомсорлогдоно/алдаа
 
 **Дууссаны шалгуур:** Хүн нэмэхэд орд зөв гарна, огноо засах UI/API байхгүй, бүх тест ногоон.
 
