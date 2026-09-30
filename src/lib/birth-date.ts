@@ -21,6 +21,11 @@ export function toIsoDate({ y, m, d }: Ymd): string {
   return `${pad(y, 4)}-${pad(m)}-${pad(d)}`;
 }
 
+/** "1985-04-02" → "1985.04.02" (how birth dates are shown in the UI). */
+export function formatBirthDate(value: string): string {
+  return value.replaceAll("-", ".");
+}
+
 const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Parses "YYYY-MM-DD"; returns null for malformed or impossible dates (e.g. 2023-02-29). */

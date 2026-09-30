@@ -1,7 +1,7 @@
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 
-import type { ContentSection } from "@/lib/domain";
+import type { ContentSection, Relation } from "@/lib/domain";
 import { firstSentences } from "@/lib/preview";
 import type { AppDb } from "@/server/db/types";
 import {
@@ -171,4 +171,36 @@ export async function linkedSynastryIds(db: AppDb, viewerId: string): Promise<st
       ),
     );
   return rows.map((r) => r.id);
+}
+
+export type ReadingPerson = {
+  id: string;
+  relation: Relation;
+  relationLabel: string | null;
+  avatarSeed: string;
+};
+
+/**
+ * Live details (relation, avatar) of a reading's people — only those the viewer owns
+ * (CLAUDE.md rule 4). A linked viewer or a deleted person gets null; the snapshot still has the rest.
+ */
+export async function readingPeople(
+  db: AppDb,
+  viewerId: string,
+  personIds: (string | null)[],
+): Promise<(ReadingPerson | null)[]> {
+  const ids = personIds.filter((x): x is string => Boolean(x));
+  if (ids.length === 0) return personIds.map(() => null);
+  const rows = await db
+    .select({
+      id: persons.id,
+      relation: persons.relation,
+      relationLabel: persons.relationLabel,
+      avatarSeed: persons.avatarSeed,
+    })
+    .from(persons)
+    .where(
+      and(inArray(persons.id, ids), eq(persons.ownerUserId, viewerId), isNull(persons.deletedAt)),
+    );
+  return personIds.map((id) => rows.find((r) => r.id === id) ?? null);
 }
