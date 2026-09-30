@@ -1,0 +1,93 @@
+/**
+ * Idempotent seed: `pnpm db:seed`.
+ * Reference data (zodiac, periods48, products) is upserted; placeholder content is inserted
+ * only where a key is missing, so real imported texts are never overwritten.
+ */
+import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+
+import { buildPlaceholderPeriods } from "@/server/astro/calendar";
+import { expectedKeys } from "@/server/content/keys";
+import * as schema from "./schema";
+import { PRODUCTS, ZODIAC_SIGNS, placeholderEntry } from "./seed-data";
+
+try {
+  process.loadEnvFile();
+} catch {
+  // .env is optional
+}
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error("DATABASE_URL is not set");
+
+const client = postgres(url, { max: 1, onnotice: () => {} });
+const db = drizzle(client, { schema, casing: "snake_case" });
+
+const excluded = (col: string) => sql.raw(`excluded.${col}`);
+
+async function main() {
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(schema.zodiacSigns)
+      .values(ZODIAC_SIGNS)
+      .onConflictDoUpdate({
+        target: schema.zodiacSigns.code,
+        set: {
+          nameMn: excluded("name_mn"),
+          startMd: excluded("start_md"),
+          endMd: excluded("end_md"),
+          sort: excluded("sort"),
+        },
+      });
+
+    // Periods: only fill if empty — real ranges come from the admin import and must not be reset.
+    const [{ count: periodCount }] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schema.periods48);
+    if (periodCount === 0) await tx.insert(schema.periods48).values(buildPlaceholderPeriods());
+
+    // Products: insert new ones, keep admin-edited price/flags on re-seed.
+    await tx
+      .insert(schema.products)
+      .values(PRODUCTS.map((p, i) => ({ ...p, sort: i + 1 })))
+      .onConflictDoNothing({ target: schema.products.code });
+
+    const signCodes = ZODIAC_SIGNS.map((s) => s.code);
+    let inserted = 0;
+    for (const product of PRODUCTS) {
+      for (const { section, keys } of expectedKeys(product.code, { signCodes, periodCount: 48 })) {
+        const rows = keys.map((key) => ({
+          productCode: product.code,
+          section,
+          key,
+          status: "published" as const,
+          ...placeholderEntry(product.nameMn, key),
+        }));
+        for (let i = 0; i < rows.length; i += 500) {
+          const res = await tx
+            .insert(schema.contentEntries)
+            .values(rows.slice(i, i + 500))
+            .onConflictDoNothing()
+            .returning({ id: schema.contentEntries.id });
+          inserted += res.length;
+        }
+      }
+    }
+
+    const [{ total }] = await tx
+      .select({ total: sql<number>`count(*)::int` })
+      .from(schema.contentEntries);
+    console.log(
+      `Seeded: ${ZODIAC_SIGNS.length} signs, 48 periods, ${PRODUCTS.length} products, ` +
+        `content +${inserted} (total ${total}).`,
+    );
+  });
+}
+
+main()
+  .catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(() => client.end());
