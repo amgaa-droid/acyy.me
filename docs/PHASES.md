@@ -144,6 +144,18 @@
 
 ---
 
+## C7.5 — Хуучин сайтын контент (~1 өдөр)
+
+- [x] `OldDB/` (MSSQL dump, git-гүй) → `birthdays.json`, `compatibility.json` (366 өдөр × 8 хэсэг, 1,176 хос, 48 үе)
+- [x] `content_entries.teaser` (үнэгүй тизер) + body-д `## ` дэд гарчиг (SPEC §3.1, §10); уншлага, preview, админ засвар, импорт
+- [x] `src/server/legacy/transform.ts` + `scripts/legacy-to-xlsx.ts` → `birthday.xlsx`, `synastry_periods.xlsx`, `periods48.xlsx` (импортын dry-run-аар шалгагдсан)
+- [x] **Тест:** HTML → текст, түлхүүр үг, харилцааны нэр цэвэрлэх, 02-29, preview гарчгийг алгасах
+- [ ] Ордны нийцэл (78), `sign`/`love`/`sex`/`dating` (12 тус бүр) — хэрэглэгч өөрөө оруулна
+
+**Дууссаны шалгуур:** `/admin/import`-оор 3 файл алдаагүй орж, `/admin` дээр `366/366`, `1176/1176` харагдана; төрсөн өдрийн preview-д тизер + Ерөнхий шинжийн 2 өгүүлбэр, уншлагад дэд гарчигтай 6 хэсэг.
+
+---
+
 ## C8 — Deploy (~2 өдөр)
 
 - [ ] `Dockerfile` (Next.js standalone, multi-stage), `docker-compose.prod.yml` (app, db, caddy), C0-ийн Caddy-г app руу proxy болгох

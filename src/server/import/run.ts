@@ -82,6 +82,7 @@ export async function runImport(
               key: e.key,
               title: e.title,
               body: e.body,
+              teaser: e.teaser,
               score: e.score,
               status: "published" as const,
               updatedBy: opts.actorId,
@@ -92,6 +93,7 @@ export async function runImport(
             set: {
               title: sql.raw("excluded.title"),
               body: sql.raw("excluded.body"),
+              teaser: sql.raw("excluded.teaser"),
               score: sql.raw("excluded.score"),
               status: sql.raw("excluded.status"),
               updatedBy: sql.raw("excluded.updated_by"),

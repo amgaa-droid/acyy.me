@@ -221,6 +221,8 @@ export const contentEntries = pgTable(
     key: text().notNull(),
     title: text().notNull(),
     body: text().notNull(),
+    /** Free teaser shown in the paywall preview as-is (SPEC §3.1); null = none. */
+    teaser: text(),
     score: integer(),
     status: contentStatusEnum().notNull().default("draft"),
     updatedBy: uuid().references(() => user.id, { onDelete: "set null" }),

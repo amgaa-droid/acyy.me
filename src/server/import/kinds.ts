@@ -24,6 +24,7 @@ const col = (name: string, aliases: string[], required = true): ColumnSpec => ({
 
 const TITLE = col("title", ["гарчиг", "нэр", "heading"]);
 const BODY = col("body", ["текст", "агуулга", "бичвэр", "text", "content"]);
+const TEASER = col("teaser", ["тизер", "үнэгүй", "free"], false);
 const SCORE = col("score", ["оноо", "хувь", "percent"], false);
 const SIGN = col("sign", ["орд", "zodiac", "sign_code"]);
 
@@ -41,35 +42,40 @@ export const IMPORT_KINDS: Record<ImportKind, ImportKindSpec> = {
     kind: "birthday",
     label: "Төрсөн өдрийн зурхай (366)",
     file: "birthday.xlsx",
-    columns: [col("month_day", ["огноо", "сар_өдөр", "сар-өдөр", "date", "md"]), TITLE, BODY],
+    columns: [
+      col("month_day", ["огноо", "сар_өдөр", "сар-өдөр", "date", "md"]),
+      TITLE,
+      BODY,
+      TEASER,
+    ],
     target: { product: "birthday", section: "main" },
   },
   sign: {
     kind: "sign",
     label: "Ордны зурхай (12)",
     file: "sign.xlsx",
-    columns: [SIGN, TITLE, BODY],
+    columns: [SIGN, TITLE, BODY, TEASER],
     target: { product: "sign", section: "main" },
   },
   love: {
     kind: "love",
     label: "Хайр дурлалын зурхай (12)",
     file: "love.xlsx",
-    columns: [SIGN, TITLE, BODY],
+    columns: [SIGN, TITLE, BODY, TEASER],
     target: { product: "love", section: "main" },
   },
   sex: {
     kind: "sex",
     label: "Секс зурхай (12)",
     file: "sex.xlsx",
-    columns: [SIGN, TITLE, BODY],
+    columns: [SIGN, TITLE, BODY, TEASER],
     target: { product: "sex", section: "main" },
   },
   dating: {
     kind: "dating",
     label: "Болзооны зурхай (12)",
     file: "dating.xlsx",
-    columns: [SIGN, TITLE, BODY],
+    columns: [SIGN, TITLE, BODY, TEASER],
     target: { product: "dating", section: "main" },
   },
   synastry_signs: {
@@ -81,6 +87,7 @@ export const IMPORT_KINDS: Record<ImportKind, ImportKindSpec> = {
       col("sign_b", ["орд_b", "орд 2", "орд2", "b"]),
       TITLE,
       BODY,
+      TEASER,
       SCORE,
     ],
     target: { product: "synastry", section: "sign_pair" },
@@ -94,6 +101,7 @@ export const IMPORT_KINDS: Record<ImportKind, ImportKindSpec> = {
       col("period_b", ["үе_b", "үе 2", "үе2", "b"]),
       TITLE,
       BODY,
+      TEASER,
       SCORE,
     ],
     target: { product: "synastry", section: "period_pair" },

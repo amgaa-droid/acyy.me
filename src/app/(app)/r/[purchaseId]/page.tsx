@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ConstellationArt } from "@/components/app/constellation";
+import { ReadingBody, Teaser } from "@/components/readings/reading-body";
 import { ScoreRing } from "@/components/readings/score-ring";
 import { ShareCardButton } from "@/components/readings/share-card-button";
 import { UnlinkButton } from "@/components/app/unlink-button";
@@ -126,11 +127,8 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                   <h2 className="text-[32px] leading-tight font-semibold lg:text-[40px]">
                     {s.title}
                   </h2>
-                  {s.body.split(/\n\s*\n/).map((para, i) => (
-                    <p key={i} className="text-[17px] leading-[1.7] whitespace-pre-line lg:text-lg">
-                      {para}
-                    </p>
-                  ))}
+                  {s.teaser && <Teaser text={s.teaser} />}
+                  <ReadingBody body={s.body} />
                 </>
               )}
             </section>

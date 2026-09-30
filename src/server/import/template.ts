@@ -9,7 +9,7 @@ export type TemplateRefs = {
   periods: (MonthDayRange & { no: number; label: string | null })[];
 };
 
-/** Key cells for every expected row, so editors only fill in title/body (/score). */
+/** Key cells for every expected row, so editors only fill in the text columns. */
 function keyRows(spec: ImportKindSpec, refs: TemplateRefs): string[][] {
   const nameOf = new Map(refs.signs.map((s) => [s.code, s.nameMn]));
   switch (spec.kind) {
@@ -28,11 +28,15 @@ function keyRows(spec: ImportKindSpec, refs: TemplateRefs): string[][] {
   }
 }
 
+const TEXT_COLUMNS = new Set(["title", "body", "teaser", "score"]);
+
 const INSTRUCTIONS = [
   "Эхний хуудасны 1-р мөр = баганын нэр. Нэрийг өөрчлөхгүй байх (монгол нэр ч танигдана).",
   "Түлхүүр баганууд (огноо, орд, үе) урьдчилан бөглөгдсөн. title, body-г бөглөнө.",
   "Орд: монгол нэр (Хилэнц) эсвэл code (scorpio). Огноо: MM-DD (03-21).",
   "Нийцэлд A×B ба B×A нэг текст. Давхар мөр оруулбал алдаа гарна.",
+  "body дотор «## Гарчиг» гэж эхэлсэн мөр нь дэд гарчиг болно. Догол мөрийг хоосон мөрөөр тусгаарлана.",
+  "teaser (заавал биш): худалдаж авахаас өмнө үнэгүй харагдах богино текст (≤ 500 тэмдэгт).",
   "score (заавал биш): 0–100 бүхэл тоо.",
   "Хоосон мөр алгасагдана. Дутуу түлхүүрүүд тайланд харагдана, импорт хэсэгчлэн хийгдэж болно.",
   "Алдаатай мөр байвал юу ч импортлогдохгүй — эхлээд тайлангаа шалгана.",
@@ -46,15 +50,16 @@ export async function buildTemplate(spec: ImportKindSpec, refs: TemplateRefs): P
   ws.columns = spec.columns.map((c) => ({
     header: c.name,
     key: c.name,
-    width: c.name === "body" ? 80 : c.name === "title" ? 36 : 14,
-    style: c.name === "body" ? { alignment: { wrapText: true, vertical: "top" } } : undefined,
+    width: c.name === "body" ? 80 : c.name === "title" || c.name === "teaser" ? 36 : 14,
+    style:
+      c.name === "body" || c.name === "teaser"
+        ? { alignment: { wrapText: true, vertical: "top" } }
+        : undefined,
   }));
   ws.getRow(1).font = { bold: true };
 
   const keyCols =
-    spec.kind === "periods48"
-      ? 4
-      : spec.columns.length - (spec.columns.some((c) => c.name === "score") ? 3 : 2);
+    spec.kind === "periods48" ? 4 : spec.columns.filter((c) => !TEXT_COLUMNS.has(c.name)).length;
   for (const keys of keyRows(spec, refs)) {
     const row = ws.addRow(keys);
     for (let i = 1; i <= keyCols; i++) row.getCell(i).numFmt = "@"; // keep "03-21" as text

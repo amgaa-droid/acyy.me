@@ -111,8 +111,9 @@
 - Худалдан авсан зурхай нь тухайн үеийн **нийтлэгдсэн** контентыг түлхүүрээр нь харуулна (админ текст засвал засвар харагдана). Түлхүүр + нэр + огнооны snapshot `purchases.snapshot`-д.
 
 ### 3.1 Preview (paywall)
-- Худалдаж аваагүй бол `title` + body-ийн **эхний 2 өгүүлбэр** (`.`, `!`, `?`, `…`-ээр таслах, товчлол анхаарах) + доор нь бүдгэрүүлсэн хуурамч мөрүүд + **[Нээх · 1,000₮]** товч.
-- Нийцэлд: хоёр хэсгийн гарчиг + 1-р хэсгийн эхний 2 өгүүлбэр.
+- Худалдаж аваагүй бол `title` + **`teaser`** (байвал, бүтнээрээ — үнэгүй харагдах зориулалттай богино текст, жишээ нь төрсөн өдрийн "Давуу тал: … / Сул тал: …") + body-ийн **эхний 2 өгүүлбэр** (`## ` дэд гарчгийг алгасна) (`.`, `!`, `?`, `…`-ээр таслах, товчлол анхаарах) + доор нь бүдгэрүүлсэн хуурамч мөрүүд + **[Нээх · 1,000₮]** товч.
+- Нийцэлд: хоёр хэсгийн гарчиг (+ teaser) + 1-р хэсгийн эхний 2 өгүүлбэр.
+- Худалдаж авсны дараа teaser нь уншлагын эхэнд харагдана.
 
 ---
 
@@ -253,7 +254,7 @@ products         code pk, name_mn, description, price bigint, person_count int (
                  allowed_groups text[], adult_only bool, is_active bool, sort int
 
 content_entries  id uuid pk, product_code → products, section text ('main'|'sign_pair'|'period_pair'),
-                 key text, title text, body text, score int null, status enum('draft','published'),
+                 key text, title text, body text, teaser text null, score int null, status enum('draft','published'),
                  updated_by → user, updated_at
                  UNIQUE(product_code, section, key)
 
@@ -288,11 +289,15 @@ audit_logs       id, actor_id, action, entity, entity_id, data jsonb, created_at
 
 | Загвар | Баганууд | Мөр |
 |---|---|---|
-| `birthday.xlsx` | `month_day` (MM-DD) · `title` · `body` | 366 |
-| `sign.xlsx`, `love.xlsx`, `sex.xlsx`, `dating.xlsx` | `sign` · `title` · `body` | 12 |
-| `synastry_signs.xlsx` | `sign_a` · `sign_b` · `title` · `body` · `score`(opt) | 78 |
-| `synastry_periods.xlsx` | `period_a` · `period_b` · `title` · `body` · `score`(opt) | 1,176 |
+| `birthday.xlsx` | `month_day` (MM-DD) · `title` · `body` · `teaser`(opt) | 366 |
+| `sign.xlsx`, `love.xlsx`, `sex.xlsx`, `dating.xlsx` | `sign` · `title` · `body` · `teaser`(opt) | 12 |
+| `synastry_signs.xlsx` | `sign_a` · `sign_b` · `title` · `body` · `teaser`(opt) · `score`(opt) | 78 |
+| `synastry_periods.xlsx` | `period_a` · `period_b` · `title` · `body` · `teaser`(opt) · `score`(opt) | 1,176 |
 | `periods48.xlsx` | `no` · `start` (MM-DD) · `end` (MM-DD) · `label`(opt) | 48 |
+
+**Body-ийн бичлэг:** энгийн текст (HTML/Markdown биш). Догол мөрийг хоосон мөрөөр тусгаарлана; `## ` -ээр эхэлсэн мөр = дэд гарчиг. `teaser` ≤ 500 тэмдэгт, мөр шилжүүлж болно.
+
+**Хуучин сайтын контент:** 366 төрсөн өдөр, 1,176 үеийн нийцэл, 48 үеийн мужийг `scripts/legacy-to-xlsx.ts`-ээр дээрх загварт хөрвүүлж `/admin/import`-оор оруулна (эх файл `OldDB/` — git-д орохгүй).
 
 **Шалгалт (dry-run):** үл мэдэгдэх түлхүүр, давхардал (A|B ба B|A = давхардал), хоосон body, огнооны формат, мужийн давхцал/цоорхой, дутуу түлхүүрүүдийн жагсаалт. Алдаатай мөртэй бол импортлохгүй (мөрийн дугаартай тайлан). Амжилттай бол нэг transaction-оор upsert, `status=published`, audit log.
 

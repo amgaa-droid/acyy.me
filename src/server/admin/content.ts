@@ -12,7 +12,7 @@ import { logAudit } from "@/server/audit";
 import { expectedKeys } from "@/server/content/keys";
 import type { AppDb } from "@/server/db/types";
 import { contentEntries } from "@/server/db/schema";
-import { MAX_BODY, MAX_TITLE } from "@/server/import/validate";
+import { MAX_BODY, MAX_TEASER, MAX_TITLE } from "@/server/import/validate";
 
 export type CoverageRow = {
   product: ProductCode;
@@ -141,6 +141,12 @@ export const entryInputSchema = z.object({
   key: z.string().trim().min(1).max(20),
   title: z.string().trim().min(1).max(MAX_TITLE),
   body: z.string().trim().min(1).max(MAX_BODY),
+  teaser: z
+    .string()
+    .trim()
+    .max(MAX_TEASER)
+    .nullish()
+    .transform((v) => v || null),
   score: z
     .union([z.literal(""), z.null(), z.coerce.number().int().min(0).max(100)])
     .transform((v) => (v === "" ? null : v)),
@@ -173,6 +179,7 @@ export async function saveContentEntry(db: AppDb, actorId: string, input: EntryI
         key: data.key,
         title: data.title,
         body: data.body,
+        teaser: data.teaser,
         score: data.score,
         status: data.status,
         updatedBy: actorId,
@@ -182,6 +189,7 @@ export async function saveContentEntry(db: AppDb, actorId: string, input: EntryI
         set: {
           title: data.title,
           body: data.body,
+          teaser: data.teaser,
           score: data.score,
           status: data.status,
           updatedBy: actorId,

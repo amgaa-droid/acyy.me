@@ -353,6 +353,8 @@ export const mn = {
       newTitle: "Шинэ текст",
       fieldTitle: "Гарчиг",
       fieldBody: "Текст",
+      fieldBodyHint: "«## Гарчиг» мөр = дэд гарчиг. Догол мөрийг хоосон мөрөөр тусгаарлана.",
+      fieldTeaser: "Тизер (үнэгүй харагдана, заавал биш)",
       fieldScore: "Оноо (0–100, заавал биш)",
       fieldStatus: "Төлөв",
       save: "Хадгалах",

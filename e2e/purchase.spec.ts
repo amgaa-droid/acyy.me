@@ -38,9 +38,12 @@ test("new user: short balance → top-up → back to confirm → buys all 6 and 
   await expect(page).toHaveURL(/\/buy\/birthday\?a=/);
   const selfId = new URL(page.url()).searchParams.get("a")!;
 
-  // Preview shows 2 sentences and never the rest.
-  await expect(page.getByText("Энэ бол жинхэнэ текст ирэх хүртэлх түр бичвэр юм!")).toBeVisible();
-  expect(await page.content()).not.toContain("Гурав дахь өгүүлбэр");
+  // Preview: title (+ teaser) + a short excerpt — never the rest, never raw "## " markup.
+  // Works with both the seeded placeholders and the imported real texts.
+  await expect(page.getByRole("article").getByRole("heading", { level: 2 })).toBeVisible();
+  const previewHtml = await page.content();
+  expect(previewHtml).not.toContain("Гурав дахь өгүүлбэр");
+  expect(previewHtml).not.toContain("## ");
 
   // Balance 0 → the confirm sheet offers a top-up instead.
   await page.getByRole("button", { name: "Нээх · 2,000₮" }).click();
@@ -61,7 +64,9 @@ test("new user: short balance → top-up → back to confirm → buys all 6 and 
   await expect(back.getByTestId("balance-change")).toHaveText("Үлдэгдэл 11,000₮ → 9,000₮");
   await back.getByRole("button", { name: "Нээх · 2,000₮" }).click();
   await expect(page).toHaveURL(/\/r\/[0-9a-f-]{36}$/, { timeout: 15_000 });
-  await expect(page.getByText("Гурав дахь өгүүлбэр").first()).toBeVisible();
+  await expect(page.getByRole("article").getByRole("heading", { level: 2 })).toBeVisible();
+  await expect(page.getByText("Энэ хэсгийн текст түр засварлагдаж байна.")).toHaveCount(0);
+  expect(await page.content()).not.toContain("## ");
 
   // The four sign-based readings for "Би".
   for (const code of ["sign", "love", "sex", "dating"]) {

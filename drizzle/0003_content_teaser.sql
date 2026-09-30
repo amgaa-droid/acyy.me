@@ -1,0 +1,1 @@
+ALTER TABLE "content_entries" ADD COLUMN "teaser" text;

@@ -13,7 +13,13 @@ const t = mn.admin.content;
 
 type Props = {
   target: { product: string; section: string; key: string };
-  initial: { title: string; body: string; score: number | null; status: "draft" | "published" };
+  initial: {
+    title: string;
+    body: string;
+    teaser: string;
+    score: number | null;
+    status: "draft" | "published";
+  };
   showScore: boolean;
 };
 
@@ -21,6 +27,7 @@ export function ContentForm({ target, initial, showScore }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initial.title);
   const [body, setBody] = useState(initial.body);
+  const [teaser, setTeaser] = useState(initial.teaser);
   const [score, setScore] = useState(initial.score === null ? "" : String(initial.score));
   const [status, setStatus] = useState(initial.status);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -29,7 +36,7 @@ export function ContentForm({ target, initial, showScore }: Props) {
   const save = () =>
     startTransition(async () => {
       setMsg(null);
-      const res = await saveContentAction({ ...target, title, body, score, status });
+      const res = await saveContentAction({ ...target, title, body, teaser, score, status });
       if (res.ok) {
         setMsg({ ok: true, text: t.saved });
         router.replace(`/admin/content/edit?id=${res.id}`);
@@ -57,6 +64,16 @@ export function ContentForm({ target, initial, showScore }: Props) {
           className={cn(input, "min-h-72 py-3 text-base leading-relaxed")}
           value={body}
           onChange={(e) => setBody(e.target.value)}
+        />
+        <span className="text-xs font-normal text-muted-foreground">{t.fieldBodyHint}</span>
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
+        {t.fieldTeaser}
+        <textarea
+          className={cn(input, "min-h-24 py-3 text-base leading-relaxed")}
+          value={teaser}
+          maxLength={500}
+          onChange={(e) => setTeaser(e.target.value)}
         />
       </label>
       <div className="flex flex-wrap gap-4">
@@ -99,6 +116,9 @@ export function ContentForm({ target, initial, showScore }: Props) {
           {t.preview}
         </h2>
         <p className="mt-2 font-heading text-2xl font-semibold">{title || "—"}</p>
+        {teaser.trim() && (
+          <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">{teaser}</p>
+        )}
         <p className="mt-1 text-sm leading-relaxed">{firstSentences(body, 2) || "—"}</p>
       </section>
 

@@ -49,3 +49,6 @@ next-env.d.ts
 
 # local PGlite database (pnpm db:local)
 /.pglite/
+
+# Legacy DB dump (local only)
+/OldDB/

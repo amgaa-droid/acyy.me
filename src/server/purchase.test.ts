@@ -290,4 +290,29 @@ describe("reading & preview", () => {
     expect(preview.sections[1].excerpt).toBeNull();
     expect(JSON.stringify(preview)).not.toContain("Гурав дахь");
   });
+
+  it("the preview adds the free teaser and skips sub-headings, but never later sections", async () => {
+    await db
+      .update(contentEntries)
+      .set({
+        body: "## Ерөнхий шинж\n\nНэг. Хоёр. Гурав.\n\n## Зөвлөгөө\n\nНууц зөвлөгөө.",
+        teaser: "Давуу тал: Тайван\nСул тал: Удаан",
+      })
+      .where(
+        and(
+          eq(contentEntries.productCode, "birthday"),
+          eq(contentEntries.section, "main"),
+          eq(contentEntries.key, "02-29"),
+        ),
+      );
+    const preview = await getPreview(db, "birthday", { main: "02-29" });
+    expect(preview.sections[0]).toMatchObject({
+      teaser: "Давуу тал: Тайван\nСул тал: Удаан",
+      excerpt: "Нэг. Хоёр.",
+    });
+    const json = JSON.stringify(preview);
+    expect(json).not.toContain("Ерөнхий шинж");
+    expect(json).not.toContain("Гурав");
+    expect(json).not.toContain("Нууц зөвлөгөө");
+  });
 });

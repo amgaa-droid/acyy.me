@@ -1,8 +1,11 @@
+import { bodyProse } from "./body";
+
 /**
  * Sentence splitting for the paywall preview (SPEC §3.1): the server sends only the first
  * N sentences of an unpurchased text. Terminators: . ! ? … (and runs like "?!" or "...").
  * Not a sentence end: initials ("Б.Анар"), dotted abbreviations ("г.м.", "т.б."),
  * decimals ("3.5"), or a terminator not followed by whitespace / end of text.
+ * "## " sub-heading lines are skipped (they are not sentences).
  */
 const TERMINATORS = new Set([".", "!", "?", "…"]);
 const CLOSERS = new Set(['"', "'", "»", "”", "’", ")", "]"]);
@@ -18,7 +21,7 @@ function isAbbreviation(text: string, dotIndex: number): boolean {
 }
 
 export function splitSentences(text: string): string[] {
-  const s = text.replace(/\s+/g, " ").trim();
+  const s = bodyProse(text).replace(/\s+/g, " ").trim();
   const out: string[] = [];
   let start = 0;
   for (let i = 0; i < s.length; i++) {

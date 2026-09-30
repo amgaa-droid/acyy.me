@@ -29,7 +29,13 @@ export type ImportError = {
   detail?: string;
 };
 
-export type ContentEntryInput = { key: string; title: string; body: string; score: number | null };
+export type ContentEntryInput = {
+  key: string;
+  title: string;
+  body: string;
+  teaser: string | null;
+  score: number | null;
+};
 export type RangeInput = { no: number; startMd: MonthDay; endMd: MonthDay; label: string | null };
 
 export type ImportReport = {
@@ -54,6 +60,7 @@ export type ImportRefs = {
 
 export const MAX_TITLE = 200;
 export const MAX_BODY = 20_000;
+export const MAX_TEASER = 500;
 
 /** Accepts MM-DD, M-D, MM/DD, MM.DD. */
 export function normalizeMonthDay(raw: string): MonthDay | null {
@@ -146,6 +153,9 @@ export function validateImport(
     else if (title.length > MAX_TITLE) errs.push({ code: "too_long", row, column: "title" });
     if (!body) errs.push({ code: "required", row, column: "body" });
     else if (body.length > MAX_BODY) errs.push({ code: "too_long", row, column: "body" });
+    const teaser = (values.teaser ?? "").trim() || null;
+    if (teaser && teaser.length > MAX_TEASER)
+      errs.push({ code: "too_long", row, column: "teaser" });
 
     let score: number | null = null;
     const rawScore = (values.score ?? "").trim().replace(/%$/, "");
@@ -165,7 +175,7 @@ export function validateImport(
     }
 
     if (errs.length) report.errors.push(...errs);
-    else if (key) report.entries.push({ key, title, body, score });
+    else if (key) report.entries.push({ key, title, body, teaser, score });
   }
 
   const target = spec.target!;

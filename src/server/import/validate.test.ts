@@ -63,7 +63,7 @@ describe("validateImport — content", () => {
       ["required", "body"],
       ["invalid_score", "score"],
     ]);
-    expect(report.entries).toEqual([{ key: "aries|cancer", ...text, score: 75 }]);
+    expect(report.entries).toEqual([{ key: "aries|cancer", ...text, teaser: null, score: 75 }]);
   });
 
   it("treats A|B and B|A as the same key (duplicate)", () => {
@@ -109,6 +109,23 @@ describe("validateImport — content", () => {
     );
     expect(report.errors.map((e) => e.code)).toEqual(["duplicate", "invalid_month_day"]);
     expect(report.missing).toHaveLength(365);
+  });
+
+  it("teaser is optional, trimmed and length-limited", () => {
+    const report = validateImport(
+      IMPORT_KINDS.birthday,
+      [
+        r({ month_day: "01-01", ...text, teaser: "  Давуу тал: Тайван\nСул тал: Удаан " }),
+        r({ month_day: "01-02", ...text, teaser: "   " }),
+        r({ month_day: "01-03", ...text, teaser: "а".repeat(501) }),
+      ],
+      refs,
+    );
+    expect(report.errors).toEqual([{ code: "too_long", row: n, column: "teaser" }]);
+    expect(report.entries.map((e) => e.teaser)).toEqual([
+      "Давуу тал: Тайван\nСул тал: Удаан",
+      null,
+    ]);
   });
 
   it("empty file is an error", () => {

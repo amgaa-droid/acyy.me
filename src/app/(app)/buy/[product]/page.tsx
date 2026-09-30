@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { Avatar } from "@/components/app/avatar";
 import { ProductIcon } from "@/components/readings/product-icon";
+import { Teaser } from "@/components/readings/reading-body";
 import { formatMnt, mn } from "@/i18n/mn";
 import type { Relation } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
@@ -176,6 +177,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
               </span>
             )}
             <h2 className="text-[28px] leading-tight font-semibold">{s.title}</h2>
+            {s.teaser && <Teaser text={s.teaser} />}
             {s.excerpt && <p className="text-base leading-relaxed">{s.excerpt}</p>}
           </section>
         ))}

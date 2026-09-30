@@ -55,8 +55,14 @@ export default async function EditContentPage({ searchParams }: PageProps<"/admi
         target={target as { product: string; section: string; key: string }}
         initial={
           entry
-            ? { title: entry.title, body: entry.body, score: entry.score, status: entry.status }
-            : { title: "", body: "", score: null, status: "published" }
+            ? {
+                title: entry.title,
+                body: entry.body,
+                teaser: entry.teaser ?? "",
+                score: entry.score,
+                status: entry.status,
+              }
+            : { title: "", body: "", teaser: "", score: null, status: "published" }
         }
         showScore={target.section !== "main"}
       />

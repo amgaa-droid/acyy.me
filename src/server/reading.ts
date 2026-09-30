@@ -28,6 +28,7 @@ export type ReadingSection = {
   key: string;
   title: string | null;
   body: string | null; // null = text currently unpublished
+  teaser: string | null;
   score: number | null;
 };
 
@@ -116,17 +117,24 @@ export async function getReading(
       key,
       title: row?.title ?? null,
       body: row?.body ?? null,
+      teaser: row?.teaser ?? null,
       score: row?.score ?? null,
     })),
   };
 }
 
 export type Preview = {
-  sections: { section: ContentSection; title: string; excerpt: string | null }[];
+  sections: {
+    section: ContentSection;
+    title: string;
+    /** Free by design (SPEC §3.1) — sent for every section. */
+    teaser: string | null;
+    excerpt: string | null;
+  }[];
 };
 
 /**
- * Paywall preview: titles, plus the FIRST 2 SENTENCES of the first section only.
+ * Paywall preview: titles and teasers, plus the FIRST 2 SENTENCES of the first section only.
  * Nothing else of the body is returned — the client never receives the full text.
  */
 export async function getPreview(
@@ -139,6 +147,7 @@ export async function getPreview(
     sections: sections.map(({ section, row }, i) => ({
       section,
       title: row?.title ?? "",
+      teaser: row?.teaser ?? null,
       excerpt: i === 0 && row ? firstSentences(row.body, 2) : null,
     })),
   };
