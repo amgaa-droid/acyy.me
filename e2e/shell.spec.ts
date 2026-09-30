@@ -39,3 +39,14 @@ test("top-up opens a bottom sheet on mobile and a dialog on desktop", async ({ p
     isDesktop(info.project.name) ? "dialog-content" : "drawer-popup",
   );
 });
+
+test("colour mode can be switched on /me and persists", async ({ page }) => {
+  await page.goto("/me");
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-theme", "cosmic");
+  await page.getByRole("button", { name: /White/ }).click();
+  await expect(html).toHaveAttribute("data-theme", "white");
+  await page.reload();
+  await expect(html).toHaveAttribute("data-theme", "white");
+  await expect(page.getByRole("button", { name: /White/ })).toHaveAttribute("aria-pressed", "true");
+});

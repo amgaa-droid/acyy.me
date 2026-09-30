@@ -6,30 +6,112 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 /*
- * Design tokens — black & white, minimal.
- *   --bg      page background
- *   --fg      primary text / solid fills
- *   --muted   secondary text
- *   --border  hairlines
- *   --subtle  quiet surfaces (chips, hover)
- * shadcn variables below are derived from these.
+ * Design tokens. Two colour modes, chosen by the user (cookie `theme`, see src/lib/theme.ts),
+ * each with a light and a dark (OS) variant:
+ *   cosmic — warm ivory ground, deep indigo ink, lavender/blush tints (default)
+ *   white  — black & white, dark = inverted
+ *
+ *   --bg          page ground            --surface      cards, sheets
+ *   --fg          ink / primary fills    --muted        secondary text
+ *   --border      hairlines              --subtle       quiet fill inside a surface
+ *   --highlight   accent (labels, bright star)   --highlight-fg
+ *   --tint-1..3   pastel tiles           --ring-2       second score ring
+ *   --nav-*       floating tab bar / sidebar panel
  */
-:root {
-  --bg: #ffffff;
+:root,
+:root[data-theme="cosmic"] {
+  --bg: #f5f1eb;
+  --surface: #ffffff;
+  --fg: #1d1b3f;
+  --muted: #6b6880;
+  --border: #e9e3da;
+  --subtle: #f5f1eb;
+  --highlight: #4a44b5;
+  --highlight-fg: #ffffff;
+  --tint-1: #e6e3fb;
+  --tint-2: #f9e0db;
+  --tint-3: #e9ecdf;
+  --ring-2: #d9705f;
+  --nav-bg: #1d1b3f;
+  --nav-fg: #bdb6d8;
+  --nav-active-bg: #ffffff;
+  --nav-active-fg: #1d1b3f;
+  --danger: #b3261e;
+}
+
+:root[data-theme="white"] {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
   --fg: #0a0a0a;
   --muted: #6b6b6b;
-  --border: #e4e4e4;
-  --subtle: #f4f4f4;
+  --border: #e6e6e6;
+  --subtle: #f0f0f0;
+  --highlight: #0a0a0a;
+  --highlight-fg: #ffffff;
+  --tint-1: #ececec;
+  --tint-2: #e2e2e2;
+  --tint-3: #f0f0f0;
+  --ring-2: #8a8a8a;
+  --nav-bg: #0a0a0a;
+  --nav-fg: #a3a3a3;
+  --nav-active-bg: #ffffff;
+  --nav-active-fg: #0a0a0a;
   --danger: #b42318;
+}
 
+@media (prefers-color-scheme: dark) {
+  :root,
+  :root[data-theme="cosmic"] {
+    --bg: #111027;
+    --surface: #1b1a3a;
+    --fg: #eeebfb;
+    --muted: #a7a2c9;
+    --border: #2b2957;
+    --subtle: #232149;
+    --highlight: #a39df5;
+    --highlight-fg: #111027;
+    --tint-1: #2b2862;
+    --tint-2: #3b2440;
+    --tint-3: #23332c;
+    --ring-2: #f0a192;
+    --nav-bg: #eeebfb;
+    --nav-fg: #6b6880;
+    --nav-active-bg: #111027;
+    --nav-active-fg: #eeebfb;
+    --danger: #f97066;
+  }
+
+  :root[data-theme="white"] {
+    --bg: #0a0a0a;
+    --surface: #171717;
+    --fg: #f5f5f5;
+    --muted: #a3a3a3;
+    --border: #262626;
+    --subtle: #1f1f1f;
+    --highlight: #f5f5f5;
+    --highlight-fg: #0a0a0a;
+    --tint-1: #262626;
+    --tint-2: #2e2e2e;
+    --tint-3: #1f1f1f;
+    --ring-2: #8a8a8a;
+    --nav-bg: #f5f5f5;
+    --nav-fg: #6b6b6b;
+    --nav-active-bg: #0a0a0a;
+    --nav-active-fg: #f5f5f5;
+    --danger: #f97066;
+  }
+}
+
+/* shadcn variables, derived from the tokens above. */
+:root {
   --background: var(--bg);
   --foreground: var(--fg);
-  --card: var(--bg);
+  --card: var(--surface);
   --card-foreground: var(--fg);
-  --popover: var(--bg);
+  --popover: var(--surface);
   --popover-foreground: var(--fg);
   --primary: var(--fg);
-  --primary-foreground: var(--bg);
+  --primary-foreground: var(--surface);
   --secondary: var(--subtle);
   --secondary-foreground: var(--fg);
   --muted-foreground: var(--muted);
@@ -37,28 +119,28 @@
   --accent-foreground: var(--fg);
   --destructive: var(--danger);
   --input: var(--border);
-  --ring: var(--fg);
-  --radius: 0.75rem;
+  --ring: var(--highlight);
+  --radius: 1rem;
 
   --tabbar-h: 4rem;
-  --header-h: 3.5rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0a0a0a;
-    --fg: #f5f5f5;
-    --muted: #9a9a9a;
-    --border: #2a2a2a;
-    --subtle: #171717;
-    --danger: #f97066;
-  }
+  --header-h: 4rem;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-fg: var(--fg);
+  --color-surface: var(--surface);
   --color-subtle: var(--subtle);
+  --color-highlight: var(--highlight);
+  --color-highlight-fg: var(--highlight-fg);
+  --color-tint-1: var(--tint-1);
+  --color-tint-2: var(--tint-2);
+  --color-tint-3: var(--tint-3);
+  --color-ring-2: var(--ring-2);
+  --color-nav: var(--nav-bg);
+  --color-nav-fg: var(--nav-fg);
+  --color-nav-active: var(--nav-active-bg);
+  --color-nav-active-fg: var(--nav-active-fg);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -87,7 +169,8 @@
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-3xl: calc(var(--radius) * 2);
 }
 
 @layer base {

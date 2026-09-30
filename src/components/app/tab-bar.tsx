@@ -6,16 +6,19 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, isActive } from "./nav-items";
 
-/** Mobile bottom navigation (hidden from `lg`, where the sidebar takes over). */
+/**
+ * Mobile navigation: a floating pill. The active tab shows its label, the others are icons.
+ * Hidden from `lg`, where the sidebar takes over.
+ */
 export function TabBar() {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Үндсэн цэс"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-40 mx-auto max-w-md lg:hidden"
     >
-      <ul className="mx-auto grid h-(--tabbar-h) max-w-md grid-cols-4">
+      <ul className="flex h-(--tabbar-h) items-center justify-between rounded-full bg-nav p-2 shadow-lg shadow-black/10">
         {NAV_ITEMS.map(({ href, label, Icon }) => {
           const active = isActive(pathname, href);
           return (
@@ -23,13 +26,14 @@ export function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
+                aria-label={active ? undefined : label}
                 className={cn(
-                  "flex h-full flex-col items-center justify-center gap-1 text-[11px] transition-colors",
-                  active ? "text-fg" : "text-muted-foreground",
+                  "flex h-12 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors",
+                  active ? "bg-nav-active px-5 text-nav-active-fg" : "w-13 text-nav-fg",
                 )}
               >
-                <Icon className="size-[22px]" strokeWidth={active ? 2 : 1.5} aria-hidden />
-                <span>{label}</span>
+                <Icon className="size-[22px]" strokeWidth={active ? 1.9 : 1.6} aria-hidden />
+                {active && <span>{label}</span>}
               </Link>
             </li>
           );

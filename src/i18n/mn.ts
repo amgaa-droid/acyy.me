@@ -43,6 +43,15 @@ export const mn = {
   },
   me: {
     title: "Би",
+    appearance: "Өнгөний горим",
+    appearanceHint: "Утасны dark mode-ыг автоматаар дагана.",
+  },
+  themes: {
+    cosmic: { name: "Cosmic", description: "Зааны яс, индиго, пастел" },
+    white: { name: "White", description: "Цагаан хар, minimal" },
+  },
+  hero: {
+    yourSign: "Таны орд",
   },
   wallet: {
     title: "Хэтэвч",

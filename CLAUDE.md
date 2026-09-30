@@ -44,8 +44,8 @@ pnpm test:e2e                 # Playwright
 - Mutation → **Server Actions** (Zod-оор шалгана). Гадны callback/cron → Route Handlers (`src/app/api/...`).
 - Бизнес логик `src/server/*` (UI-гүй, тестлэгдэхүйц цэвэр функц), React компонентод биш.
 - Mobile-first: 360–390px-ээс эхэлж зурна, товч ≥ 44px, гол үйлдэл доод хэсэгт, сонголтуудыг bottom sheet-ээр.
-- Desktop (`lg` ≥ 1024px): доод tab bar + header → зүүн **sidebar** (nav + хэтэвч), контент олон баганаар (`lg:grid-cols-…`), `BottomSheet` автоматаар төвийн **dialog** болно, унших текст ≤ 680px. Загвар: [Design canvas](https://claude.ai/artifact/RfYiDGgrnN2ERBYmpaRASy).
-- Дизайн: **цагаан хар, minimal** (Co–Star маягийн). Өнгийг CSS token-оор (`--bg`, `--fg`, `--muted`, `--border`), dark mode = урвуу.
+- Desktop (`lg` ≥ 1024px): доод tab bar + header → зүүн **sidebar** (nav + хэтэвч), контент олон баганаар (`lg:grid-cols-…`), `BottomSheet` автоматаар төвийн **dialog** болно, унших текст ≤ 680px. Загвар: [Cosmic soft v2](https://claude.ai/artifact/UsPJUf9XeTrS72tBih7hHD).
+- Дизайн: **Cosmic soft** бүтэц (том орд hero, пастел хавтан, хөвөгч pill tab bar, дугуй карт). Хэрэглэгч **Cosmic** ба **White** гэсэн 2 өнгөний горимоос сонгоно (`src/lib/theme.ts`, cookie `theme`), тус бүр OS dark mode-ыг дагана. Өнгийг зөвхөн CSS token-оор (`--bg`, `--surface`, `--fg`, `--muted`, `--highlight`, `--tint-1..3`, `--nav-*` — `globals.css`), hex-ийг компонентод бичихгүй.
 - Шинэ бизнес логик бүрт unit тест. Мөнгө, эрх, импортын логикт тест **заавал**.
 
 ## Ажлын урсгал
