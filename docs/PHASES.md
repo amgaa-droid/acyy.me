@@ -86,14 +86,14 @@
 
 ## C4 — Админ + текст сан + Excel импорт (~4 өдөр)
 
-- [ ] `/admin` layout (role guard), dashboard (одоохондоо контентын бүрдэл `366/366` гэх мэт)
-- [ ] `/admin/content`: бүтээгдэхүүн/хэсгээр жагсаалт, хайх, дутуу түлхүүр, засах (title/body/score/status)
-- [ ] `/admin/zodiac`, `/admin/periods`: муж засах + `validateCoverage`
-- [ ] `/admin/products` (Owner): үнэ, идэвх, бүлэг, 18+
-- [ ] `src/server/import/`: загвар үүсгэгч (SPEC §10), parser (column mapping-тай, монгол ордын нэр ↔ code), validator, dry-run тайлан, transaction upsert, audit log
-- [ ] `/admin/import`: загвар татах → upload → тайлан → [Импортлох]
-- [ ] **Unit тест:** validator — дутуу/давхар (A|B vs B|A)/үл мэдэгдэх түлхүүр/хоосон body/муж цоорхой; 78 ба 1,176 хосын бүрэн жагсаалт үүсгэгч
-- [ ] Хэрэглэгчийн жинхэнэ файл `content/` хавтаст байвал форматыг шинжилж parser-ийг тааруулах, импортлож туршиx
+- [x] `/admin` layout (role guard), dashboard (одоохондоо контентын бүрдэл `366/366` гэх мэт, placeholder-уудыг тусад нь тоолно)
+- [x] `/admin/content`: бүтээгдэхүүн/хэсгээр жагсаалт, хайх, дутуу түлхүүр, засах (title/body/score/status)
+- [x] `/admin/zodiac`, `/admin/periods`: муж засах + `validateCoverage`
+- [x] `/admin/products` (Owner): үнэ, идэвх, бүлэг, 18+
+- [x] `src/server/import/`: загвар үүсгэгч (SPEC §10), parser (column mapping-тай, монгол ордын нэр ↔ code), validator, dry-run тайлан, transaction upsert, audit log
+- [x] `/admin/import`: загвар татах → upload → тайлан → [Импортлох]
+- [x] **Unit тест:** validator — дутуу/давхар (A|B vs B|A)/үл мэдэгдэх түлхүүр/хоосон body/муж цоорхой; 78 ба 1,176 хосын бүрэн жагсаалт үүсгэгч
+- [ ] Хэрэглэгчийн жинхэнэ файл `content/` хавтаст байвал форматыг шинжилж parser-ийг тааруулах, импортлож туршиx — _файл ирээгүй; parser нь монгол/англи баганын нэр, Excel огноо нүдийг танина_
 
 **Дууссаны шалгуур:** Загвар татаж бөглөөд upload хийхэд dry-run тайлан зөв гарна; алдаагүй файл бүрэн импортлогдоно; Editor нь `/admin/products` руу орж чадахгүй.
 

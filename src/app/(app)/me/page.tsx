@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 import { Avatar } from "@/components/app/avatar";
 import { PageTitle } from "@/components/app/empty-state";
@@ -33,9 +34,12 @@ export default async function MePage() {
               {sign.nameMn} · {self.birthDate}
             </span>
             {role && (
-              <span className="mt-2 self-start rounded-full bg-tint-1 px-2.5 py-0.5 text-xs font-semibold text-highlight">
-                {mn.me.roles[role]}
-              </span>
+              <Link
+                href="/admin"
+                className="mt-2 flex h-9 items-center gap-1.5 self-start rounded-full bg-tint-1 px-3 text-xs font-semibold text-highlight"
+              >
+                {mn.me.admin} · {mn.me.roles[role]}
+              </Link>
             )}
           </div>
         </section>

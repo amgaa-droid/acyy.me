@@ -30,6 +30,8 @@ pnpm dev                      # http://localhost:3000
 | `pnpm db:generate`                             | Схемийн өөрчлөлтөөс migration үүсгэх (`drizzle/`)               |
 | `pnpm db:studio`                               | Drizzle Studio                                                  |
 
+**Админ:** `/admin` (`owner@test.local` = Owner, `editor@test.local` = Editor; `.env`-ийн `ADMIN_*_EMAILS`). Excel импорт: `/admin/import` → загвар татах → бөглөх → Шалгах → Импортлох.
+
 `/dev/ui` — компонентуудын галерей, `/dev/mail` — илгээсэн имэйлүүд (зөвхөн dev).
 
 ## Бүтэц
