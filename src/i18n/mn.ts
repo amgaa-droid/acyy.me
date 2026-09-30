@@ -37,6 +37,8 @@ export const mn = {
     sendCode: "Код авах",
     code: "6 оронтой код",
     codeSentTo: "Код илгээлээ:",
+    devMailHint: "Тест горим: имэйл жинхэнээр илгээгдэхгүй. Кодоо эндээс харна уу →",
+    devMailLink: "Ирсэн имэйлүүд",
     verify: "Нэвтрэх",
     resend: "Дахин илгээх",
     changeEmail: "Имэйл солих",

@@ -11,6 +11,8 @@ type Props = {
   next: string;
   passwordEnabled: boolean;
   providers: ("google" | "facebook")[];
+  /** Local dev without a mail server: point to the /dev/mail outbox. */
+  devMail?: boolean;
 };
 
 type AuthError = { status?: number; code?: string; message?: string } | null | undefined;
@@ -30,7 +32,7 @@ function errorText(error: AuthError): string {
 const inputClass =
   "h-12 w-full rounded-2xl border bg-bg px-4 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-export function LoginForm({ next, passwordEnabled, providers }: Props) {
+export function LoginForm({ next, passwordEnabled, providers, devMail = false }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -127,6 +129,19 @@ export function LoginForm({ next, passwordEnabled, providers }: Props) {
           <p className="text-sm text-muted-foreground">
             {mn.login.codeSentTo} <span className="font-semibold text-fg">{email}</span>
           </p>
+          {devMail && (
+            <p className="rounded-2xl bg-tint-1 px-4 py-3 text-sm">
+              {mn.login.devMailHint}{" "}
+              <a
+                href="/dev/mail"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-highlight underline"
+              >
+                {mn.login.devMailLink}
+              </a>
+            </p>
+          )}
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             {mn.login.code}
             <input

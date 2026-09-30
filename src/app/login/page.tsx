@@ -30,6 +30,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             next={target}
             passwordEnabled={env().AUTH_PASSWORD_ENABLED}
             providers={enabledSocialProviders}
+            devMail={env().NODE_ENV !== "production" && env().EMAIL_TRANSPORT === "console"}
           />
         </div>
       </div>

@@ -12,6 +12,8 @@ export default function DevMailPage() {
 
   return (
     <main className="mx-auto max-w-2xl bg-bg px-4 py-8">
+      {/* Refresh every 3 s so a freshly sent OTP shows up without reloading. */}
+      <meta httpEquiv="refresh" content="3" />
       <PageTitle>Dev mail</PageTitle>
       {emails.length === 0 && <p className="text-muted-foreground">Имэйл алга.</p>}
       <ul className="flex flex-col gap-3">
