@@ -5,13 +5,14 @@ import { notFound } from "next/navigation";
 
 import { Avatar } from "@/components/app/avatar";
 import { ConstellationArt } from "@/components/app/constellation";
-import { EmptyState } from "@/components/app/empty-state";
+import { OfferList } from "@/components/readings/offer-list";
 import { mn } from "@/i18n/mn";
 import { avatarOptions } from "@/lib/avatars";
 import { relationTint, relationText } from "@/lib/people";
 import { cn } from "@/lib/utils";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
+import { loadViewer, offersForPerson } from "@/server/catalog";
 import { db } from "@/server/db";
 import { PersonNotFoundError, getPerson } from "@/server/persons";
 import { DeletePersonButton, EditPersonButton } from "./person-actions";
@@ -32,6 +33,7 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
   const { user } = await requireOnboardedUser();
   const person = await loadPerson(user.id, id);
   const { sign, period } = describeBirthDate(person.birthDate, await loadAstroRefs(db));
+  const offers = await offersForPerson(db, await loadViewer(db, user.id), person);
 
   return (
     <div className="flex flex-col gap-5">
@@ -88,7 +90,19 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
             />
           </dl>
 
-          <EmptyState>{mn.people.readingsSoon}</EmptyState>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-2xl font-semibold">{mn.people.readingsTitle}</h2>
+            <OfferList
+              personId={person.id}
+              offers={offers.map((o) => ({
+                code: o.product.code,
+                name: o.product.nameMn,
+                price: o.product.price,
+                personCount: o.product.personCount,
+                purchaseId: o.purchaseId,
+              }))}
+            />
+          </section>
 
           <div className="flex flex-wrap gap-2">
             <EditPersonButton

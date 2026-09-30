@@ -22,7 +22,13 @@ const t = mn.people;
 type OtherRelation = Exclude<Relation, "self">;
 
 /** /people/new: relation → avatar → name, birth date, gender (SPEC §6.1). */
-export function NewPersonFlow({ avatars }: { avatars: AvatarOption[] }) {
+export function NewPersonFlow({
+  avatars,
+  returnTo,
+}: {
+  avatars: AvatarOption[];
+  returnTo?: { next: string; slot: "a" | "b" } | null;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [relation, setRelation] = useState<OtherRelation | null>(null);
@@ -49,7 +55,11 @@ export function NewPersonFlow({ avatars }: { avatars: AvatarOption[] }) {
         gender,
       });
       if (res.ok) {
-        router.push(`/people/${res.id}`);
+        if (returnTo) {
+          const url = new URL(returnTo.next, window.location.origin);
+          url.searchParams.set(returnTo.slot, res.id);
+          router.push(`${url.pathname}${url.search}`);
+        } else router.push(`/people/${res.id}`);
         return;
       }
       setError(t.errors[res.error]);

@@ -69,7 +69,7 @@ test("'Би' has no delete button and its relation can't be edited", async ({ pa
 
 test("home shows my sign and my people", async ({ page }) => {
   await loginWithPassword(page);
-  await expect(page.getByText("Хилэнц").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /Ээж/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Хайрт/ })).toBeVisible();
+  await expect(page.getByText("Хилэнц", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ээж Матар" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Хайрт Арслан" })).toBeVisible();
 });

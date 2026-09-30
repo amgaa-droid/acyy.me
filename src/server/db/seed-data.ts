@@ -1,4 +1,5 @@
 import type { ProductCode, RelationGroup } from "@/lib/domain";
+import { expectedKeys } from "@/server/content/keys";
 
 /** Initial reference data (SPEC §2.4, §3). Editable later from the admin panel. */
 
@@ -95,4 +96,20 @@ export function placeholderEntry(productName: string, key: string) {
       "Админ Excel-ээр жинхэнэ текстийг импортлоход энэ бичвэр солигдоно.",
     ].join(" "),
   };
+}
+
+/** Every placeholder content row (1,668), published. */
+export function placeholderContentRows() {
+  const signCodes = ZODIAC_SIGNS.map((s) => s.code);
+  return PRODUCTS.flatMap((product) =>
+    expectedKeys(product.code, { signCodes, periodCount: 48 }).flatMap(({ section, keys }) =>
+      keys.map((key) => ({
+        productCode: product.code,
+        section,
+        key,
+        status: "published" as const,
+        ...placeholderEntry(product.nameMn, key),
+      })),
+    ),
+  );
 }

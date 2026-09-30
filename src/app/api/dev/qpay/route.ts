@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeNext } from "@/lib/safe-next";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
 import { topups } from "@/server/db/schema";
@@ -37,5 +38,8 @@ export async function POST(req: NextRequest) {
   } else {
     return new NextResponse("Bad request", { status: 400 });
   }
-  return NextResponse.redirect(new URL(`/wallet/topup/${topup.id}`, req.url), 303);
+  const next = safeNext(String(form.get("next") ?? ""), "/wallet");
+  const target = new URL(`/wallet/topup/${topup.id}`, req.url);
+  target.searchParams.set("next", next);
+  return NextResponse.redirect(target, 303);
 }

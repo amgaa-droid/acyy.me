@@ -12,7 +12,7 @@ test("signed-out users cannot open app pages", async ({ page }) => {
 test("seeded user signs in with password and lands on home with their sign", async ({ page }) => {
   await loginWithPassword(page);
   await expect(page.getByRole("heading", { name: "Анар" })).toBeVisible();
-  await expect(page.getByText("Хилэнц")).toBeVisible();
+  await expect(page.getByText("Хилэнц", { exact: true })).toBeVisible();
 });
 
 test("wrong password shows an error", async ({ page }) => {

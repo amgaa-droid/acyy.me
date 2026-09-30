@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Avatar } from "@/components/app/avatar";
 import { PageTitle } from "@/components/app/empty-state";
 import { SignOutButton } from "@/components/app/sign-out-button";
+import { AdultConfirm } from "@/components/readings/adult-confirm";
+import { ageOn, parseIsoDate, todayYmd } from "@/lib/birth-date";
 import { ThemePicker } from "@/components/app/theme-picker";
 import { formatMnt, mn } from "@/i18n/mn";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
@@ -22,6 +24,9 @@ export default async function MePage() {
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   const role = adminRoleOf(user.email);
   const balance = await getBalance(db, user.id);
+  const selfAge = ageOn(parseIsoDate(self.birthDate)!, todayYmd());
+  const adultState =
+    selfAge < 18 ? "too_young" : user.adultConfirmedAt ? "confirmed" : "can_confirm";
 
   return (
     <>
@@ -55,7 +60,10 @@ export default async function MePage() {
           </span>
           <span className="text-sm font-semibold text-highlight">{mn.wallet.history} →</span>
         </Link>
-        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div className="lg:col-start-1">
+          <AdultConfirm state={adultState} />
+        </div>
+        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-3 lg:row-start-1">
           <div>
             <h2 className="text-2xl font-semibold">{mn.me.appearance}</h2>
             <p className="text-sm text-muted-foreground">{mn.me.appearanceHint}</p>

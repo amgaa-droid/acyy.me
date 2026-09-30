@@ -1,25 +1,46 @@
-import { Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SignHero } from "@/components/app/sign-hero";
 import { PersonTile } from "@/components/people/person-card";
-import { mn } from "@/i18n/mn";
+import { ProductIcon } from "@/components/readings/product-icon";
+import { formatMnt, mn } from "@/i18n/mn";
+import { RELATION_GROUP } from "@/lib/domain";
+import { relationText } from "@/lib/people";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
+import { listActiveProducts, loadViewer, offersForPerson } from "@/server/catalog";
 import { db } from "@/server/db";
 import { listPeopleWithSigns } from "@/server/people-view";
+import { listPurchases, subjectKey } from "@/server/purchase";
 
 export const metadata: Metadata = { title: mn.home.title };
 
-// C6: suggestion card, product tiles, recent readings.
 export default async function HomePage() {
   const { user, self } = await requireOnboardedUser();
-  const [{ sign, period }, people] = await Promise.all([
-    loadAstroRefs(db).then((refs) => describeBirthDate(self.birthDate, refs)),
+  const [refs, people, viewer, purchases, allProducts] = await Promise.all([
+    loadAstroRefs(db),
     listPeopleWithSigns(user.id),
+    loadViewer(db, user.id),
+    listPurchases(db, user.id, 50),
+    listActiveProducts(db),
   ]);
+  const { sign, period } = describeBirthDate(self.birthDate, refs);
   const others = people.filter((p) => p.relation !== "self");
+  const offers = (await offersForPerson(db, viewer, self)).filter(
+    (o) => o.product.personCount === 1,
+  );
+  const productName = Object.fromEntries(allProducts.map((p) => [p.code, p.nameMn]));
+
+  // Suggest a synastry with the closest person we don't have one with yet (family/romantic first).
+  const owned = new Set(
+    purchases.filter((p) => p.productCode === "synastry").map((p) => p.subjectKey),
+  );
+  const rank = { romantic: 0, family: 1, friend: 2, other: 3, self: 9 } as const;
+  const suggestion = [...others]
+    .sort((a, b) => rank[RELATION_GROUP[a.relation]] - rank[RELATION_GROUP[b.relation]])
+    .find((p) => !owned.has(subjectKey([self.id, p.id])));
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,11 +77,76 @@ export default async function HomePage() {
               {mn.home.add}
             </Link>
           </div>
-          {others.length === 0 && (
-            <p className="text-sm text-muted-foreground">{mn.people.empty}</p>
-          )}
         </section>
       </div>
+
+      {suggestion && (
+        <Link
+          href={`/buy/synastry?a=${self.id}&b=${suggestion.id}`}
+          className="flex items-center gap-4 rounded-[28px] bg-nav p-5 text-nav-active"
+        >
+          <ProductIcon code="synastry" className="bg-nav-active/15 text-nav-active" />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-lg font-semibold">
+              {mn.home.suggestion(relationText(suggestion))}
+            </span>
+            <span className="text-sm text-nav-fg">
+              {mn.home.suggestionSub(sign.nameMn, suggestion.signName)}
+            </span>
+          </span>
+          <ChevronRight className="size-5" aria-hidden />
+        </Link>
+      )}
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-2xl font-semibold lg:text-[28px]">{mn.home.forMe}</h2>
+        <ul className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {offers.map((o) => (
+            <li key={o.product.code}>
+              <Link
+                href={o.purchaseId ? `/r/${o.purchaseId}` : `/buy/${o.product.code}?a=${self.id}`}
+                className="flex h-full flex-col gap-3 rounded-3xl bg-surface p-4 lg:p-5"
+              >
+                <ProductIcon code={o.product.code} />
+                <span className="text-sm leading-tight font-semibold lg:text-base">
+                  {o.product.nameMn}
+                </span>
+                <span className="mt-auto text-xs font-semibold lg:text-sm">
+                  {o.purchaseId ? (
+                    <span className="text-highlight">{mn.readings.read} →</span>
+                  ) : (
+                    <span className="text-muted-foreground">{formatMnt(o.product.price)}</span>
+                  )}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {purchases.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-2xl font-semibold lg:text-[28px]">{mn.readings.recent}</h2>
+          <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-3xl bg-surface">
+            {purchases.slice(0, 3).map((p) => (
+              <li key={p.id}>
+                <Link href={`/r/${p.id}`} className="flex items-center gap-3 px-4 py-3.5">
+                  <ProductIcon code={p.productCode} className="size-10" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate font-semibold">
+                      {productName[p.productCode] ?? p.productCode}
+                    </span>
+                    <span className="truncate text-sm text-muted-foreground">
+                      {p.snapshot.persons.map((x) => x.name).join(" × ")}
+                    </span>
+                  </span>
+                  <ChevronRight className="size-5 text-muted-foreground" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

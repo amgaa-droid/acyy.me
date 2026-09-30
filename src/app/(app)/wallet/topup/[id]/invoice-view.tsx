@@ -181,7 +181,10 @@ export function InvoiceView({ topup, balance: initialBalance, next, mockPayUrl }
       {mockPayUrl && (
         <p className="rounded-2xl border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
           {t.mockHint} ·{" "}
-          <Link href={mockPayUrl} className="font-semibold text-highlight underline">
+          <Link
+            href={`${mockPayUrl}?next=${encodeURIComponent(next)}`}
+            className="font-semibold text-highlight underline"
+          >
             {t.mockOpen}
           </Link>
         </p>

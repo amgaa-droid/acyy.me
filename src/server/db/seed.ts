@@ -9,9 +9,8 @@ import postgres from "postgres";
 
 import { todayYmd } from "@/lib/birth-date";
 import { buildPlaceholderPeriods } from "@/server/astro/calendar";
-import { expectedKeys } from "@/server/content/keys";
 import * as schema from "./schema";
-import { PRODUCTS, ZODIAC_SIGNS, placeholderEntry } from "./seed-data";
+import { PRODUCTS, ZODIAC_SIGNS, placeholderContentRows } from "./seed-data";
 import { seedTestUsers } from "./seed-users";
 import type { AppDb } from "./types";
 
@@ -56,26 +55,15 @@ async function main() {
       .values(PRODUCTS.map((p, i) => ({ ...p, sort: i + 1 })))
       .onConflictDoNothing({ target: schema.products.code });
 
-    const signCodes = ZODIAC_SIGNS.map((s) => s.code);
+    const rows = placeholderContentRows();
     let inserted = 0;
-    for (const product of PRODUCTS) {
-      for (const { section, keys } of expectedKeys(product.code, { signCodes, periodCount: 48 })) {
-        const rows = keys.map((key) => ({
-          productCode: product.code,
-          section,
-          key,
-          status: "published" as const,
-          ...placeholderEntry(product.nameMn, key),
-        }));
-        for (let i = 0; i < rows.length; i += 500) {
-          const res = await tx
-            .insert(schema.contentEntries)
-            .values(rows.slice(i, i + 500))
-            .onConflictDoNothing()
-            .returning({ id: schema.contentEntries.id });
-          inserted += res.length;
-        }
-      }
+    for (let i = 0; i < rows.length; i += 500) {
+      const res = await tx
+        .insert(schema.contentEntries)
+        .values(rows.slice(i, i + 500))
+        .onConflictDoNothing()
+        .returning({ id: schema.contentEntries.id });
+      inserted += res.length;
     }
 
     const [{ total }] = await tx

@@ -2,15 +2,20 @@ import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { formatMnt, mn } from "@/i18n/mn";
+import { safeNext } from "@/lib/safe-next";
 import { mockQPay } from "@/server/qpay";
 
 export const dynamic = "force-dynamic";
 
 /** Mock QPay "bank app" (QPAY_MODE=mock only, never in production builds). */
-export default async function MockQPayPage({ params }: PageProps<"/dev/qpay/[invoiceId]">) {
+export default async function MockQPayPage({
+  params,
+  searchParams,
+}: PageProps<"/dev/qpay/[invoiceId]">) {
   const mock = process.env.NODE_ENV === "production" ? null : mockQPay();
   if (!mock) notFound();
   const { invoiceId } = await params;
+  const { next } = await searchParams;
   const inv = mock.get(invoiceId);
   const t = mn.wallet.mock;
 
@@ -31,6 +36,11 @@ export default async function MockQPayPage({ params }: PageProps<"/dev/qpay/[inv
             ) : (
               <form method="post" action="/api/dev/qpay" className="grid grid-cols-2 gap-2">
                 <input type="hidden" name="invoiceId" value={invoiceId} />
+                <input
+                  type="hidden"
+                  name="next"
+                  value={safeNext(typeof next === "string" ? next : undefined, "/wallet")}
+                />
                 <Button
                   type="submit"
                   name="op"
