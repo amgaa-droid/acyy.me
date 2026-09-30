@@ -3,14 +3,16 @@ import { Sidebar } from "@/components/app/sidebar";
 import { TabBar } from "@/components/app/tab-bar";
 import { APP_NAME } from "@/env";
 import { requireOnboardedUser } from "@/server/auth/current";
+import { db } from "@/server/db";
+import { getBalance } from "@/server/wallet";
 
 /**
  * App shell for signed-in, onboarded users.
  * Mobile: header + floating tab bar. Desktop (lg+): floating sidebar with nav and wallet.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  await requireOnboardedUser();
-  const balance = 0; // C5: real wallet balance
+  const { user } = await requireOnboardedUser();
+  const balance = await getBalance(db, user.id);
 
   return (
     <div className="flex min-h-dvh">

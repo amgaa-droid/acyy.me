@@ -289,6 +289,8 @@ export const topups = pgTable(
     status: topupStatusEnum().notNull().default("pending"),
     provider: text().notNull(),
     invoiceId: text().unique(),
+    /** QR image/text + bank deeplinks, so the invoice screen survives a reload. */
+    invoiceData: jsonb().$type<InvoiceData>(),
     paymentId: text(),
     paidAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
@@ -300,6 +302,12 @@ export const topups = pgTable(
     check("topups_bonus_nonneg", sql`${t.bonus} >= 0`),
   ],
 );
+
+export type InvoiceData = {
+  qrImage: string;
+  qrText: string;
+  deeplinks: { name: string; logo: string; link: string }[];
+};
 
 // ---------- Purchases ----------
 

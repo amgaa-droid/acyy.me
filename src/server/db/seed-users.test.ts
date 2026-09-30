@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ageOn, parseIsoDate } from "@/lib/birth-date";
 import { createTestDb } from "@/test/db";
+import { getBalance } from "@/server/wallet";
+
 import { persons, user } from "./schema";
 import { seedTestUsers, testAccounts } from "./seed-users";
 import type { AppDb } from "./types";
@@ -25,6 +27,7 @@ describe("seedTestUsers", () => {
     const people = await db.select().from(persons).where(eq(persons.ownerUserId, u.id));
     expect(people).toHaveLength(4);
     expect(people.filter((p) => p.isSelf)).toHaveLength(1);
+    expect(await getBalance(db, u.id)).toBe(5_000); // not doubled by the second run
   });
 
   it("minor@test.local is 16", () => {

@@ -1,0 +1,1 @@
+ALTER TABLE "topups" ADD COLUMN "invoice_data" jsonb;

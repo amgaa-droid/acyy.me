@@ -15,6 +15,10 @@ import type { CoverageIssue } from "@/server/astro/coverage";
 import { db } from "@/server/db";
 import { IMPORT_KINDS, isImportKind } from "@/server/import/kinds";
 import { runImport } from "@/server/import/run";
+import { logAudit } from "@/server/audit";
+import { qpay } from "@/server/qpay";
+import { TopupNotFoundError, settleTopup } from "@/server/topups";
+import { InsufficientFundsError, adjust } from "@/server/wallet";
 import type { ImportError } from "@/server/import/validate";
 
 // ---------- Content ----------
@@ -141,5 +145,50 @@ export async function importAction(formData: FormData): Promise<ImportActionResu
   } catch (err) {
     console.error("[admin:import]", err);
     return { ok: false, error: "generic" };
+  }
+}
+
+// ---------- Money (Owner) ----------
+
+export async function adjustWalletAction(input: {
+  userId: string;
+  amount: number;
+  reason: string;
+  idempotencyKey: string;
+}): Promise<{ ok: true } | { ok: false; error: "invalid" | "insufficient" | "generic" }> {
+  const admin = await requireOwner();
+  try {
+    await db.transaction(async (tx) => {
+      const res = await adjust(tx as unknown as typeof db, { ...input, createdBy: admin.userId });
+      if (!res.duplicate) {
+        await logAudit(tx, {
+          actorId: admin.userId,
+          action: "wallet.adjust",
+          entity: "wallets",
+          entityId: input.userId,
+          data: { amount: input.amount, reason: input.reason, entryId: res.entry.id },
+        });
+      }
+    });
+    revalidatePath(`/admin/users/${input.userId}`);
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof InsufficientFundsError) return { ok: false, error: "insufficient" };
+    if (err instanceof z.ZodError) return { ok: false, error: "invalid" };
+    console.error("[admin:adjust]", err);
+    return { ok: false, error: "generic" };
+  }
+}
+
+export async function recheckTopupAction(id: string): Promise<{ status: string }> {
+  const admin = await requireOwner();
+  try {
+    const res = await settleTopup(db, qpay(), id, { source: "admin", actorId: admin.userId });
+    revalidatePath("/admin/topups");
+    return { status: res.status };
+  } catch (err) {
+    if (err instanceof TopupNotFoundError) return { status: "not_found" };
+    console.error("[admin:recheck]", err);
+    return { status: "error" };
   }
 }

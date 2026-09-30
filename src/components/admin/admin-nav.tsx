@@ -6,8 +6,10 @@ import {
   LayoutDashboard,
   Orbit,
   Package,
+  Receipt,
   Sparkles,
   Text,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -24,6 +26,8 @@ const ITEMS = [
   { href: "/admin/zodiac", label: t.zodiac, Icon: Sparkles, owner: false },
   { href: "/admin/periods", label: t.periods, Icon: Orbit, owner: false },
   { href: "/admin/products", label: t.products, Icon: Package, owner: true },
+  { href: "/admin/users", label: t.users, Icon: Users, owner: true },
+  { href: "/admin/topups", label: t.topups, Icon: Receipt, owner: true },
 ];
 
 /** Admin navigation: sidebar on desktop, horizontal scroller on mobile. Owner-only items hidden for Editors. */

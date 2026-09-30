@@ -101,15 +101,15 @@
 
 ## C5 — Хэтэвч + QPay mock (~3 өдөр)
 
-- [ ] `src/server/wallet.ts`: `getBalance`, `credit`, `debit` (SPEC §4.2)
-- [ ] **Unit/integration тест (жинхэнэ Postgres):** 100 зэрэгцээ debit → сөрөг үлдэгдэлгүй; ижил `idempotency_key` 2 удаа → 1 л бичлэг
-- [ ] `src/server/qpay/`: `QPayProvider` интерфейс, `MockQPayProvider`, `QPayV2Provider` (sandbox/prod — кодыг бичээд mock-оор тестлэнэ)
-- [ ] `src/config/topup.ts` шатлал; Цэнэглэх bottom sheet (Header чип, `/wallet`-ээс)
-- [ ] Invoice дэлгэц: утсан дээр deeplink товчнууд, desktop дээр QR; 3 сек poll
-- [ ] `/api/qpay/callback` (HMAC + `checkPayment` + idempotent credit + bonus), `/api/cron/qpay-check`
-- [ ] `/dev/qpay/[invoiceId]` mock төлбөрийн хуудас (зөвхөн `QPAY_MODE=mock`)
-- [ ] `/wallet`: үлдэгдэл, гүйлгээний түүх
-- [ ] Админ `/admin/users/[id]`, `/admin/topups` (Owner): хэтэвч, adjust (шалтгаантай), дахин шалгах
+- [x] `src/server/wallet.ts`: `getBalance`, `credit`, `debit` (SPEC §4.2)
+- [x] **Unit/integration тест (жинхэнэ Postgres):** 100 зэрэгцээ debit → сөрөг үлдэгдэлгүй; ижил `idempotency_key` 2 удаа → 1 л бичлэг — _embedded Postgres 16 (`src/test/real-pg.ts`), `FOR UPDATE`-гүйгээр тест унадгийг шалгасан_
+- [x] `src/server/qpay/`: `QPayProvider` интерфейс, `MockQPayProvider`, `QPayV2Provider` (sandbox/prod — кодыг бичээд mock-оор тестлэнэ)
+- [x] `src/config/topup.ts` шатлал; Цэнэглэх bottom sheet (Header чип, `/wallet`-ээс)
+- [x] Invoice дэлгэц: утсан дээр deeplink товчнууд, desktop дээр QR; 3 сек poll
+- [x] `/api/qpay/callback` (HMAC + `checkPayment` + idempotent credit + bonus), `/api/cron/qpay-check`
+- [x] `/dev/qpay/[invoiceId]` mock төлбөрийн хуудас (зөвхөн `QPAY_MODE=mock`; товч нь `/api/dev/qpay` руу энгийн form POST)
+- [x] `/wallet`: үлдэгдэл, гүйлгээний түүх
+- [x] Админ `/admin/users/[id]`, `/admin/topups` (Owner): хэтэвч, adjust (шалтгаантай), дахин шалгах
 
 **Дууссаны шалгуур:** Mock-оор 10,000₮ цэнэглэхэд 11,000 нэмэгдэнэ; callback-ийг 2 удаа дуудахад 1 л удаа нэмэгдэнэ; callback-гүйгээр cron шалгаж нэмнэ.
 

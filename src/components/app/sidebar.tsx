@@ -44,7 +44,9 @@ export function Sidebar({ appName, balance }: { appName: string; balance: number
         </nav>
 
         <div className="mt-auto flex flex-col gap-3 rounded-[22px] bg-nav-active/10 p-4">
-          <span className="text-xs text-nav-fg">{mn.header.wallet}</span>
+          <Link href="/wallet" className="text-xs text-nav-fg underline-offset-2 hover:underline">
+            {mn.header.wallet} · {mn.wallet.history}
+          </Link>
           <span className="text-[28px] leading-none font-semibold tabular-nums">
             {formatMnt(balance)}
           </span>

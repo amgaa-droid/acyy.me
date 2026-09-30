@@ -189,6 +189,13 @@
   h3 {
     @apply font-heading tracking-tight;
   }
+  /* Cormorant uses old-style figures by default; money and scores read better lining. */
+  .font-heading,
+  h1,
+  h2,
+  h3 {
+    font-variant-numeric: lining-nums;
+  }
 }
 
 @utility scrollbar-none {

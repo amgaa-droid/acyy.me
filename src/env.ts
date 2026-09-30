@@ -34,6 +34,12 @@ const serverEnvSchema = z.object({
   EMAIL_FROM: z.string().default("Зурхай <no-reply@localhost>"),
 
   QPAY_MODE: z.enum(["mock", "sandbox", "production"]).default("mock"),
+  QPAY_CLIENT_ID: optional,
+  QPAY_CLIENT_SECRET: optional,
+  QPAY_INVOICE_CODE: optional,
+  QPAY_BASE_URL: optional,
+  QPAY_CALLBACK_SECRET: z.string().min(32, "QPAY_CALLBACK_SECRET: openssl rand -hex 32"),
+  CRON_SECRET: z.string().min(16, "CRON_SECRET: openssl rand -hex 32"),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

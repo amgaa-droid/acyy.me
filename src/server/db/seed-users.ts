@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 
 import { toIsoDate, type Ymd } from "@/lib/birth-date";
 import type { Relation } from "@/lib/domain";
+import { credit } from "@/server/wallet";
+
 import type { AppDb } from "./types";
 import { account, persons, user } from "./schema";
 
@@ -59,6 +61,18 @@ export async function seedTestUsers(db: AppDb, password: string, today: Ymd): Pr
         );
     });
     created.push(acc.email);
+  }
+
+  // user@test.local starts with 5,000₮ (SPEC §5) — through the ledger, idempotently.
+  const [u] = await db.select({ id: user.id }).from(user).where(eq(user.email, "user@test.local"));
+  if (u) {
+    await credit(db, "adjust", {
+      userId: u.id,
+      amount: 5_000,
+      idempotencyKey: "seed:user@test.local:initial",
+      refType: "seed",
+      note: "Seed",
+    });
   }
   return created;
 }
