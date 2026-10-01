@@ -13,7 +13,10 @@ import { APP_NAME } from "@/env";
 import { formatMnt, mn } from "@/i18n/mn";
 import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
 import { avatarDataUri } from "@/lib/avatars";
+import { formatBirthDate } from "@/lib/birth-date";
+import { DEMO_LINKS, DEMO_PEOPLE } from "@/lib/landing-demo";
 import { cn } from "@/lib/utils";
+import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { getSession } from "@/server/auth/session";
 import { listActiveProducts } from "@/server/catalog";
 import { db } from "@/server/db";
@@ -24,15 +27,6 @@ export const metadata: Metadata = {
   description: mn.landing.metaDescription,
 };
 
-/** Example people on the landing's planet system (relation names, no invented personal data). */
-const DEMO_PEOPLE = [
-  { name: "Ээж", tint: "bg-tint-2" },
-  { name: "Хайрт", tint: "bg-tint-1" },
-  { name: "Аав", tint: "bg-tint-3" },
-  { name: "Найз", tint: "bg-tint-3" },
-  { name: "Дүү", tint: "bg-tint-2" },
-];
-
 const loginTo = (next: string) => `/login?${new URLSearchParams({ next })}`;
 
 const primaryCta =
@@ -42,7 +36,11 @@ export default async function LandingPage() {
   if (await getSession()) redirect("/home");
 
   const t = mn.landing;
-  const [products, packages] = await Promise.all([listActiveProducts(db), listActivePackages(db)]);
+  const [products, packages, refs] = await Promise.all([
+    listActiveProducts(db),
+    listActivePackages(db),
+    loadAstroRefs(db),
+  ]);
   const birthdayPrice = products.find((p) => p.code === "birthday")?.price ?? 2000;
   const synastry = products.find((p) => p.code === "synastry");
   const cheapest = Math.min(...products.map((p) => p.price));
@@ -53,12 +51,17 @@ export default async function LandingPage() {
       {/* ---- First screen: the planet system, as in the app ---- */}
       <LandingPlanets
         appName={APP_NAME}
-        people={DEMO_PEOPLE.map((d, i) => ({
-          id: `demo-${i}`,
+        people={DEMO_PEOPLE.map((d) => ({
+          id: d.id,
           name: d.name,
           tint: d.tint,
-          avatarUri: avatarDataUri(AVATAR_SEEDS[(i * 3 + 1) % AVATAR_SEEDS.length]),
+          birthDate: formatBirthDate(d.birthDate),
+          signName: describeBirthDate(d.birthDate, refs).sign.nameMn,
+          avatarUri: avatarDataUri(AVATAR_SEEDS[d.seed % AVATAR_SEEDS.length]),
+          phone: d.phone,
+          desktop: d.desktop,
         }))}
+        links={DEMO_LINKS}
         products={products
           .filter((p) => p.personCount === 1)
           .map((p) => ({

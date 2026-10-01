@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ChevronDown, Lock, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronDown, Lock, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import {
   useEffect,
@@ -15,12 +15,13 @@ import { BottomSheet } from "@/components/app/bottom-sheet";
 import { BrandMark } from "@/components/app/brand-mark";
 import { BirthdayReveal } from "@/components/landing/birthday-reveal";
 import { PRODUCT_ICON_COMPONENTS } from "@/components/readings/product-icon";
+import { ScoreRing } from "@/components/readings/score-ring";
 import { formatMnt, mn } from "@/i18n/mn";
 import type { ProductIconName } from "@/lib/domain";
+import { compatLevel, type DemoLink } from "@/lib/landing-demo";
 import {
   DESKTOP_LAYOUT,
   PHONE_LAYOUT,
-  captionBodies,
   chainPoint,
   clampToStage,
   dropTarget,
@@ -28,7 +29,6 @@ import {
   layoutScale,
   rimLine,
   ringAngles,
-  scatter,
   toPct,
   toPx,
   type Body,
@@ -66,7 +66,17 @@ const LANDING_DESKTOP: PlanetLayout = {
 };
 
 export type LandingProduct = { code: string; name: string; icon: string; price: number; hook: string };
-export type DemoPerson = { id: string; name: string; avatarUri: string; tint: string };
+export type DemoPerson = {
+  id: string;
+  name: string;
+  avatarUri: string;
+  tint: string;
+  /** "1968.03.05" */
+  birthDate: string;
+  signName: string;
+  phone: Point;
+  desktop: Point;
+};
 
 type Sheet = { kind: "reveal" } | { kind: "product"; code: string; who: string } | { kind: "pair"; who: string };
 
@@ -78,6 +88,8 @@ function Glyph({ icon, className }: { icon: string; className?: string }) {
 }
 
 const loginTo = (next: string) => `/login?${new URLSearchParams({ next })}`;
+const linkKey = (l: DemoLink) => `${l.a}|${l.b}`;
+const INFO_W = 280;
 
 /**
  * The signed-out landing's first screen, in the same planet-system look as the signed-in home:
@@ -88,12 +100,14 @@ const loginTo = (next: string) => `/login?${new URLSearchParams({ next })}`;
 export function LandingPlanets({
   appName,
   people,
+  links,
   products,
   synastry,
   birthdayPrice,
 }: {
   appName: string;
   people: DemoPerson[];
+  links: readonly DemoLink[];
   products: LandingProduct[];
   synastry: { price: number } | null;
   birthdayPrice: number;
@@ -103,6 +117,7 @@ export function LandingPlanets({
   const [places, setPlaces] = useState<Record<string, Point>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [intro, setIntro] = useState(true);
   const [drag, setDragState] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
@@ -125,21 +140,21 @@ export function LandingPlanets({
   const k = size ? layoutScale(layout, size.w, size.h) : 1;
   const radius = (i: number) => layout.sizes[Math.min(i, layout.sizes.length - 1)] * k;
 
-  // A fresh random sky on every visit; re-scattered when the screen changes shape.
+  // Fixed seats (linked people side by side), kept on stage; reset when the screen changes shape.
   const sizeKey = size ? `${layout === LANDING_DESKTOP}` : "";
   useEffect(() => {
     if (!size) return;
-    const me = { ...toPx(layout.me, size.w, size.h), r: layout.me.r * k };
+    const desktop = layout === LANDING_DESKTOP;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- places depend on the measured screen
     setPlaces(
-      scatter(
-        people.map((p, i) => ({ id: p.id, r: radius(i) })),
-        [me, ...captionBodies(me, 210)],
-        size.w,
-        size.h,
-        layout,
+      Object.fromEntries(
+        people.map((p, i) => {
+          const at = toPx(desktop ? p.desktop : p.phone, size.w, size.h);
+          return [p.id, toPct(clampToStage(at, radius(i), size.w, size.h, layout), size.w, size.h)];
+        }),
       ),
     );
+    setInfo(null);
     const id = window.setTimeout(() => setIntro(false), 1600);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- scatter once per screen shape
@@ -155,7 +170,14 @@ export function LandingPlanets({
       aria-label={tp.label}
       className="relative h-dvh min-h-[560px] touch-pan-y overflow-hidden bg-tint-1 select-none"
     >
-      <div aria-hidden className="absolute inset-0" onClick={() => setSelected(null)} />
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        onClick={() => {
+          setSelected(null);
+          setInfo(null);
+        }}
+      />
       {STARS.map((s) => (
         <span
           key={`${s.x}-${s.y}`}
@@ -295,6 +317,7 @@ export function LandingPlanets({
       const d = dragRef.current;
       if (!d) return;
       setDrag(null);
+      setInfo(null);
       if (!d.moved) return setSelected((cur) => (cur === d.id ? null : d.id));
       if (d.target) return setSheet({ kind: "pair", who: d.id });
       const r = home.get(d.id)!.r;
@@ -316,6 +339,96 @@ export function LandingPlanets({
       );
     };
 
+    const personOf = (id: string) => people.find((p) => p.id === id)!;
+
+    function renderLinks() {
+      return links.map((l) => {
+        const a = home.get(l.a);
+        const b = home.get(l.b);
+        if (!a || !b) return null;
+        const line = rimLine(a, b);
+        const mid = chainPoint(a, b);
+        const key = linkKey(l);
+        const open = info === key;
+        const level = compatLevel(l.score);
+        const left = Math.min(w - INFO_W / 2 - 8, Math.max(INFO_W / 2 + 8, mid.x));
+        const below = mid.y < h * 0.55;
+        return (
+          <div key={key}>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute planet-line planet-line-ghost opacity-60"
+              style={{ left: line.x, top: line.y - 1, width: line.length, transform: `rotate(${line.angle}deg)` }}
+            />
+            <button
+              type="button"
+              aria-label={tp.linkAria(personOf(l.a).name, personOf(l.b).name, l.score)}
+              aria-expanded={open}
+              onClick={() => {
+                setSelected(null);
+                setInfo(open ? null : key);
+              }}
+              className="group/l absolute z-20 flex size-11 -translate-1/2 items-center justify-center"
+              style={{ left: mid.x, top: mid.y }}
+            >
+              <span
+                className={cn(
+                  `rounded-full px-2.5 py-1 text-xs font-bold shadow-[0_4px_12px_rgb(0_0_0/0.12)] transition-[scale] duration-300 ${SPRING} group-hover/l:scale-110`,
+                  open ? "bg-fg text-bg" : "bg-surface text-highlight",
+                )}
+              >
+                {l.score}%
+              </span>
+            </button>
+            {open && (
+              <div
+                role="dialog"
+                aria-label={tp.levels[level]}
+                className={cn(
+                  "absolute z-40 flex -translate-x-1/2 animate-pop-in flex-col gap-3 rounded-3xl bg-surface p-4 text-left shadow-[0_18px_44px_rgb(0_0_0/0.18)]",
+                  below ? "mt-6" : "-translate-y-full -mt-6",
+                )}
+                style={{ left, top: mid.y, width: INFO_W }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="rounded-full bg-subtle px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                    {tp.example}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={tp.close}
+                    onClick={() => setInfo(null)}
+                    className="-mt-2 -mr-2 flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-subtle"
+                  >
+                    <X className="size-4" aria-hidden />
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <ScoreRing value={l.score} size={56} />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="text-sm font-semibold">{tp.levels[level]}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {personOf(l.a).name} · {personOf(l.a).signName} × {personOf(l.b).name} · {personOf(l.b).signName}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed">{tp.linkTexts[l.text]}</p>
+                {synastry && (
+                  <Link
+                    href={loginTo("/buy/synastry")}
+                    className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-fg px-4 text-sm font-semibold text-bg"
+                  >
+                    {tp.checkYours} · {formatMnt(synastry.price)}
+                    <ArrowRight className="size-4" aria-hidden />
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      });
+    }
+
     const selBody = sel && sel !== YOU ? pos(sel) : null;
     const ghost = drag?.moved && drag.target ? pos(drag.id) : null;
 
@@ -331,6 +444,8 @@ export function LandingPlanets({
           className="pointer-events-none absolute -translate-1/2 rounded-full border border-highlight/15"
           style={{ left: me.x, top: me.y, width: me.r * 7.8, height: me.r * 7.8 }}
         />
+
+        {!sel && !drag?.moved && renderLinks()}
 
         {(selBody || ghost) &&
           (() => {
@@ -400,8 +515,11 @@ export function LandingPlanets({
                       {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
                       <img src={p.avatarUri} alt="" draggable={false} className="size-full" />
                     </span>
-                    <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 -translate-x-1/2 text-[13px] font-semibold whitespace-nowrap lg:text-[15px]">
-                      {p.name}
+                    <span className="pointer-events-none absolute top-full left-1/2 mt-1 flex -translate-x-1/2 flex-col items-center rounded-xl bg-tint-1/85 px-2 py-0.5 leading-tight whitespace-nowrap">
+                      <span className="text-[13px] font-semibold lg:text-[15px]">{p.name}</span>
+                      <span className="text-[11px] text-muted-foreground lg:text-xs">
+                        {p.signName} · {p.birthDate}
+                      </span>
                     </span>
                   </button>
                 </div>
@@ -417,6 +535,7 @@ export function LandingPlanets({
             aria-label={tp.youAria}
             onClick={() => {
               setSelected(null);
+              setInfo(null);
               setSheet({ kind: "reveal" });
             }}
             className="group/me block size-full rounded-full motion-safe:animate-breathe"
