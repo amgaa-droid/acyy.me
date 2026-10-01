@@ -50,7 +50,7 @@ export type SeedProduct = {
 
 const GENERAL: SeedField = { code: "general", nameMn: "Ерөнхий", kind: "text", required: true };
 
-/** One sign-keyed part with a single prose field — the shape of sign/sex/dating. */
+/** One sign-keyed part with a single prose field — the shape of sign/dating. */
 const signPart = (nameMn: string): SeedPart => ({
   code: "main",
   nameMn,
@@ -102,6 +102,8 @@ export const PRODUCTS: SeedProduct[] = [
     icon: "sparkles",
     tint: "tint-1",
     parts: [signPart("Орд")],
+      },
+    ],
   },
   {
     code: "love",
@@ -139,7 +141,19 @@ export const PRODUCTS: SeedProduct[] = [
     adultOnly: true,
     icon: "flame",
     tint: "dark",
-    parts: [signPart("Орд")],
+    // Sub-sections added by migration 0011.
+    parts: [
+      {
+        code: "main",
+        nameMn: "Орд",
+        keyType: "sign",
+        fields: [
+          GENERAL,
+          { code: "turn_ons", nameMn: "Хүслийг нь өдөөдөг зүйлс", kind: "text" },
+          { code: "turn_offs", nameMn: "Хүслийг нь унтраадаг зүйлс", kind: "text" },
+        ],
+      },
+    ],
   },
   {
     code: "dating",
