@@ -681,7 +681,7 @@ export function PlanetSystem({
           const body = (
             <>
               {e.on ? (
-                <Link2 className="size-[52%]" strokeWidth={2.4} aria-hidden />
+                <Link2 className="size-[38%] lg:size-[52%]" strokeWidth={2.4} aria-hidden />
               ) : (
                 <Lock className="size-[44%]" strokeWidth={2} aria-hidden />
               )}
