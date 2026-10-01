@@ -3,8 +3,8 @@ import type { KeyType } from "./domain";
 const GENDER_LABELS: Record<string, string> = { male: "Эр", female: "Эм" };
 
 /**
- * Human label for a content key: "aries|leo" → "Хуц × Арслан", "3|12" → "3 × 12",
- * "leo" → "Арслан", "leo|female" → "Арслан · Эм", ordered "aries|leo" → "Хуц → Арслан".
+ * Human label for a content key: "aries|leo" → "Хонь × Арслан", "3|12" → "3 × 12",
+ * "leo" → "Арслан", "leo|female" → "Арслан · Эм", ordered "aries|leo" → "Хонь → Арслан".
  */
 export function displayKey(
   key: string,

@@ -500,7 +500,7 @@ describe("sign pair → ordered sign pair", () => {
       product: "pairs",
       section: "main",
       key: "aries|leo",
-      title: "Хуц × Арслан",
+      title: "Хонь × Арслан",
       fields: { general: "Текст." },
       score: "",
       status: "published",

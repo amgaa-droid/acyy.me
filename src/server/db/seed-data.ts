@@ -5,7 +5,7 @@ import type { ProductDef } from "@/server/products";
 /** Initial reference data (SPEC §2.4, §3). Editable later from the admin panel. */
 
 export const ZODIAC_SIGNS = [
-  { code: "aries", nameMn: "Хуц", startMd: "03-21", endMd: "04-19" },
+  { code: "aries", nameMn: "Хонь", startMd: "03-21", endMd: "04-19" },
   { code: "taurus", nameMn: "Үхэр", startMd: "04-20", endMd: "05-20" },
   { code: "gemini", nameMn: "Ихэр", startMd: "05-21", endMd: "06-20" },
   { code: "cancer", nameMn: "Мэлхий", startMd: "06-21", endMd: "07-22" },

@@ -103,9 +103,9 @@ describe("validateImport — key types", () => {
     const report = validateImport(
       custom.career,
       [
-        r({ sign: "Хуц", gender: "Эр", title: "А", general: "Текст." }),
-        r({ sign: "Хуц", gender: "female", title: "Б", general: "Текст." }),
-        r({ sign: "Хуц", gender: "?", title: "В", general: "Текст." }),
+        r({ sign: "Хонь", gender: "Эр", title: "А", general: "Текст." }),
+        r({ sign: "Хонь", gender: "female", title: "Б", general: "Текст." }),
+        r({ sign: "Хонь", gender: "?", title: "В", general: "Текст." }),
       ],
       refs,
     );
@@ -119,8 +119,8 @@ describe("validateImport — key types", () => {
     const report = validateImport(
       custom.crush,
       [
-        r({ sign_a: "Хуц", sign_b: "Арслан", title: "А", general: "Текст." }),
-        r({ sign_a: "Арслан", sign_b: "Хуц", title: "Б", general: "Текст." }),
+        r({ sign_a: "Хонь", sign_b: "Арслан", title: "А", general: "Текст." }),
+        r({ sign_a: "Арслан", sign_b: "Хонь", title: "Б", general: "Текст." }),
       ],
       refs,
     );
@@ -132,7 +132,7 @@ describe("validateImport — key types", () => {
   it("stores each sub-section column as its field", () => {
     const report = validateImport(
       custom.career,
-      [r({ sign: "Хуц", gender: "Эр", title: "А", general: " Текст. ", strengths: "• а\n• б" })],
+      [r({ sign: "Хонь", gender: "Эр", title: "А", general: " Текст. ", strengths: "• а\n• б" })],
       refs,
     );
     expect(report.entries[0].fields).toEqual({ general: "Текст.", strengths: "• а\n• б" });
@@ -177,7 +177,7 @@ describe("validateImport — content", () => {
   });
 
   it("lists missing keys without failing (partial import)", () => {
-    const report = validateImport(IMPORT_KINDS.sign, [r({ sign: "Хуц", ...text })], refs);
+    const report = validateImport(IMPORT_KINDS.sign, [r({ sign: "Хонь", ...text })], refs);
     expect(report.ok).toBe(true);
     expect(report.missing).toHaveLength(11);
     expect(report.missing).not.toContain("aries");
@@ -187,10 +187,10 @@ describe("validateImport — content", () => {
     const report = validateImport(
       IMPORT_KINDS["synastry.sign_pair"],
       [
-        r({ sign_a: "Хуц", sign_b: "Могой", ...text }),
-        r({ sign_a: "Хуц", sign_b: "Үхэр", title: "", body: "" }),
-        r({ sign_a: "Хуц", sign_b: "Ихэр", ...text, score: "101" }),
-        r({ sign_a: "Хуц", sign_b: "Мэлхий", ...text, score: "75%" }),
+        r({ sign_a: "Хонь", sign_b: "Могой", ...text }),
+        r({ sign_a: "Хонь", sign_b: "Үхэр", title: "", body: "" }),
+        r({ sign_a: "Хонь", sign_b: "Ихэр", ...text, score: "101" }),
+        r({ sign_a: "Хонь", sign_b: "Мэлхий", ...text, score: "75%" }),
       ],
       refs,
     );

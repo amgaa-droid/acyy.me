@@ -71,6 +71,13 @@
       "when": 1790816511328,
       "tag": "0009_love_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790818646678,
+      "tag": "0010_aries_name_mn",
+      "breakpoints": true
     }
   ]
 }

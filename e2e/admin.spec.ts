@@ -56,7 +56,7 @@ test("import: template → fill → dry-run report → import", async ({ page })
   const wb = await downloadTemplate(page, "dating");
   const ws = wb.worksheets[0];
   expect(ws.rowCount).toBe(13);
-  expect(ws.getRow(2).getCell(1).value).toBe("Хуц");
+  expect(ws.getRow(2).getCell(1).value).toBe("Хонь");
   ws.eachRow((row, i) => {
     if (i === 1) return;
     row.getCell(2).value = `E2E гарчиг ${i}`;
