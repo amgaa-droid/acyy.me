@@ -25,10 +25,12 @@ pnpm db:generate              # схемээс migration үүсгэх
 pnpm db:migrate
 pnpm db:seed                  # орд, 48 үе, бүтээгдэхүүн, тестийн хэрэглэгчид, placeholder текст
 pnpm db:seed:demo [--reset]   # dev: 90 хоногийн demo хэрэглэгч/цэнэглэлт/худалдан авалт (admin самбарт)
+pnpm db:clean:e2e             # dev: E2E-ийн үүсгэсэн *@test.local хэрэглэгчдийг устгана (seed-ийн 4 данс үлдэнэ)
 pnpm lint && pnpm typecheck
 pnpm test                     # Vitest
 pnpm test:e2e                 # Playwright
 ```
+PGlite (`db:local`) нь бүх холболтыг нэг session-д нийлүүлдэг тул `db:*` script-үүдийг dev server зогссон үед ажиллуулна.
 Гар утсаар тестлэх: `pnpm dev -H 0.0.0.0` → `http://<LAN-IP>:3000`. In-app browser тест: `cloudflared tunnel --url http://localhost:3000`.
 
 ## Хатуу дүрмүүд (зөрчихгүй)

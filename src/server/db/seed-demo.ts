@@ -1,12 +1,13 @@
 /**
  * Demo activity for the admin dashboard — DEV ONLY: `pnpm db:seed:demo [--reset] [--users=80] [--days=90]`.
  * See src/server/db/demo-activity.ts. Refuses to run in production, and on PGlite while the dev
- * server is running (see assertExclusivePglite).
+ * server is running (see assertNoDevServerOnPglite).
  */
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import { demoUserCount, resetDemoActivity, seedDemoActivity } from "./demo-activity";
+import { assertNoDevServerOnPglite } from "./dev-cleanup";
 import * as schema from "./schema";
 import type { AppDb } from "./types";
 
@@ -24,32 +25,8 @@ const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`
 const client = postgres(url, { max: 1, onnotice: () => {} });
 const db = drizzle(client, { schema, casing: "snake_case" }) as unknown as AppDb;
 
-/**
- * `pnpm db:local` (pglite-socket) multiplexes every client onto ONE Postgres session, so another
- * client's queries interleave with ours mid-statement ("bind message supplies 8 parameters, but
- * prepared statement requires 1") or land inside our transactions. Refuse while the dev server
- * — the usual other client — is up.
- */
-async function assertExclusivePglite() {
-  const [{ version }] = await client`select version()`;
-  if (!String(version).includes("PGlite") || process.argv.includes("--force")) return;
-  const port = process.env.PORT ?? "3000";
-  const up = await fetch(`http://localhost:${port}/`, { signal: AbortSignal.timeout(1500) }).then(
-    () => true,
-    () => false,
-  );
-  if (up) {
-    console.error(
-      `The dev server on :${port} shares the PGlite database (one session for all clients), so ` +
-        "seeding now would interleave with its queries. Stop it, run this again, then restart " +
-        "`pnpm dev`. (--force skips this check.)",
-    );
-    process.exit(2);
-  }
-}
-
 async function main() {
-  await assertExclusivePglite();
+  await assertNoDevServerOnPglite(db);
   if (process.argv.includes("--reset")) {
     console.log(`Removed ${await resetDemoActivity(db)} demo users.`);
   } else if (await demoUserCount(db)) {

@@ -17,6 +17,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/server/db/seed.ts",
     "db:seed:demo": "tsx src/server/db/seed-demo.ts",
+    "db:clean:e2e": "tsx src/server/db/clean-e2e.ts",
     "db:studio": "drizzle-kit studio",
     "db:local": "pglite-server --db=.pglite --host=127.0.0.1 --port=54320 --max-connections=4"
   },

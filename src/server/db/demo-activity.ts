@@ -1,4 +1,4 @@
-import { and, eq, inArray, like } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 
 import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
 import type { Relation } from "@/lib/domain";
@@ -11,18 +11,8 @@ import { listActivePackages, type PackageOption } from "@/server/topup-packages"
 import { createTopup, settleTopup } from "@/server/topups";
 import { getBalance } from "@/server/wallet";
 
-import {
-  account,
-  invitations,
-  persons,
-  previewViews,
-  purchases,
-  session,
-  topups,
-  user,
-  walletEntries,
-  wallets,
-} from "./schema";
+import { deleteUsersAndData } from "./dev-cleanup";
+import { persons, purchases, topups, user, walletEntries } from "./schema";
 import type { AppDb } from "./types";
 
 /**
@@ -285,21 +275,9 @@ export async function seedDemoActivity(db: AppDb, opts: DemoOptions = {}): Promi
 
 /** Removes every demo user and everything they own (dev only). */
 export async function resetDemoActivity(db: AppDb): Promise<number> {
-  const ids = (
-    await db.select({ id: user.id }).from(user).where(like(user.email, DEMO_EMAIL_LIKE))
-  ).map((u) => u.id);
-  if (!ids.length) return 0;
-  await db.transaction(async (tx) => {
-    await tx.delete(purchases).where(inArray(purchases.userId, ids));
-    await tx.delete(previewViews).where(inArray(previewViews.userId, ids));
-    await tx.delete(walletEntries).where(inArray(walletEntries.userId, ids));
-    await tx.delete(wallets).where(inArray(wallets.userId, ids));
-    await tx.delete(topups).where(inArray(topups.userId, ids));
-    await tx.delete(invitations).where(inArray(invitations.inviterUserId, ids));
-    await tx.delete(persons).where(inArray(persons.ownerUserId, ids));
-    await tx.delete(session).where(inArray(session.userId, ids));
-    await tx.delete(account).where(inArray(account.userId, ids));
-    await tx.delete(user).where(inArray(user.id, ids));
-  });
-  return ids.length;
+  const rows = await db.select({ id: user.id }).from(user).where(like(user.email, DEMO_EMAIL_LIKE));
+  return deleteUsersAndData(
+    db,
+    rows.map((u) => u.id),
+  );
 }
