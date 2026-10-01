@@ -20,6 +20,8 @@ test("regular users and signed-out visitors can't see the admin", async ({ page 
   await loginWithPassword(page, "user@test.local");
   expect((await page.goto("/admin"))?.status()).toBe(404);
   expect((await page.goto("/admin/import"))?.status()).toBe(404);
+  expect((await page.goto("/admin/landing"))?.status()).toBe(404);
+  expect((await page.goto("/preview/landing"))?.status()).toBe(404);
   expect((await page.request.get("/api/admin/templates/sign")).status()).toBe(404);
 });
 
@@ -101,4 +103,52 @@ test("ranges editor refuses a gap", async ({ page }) => {
   await expect(page.getByText("Цоорхой: 08-21, 08-22")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("textbox", { name: "Арслан Дуусах (MM-DD)" })).toHaveValue("08-22");
+});
+
+test("landing CMS: edit → save draft → preview → publish → live, then back to defaults", async ({
+  page,
+  browser,
+}) => {
+  page.on("dialog", (d) => d.accept());
+  await loginWithPassword(page, "editor@test.local", "/admin/landing");
+  await expect(page.getByRole("heading", { name: "Нүүр хуудас" })).toBeVisible();
+
+  const hero = page.locator("details").filter({ has: page.getByText("Эхний дэлгэц", { exact: true }) });
+  await hero.locator("summary").click();
+  const title = hero.getByLabel("Гарчиг", { exact: true });
+  const marker = `E2E гарчиг ${Date.now()}`;
+
+  // Invalid content is refused with the field marked.
+  await title.fill("");
+  await page.getByRole("button", { name: "Ноорог хадгалах" }).click();
+  await expect(page.getByText("Зарим талбар буруу")).toBeVisible();
+  await expect(hero.getByText("Хоосон байж болохгүй")).toBeVisible();
+
+  await title.fill(marker);
+  await page.getByRole("button", { name: "Ноорог хадгалах" }).click();
+  await expect(page.getByText("Хадгаллаа")).toBeVisible();
+
+  // The draft is in the preview but not on the live page yet.
+  const preview = await page.context().newPage();
+  await preview.goto("/preview/landing");
+  await expect(preview.getByRole("heading", { level: 1 })).toHaveText(marker);
+  const visitor = await browser.newPage();
+  await visitor.goto("/");
+  await expect(visitor.getByRole("heading", { level: 1 })).not.toHaveText(marker);
+
+  await page.getByRole("button", { name: "Нийтлэх" }).click();
+  await expect(page.getByText(/нийтлэгдлээ/)).toBeVisible();
+  await visitor.reload();
+  await expect(visitor.getByRole("heading", { level: 1 })).toHaveText(marker);
+
+  // Back to the built-in copy so other runs start clean.
+  await page.reload();
+  await page.locator("summary", { hasText: "⋯" }).click();
+  await page.getByRole("button", { name: "Анхны текст рүү" }).click();
+  await expect(page.getByText(/Ноорог хадгалсан/)).toBeVisible();
+  await page.getByRole("button", { name: "Нийтлэх" }).click();
+  await expect(page.getByText(/нийтлэгдлээ/)).toBeVisible();
+  await visitor.reload();
+  await expect(visitor.getByRole("heading", { level: 1 })).not.toHaveText(marker);
+  await visitor.close();
 });

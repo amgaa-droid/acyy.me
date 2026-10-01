@@ -514,3 +514,33 @@ export const auditLogs = pgTable(
   },
   (t) => [index("audit_logs_entity_idx").on(t.entity, t.entityId)],
 );
+
+// ---------- Site pages (admin CMS) ----------
+
+/**
+ * The one working draft of an editable page (e.g. "landing"). `revision` grows on every save so
+ * two admins editing at once can't silently overwrite each other (optimistic concurrency).
+ */
+export const pageDrafts = pgTable("page_drafts", {
+  page: text().primaryKey(),
+  content: jsonb().notNull(),
+  revision: integer().notNull().default(1),
+  baseVersion: integer(),
+  updatedBy: uuid().references(() => user.id, { onDelete: "set null" }),
+  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Append-only published versions; the highest `version` per page is live. */
+export const pageVersions = pgTable(
+  "page_versions",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    page: text().notNull(),
+    version: integer().notNull(),
+    content: jsonb().notNull(),
+    note: text(),
+    publishedBy: uuid().references(() => user.id, { onDelete: "set null" }),
+    publishedAt: createdAt(),
+  },
+  (t) => [unique("page_versions_page_version_uq").on(t.page, t.version)],
+);
