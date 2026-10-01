@@ -134,6 +134,17 @@ export function scatter(
   return placed;
 }
 
+/**
+ * Circles covering the name pill under "me", so scattered planets keep clear of it too.
+ * `width` is the pill's width in px.
+ */
+export function captionBodies(me: Body, width: number): Body[] {
+  const r = 22;
+  const y = me.y + me.r + 8;
+  const n = Math.max(1, Math.ceil(width / (2 * r)));
+  return Array.from({ length: n }, (_, i) => ({ x: me.x - width / 2 + r + (i * (width - 2 * r)) / Math.max(1, n - 1), y, r }));
+}
+
 // ── Seating ─────────────────────────────────────────────────────────────────────────────────
 
 /** Who orbits (the rest wait in "+N"), and when each person was last touched. */

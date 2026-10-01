@@ -6,6 +6,7 @@ import {
   PHONE_LAYOUT,
   arrangeLinks,
   bringIn,
+  captionBodies,
   chainPoint,
   clampToStage,
   dropTarget,
@@ -72,6 +73,15 @@ describe("scatter", () => {
     expect(scatter(items, [me], w, h, PHONE_LAYOUT, seeded(1))).not.toEqual(
       scatter(items, [me], w, h, PHONE_LAYOUT, seeded(2)),
     );
+  });
+});
+
+describe("captionBodies", () => {
+  it("covers the pill under me from end to end", () => {
+    const bodies = captionBodies({ x: 100, y: 100, r: 50 }, 176);
+    expect(bodies[0].x - bodies[0].r).toBeCloseTo(12);
+    expect(bodies.at(-1)!.x + bodies.at(-1)!.r).toBeCloseTo(188);
+    expect(bodies.every((b) => b.y === 158)).toBe(true);
   });
 });
 

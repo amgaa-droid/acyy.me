@@ -23,6 +23,7 @@
  *   --border      hairlines              --subtle       quiet fill inside a surface
  *   --highlight   accent (labels, bright star)   --highlight-fg
  *   --tint-1..3   pastel tiles           --ring-2       second score ring
+ *   --pair        a bought pair reading (coral in cosmic, ink in white)
  *   --nav-*       floating tab bar / sidebar panel
  */
 :root,
@@ -39,6 +40,7 @@
   --tint-2: #f9e0db;
   --tint-3: #e9ecdf;
   --ring-2: #d9705f;
+  --pair: var(--ring-2);
   --nav-bg: #1d1b3f;
   --nav-fg: #bdb6d8;
   --nav-active-bg: #ffffff;
@@ -59,6 +61,7 @@
   --tint-2: #e2e2e2;
   --tint-3: #f0f0f0;
   --ring-2: #8a8a8a;
+  --pair: var(--fg);
   --nav-bg: #0a0a0a;
   --nav-fg: #a3a3a3;
   --nav-active-bg: #ffffff;
@@ -81,6 +84,7 @@
   --tint-2: #3b2440;
   --tint-3: #23332c;
   --ring-2: #f0a192;
+  --pair: var(--ring-2);
   --nav-bg: #eeebfb;
   --nav-fg: #6b6880;
   --nav-active-bg: #111027;
@@ -103,6 +107,7 @@
     --tint-2: #3b2440;
     --tint-3: #23332c;
     --ring-2: #f0a192;
+    --pair: var(--ring-2);
     --nav-bg: #eeebfb;
     --nav-fg: #6b6880;
     --nav-active-bg: #111027;
@@ -123,6 +128,7 @@
     --tint-2: #2e2e2e;
     --tint-3: #1f1f1f;
     --ring-2: #8a8a8a;
+    --pair: var(--fg);
     --nav-bg: #f5f5f5;
     --nav-fg: #6b6b6b;
     --nav-active-bg: #0a0a0a;
@@ -166,6 +172,7 @@
   --color-tint-2: var(--tint-2);
   --color-tint-3: var(--tint-3);
   --color-ring-2: var(--ring-2);
+  --color-pair: var(--pair);
   --color-nav: var(--nav-bg);
   --color-nav-fg: var(--nav-fg);
   --color-nav-active: var(--nav-active-bg);
@@ -330,7 +337,7 @@
   }
   @keyframes ping-soft {
     0% {
-      box-shadow: 0 0 0 0 color-mix(in oklab, var(--ring-2) 45%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--pair) 45%, transparent);
     }
     100% {
       box-shadow: 0 0 0 10px transparent;
@@ -350,7 +357,7 @@
 }
 @utility planet-line-on {
   height: 2.5px;
-  background: repeating-linear-gradient(90deg, var(--ring-2) 0 5px, transparent 5px 10px);
+  background: repeating-linear-gradient(90deg, var(--pair) 0 5px, transparent 5px 10px);
 }
 @utility planet-line-ghost {
   height: 3px;

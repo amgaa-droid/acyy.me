@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2, Menu, Plus, Sparkles, Wallet, X } from "lucide-react";
+import { Link2, Lock, Menu, Plus, Sparkles, UserRound, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -25,6 +25,7 @@ import {
   arrangeLinks,
   bodyPx,
   bringIn,
+  captionBodies,
   chainPoint,
   clampToStage,
   dropTarget,
@@ -191,8 +192,10 @@ export function PlanetSystem({
     const mine = places[layoutKey];
     const missing = seating.seats.filter((id) => !mine[id]);
     if (missing.length === 0) return;
+    const meBody = bodyPx(layout.me, size.w, size.h, k);
     const taken: Body[] = [
-      bodyPx(layout.me, size.w, size.h, k),
+      meBody,
+      ...captionBodies(meBody, 180),
       bodyPx(layout.more, size.w, size.h, k),
       bodyPx(layout.add, size.w, size.h, k),
       ...seating.seats
@@ -363,10 +366,11 @@ export function PlanetSystem({
                           {l.purchaseId ? t.bought : t.notBought}
                         </span>
                       </span>
-                      <Link2
-                        className={cn("size-5", l.purchaseId ? "text-ring-2" : "text-muted-foreground")}
-                        aria-hidden
-                      />
+                      {l.purchaseId ? (
+                        <Link2 className="size-5 text-pair" aria-hidden />
+                      ) : (
+                        <Lock className="size-5 text-muted-foreground" aria-hidden />
+                      )}
                     </Link>
                   </li>
                 );
@@ -586,13 +590,33 @@ export function PlanetSystem({
     const ringR = selBody ? selBody.r + layout.ring.gap * Math.min(1, k) : 0;
     const ringEdge = ringButton / 2 + 8;
     const angles = selBody
-      ? fitRing(selBody, ringR, ringAngles(selBody, center, selReadings.length, sel === ME, layout.ring.step), {
+      ? fitRing(selBody, ringR, ringAngles(selBody, center, selReadings.length + 1, sel === ME, layout.ring.step), {
           left: ringEdge,
           top: ringEdge + 64,
           right: w - ringEdge,
           bottom: h - ringEdge - 40,
         })
       : [];
+
+    /**
+     * A ring button's name: just outside the button, straight away from the planet, so
+     * neighbours' names point different ways; kept on screen.
+     */
+    const ringLabel = (a: number, x: number, y: number, text: string) => {
+      const labelW = Math.min(LABEL_W, text.length * 6.6 + 22);
+      const labelH = 22;
+      const reach = ringButton / 2 + 6;
+      const cx = Math.min(w - 8 - labelW / 2, Math.max(8 + labelW / 2, x + Math.cos(a) * (reach + labelW / 2)));
+      const cy = y + Math.sin(a) * (reach + labelH / 2);
+      return (
+        <span
+          className="pointer-events-none absolute max-w-28 -translate-1/2 truncate rounded-full bg-surface px-2.5 py-1 text-xs leading-none font-semibold whitespace-nowrap shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+          style={{ left: `calc(50% + ${cx - x}px)`, top: `calc(50% + ${cy - y}px)` }}
+        >
+          {text}
+        </span>
+      );
+    };
 
     return (
       <>
@@ -627,20 +651,22 @@ export function PlanetSystem({
         {edges.map((e) => {
           const p = chainPoint(e.a, e.b, e.at);
           const cls = cn(
-            "absolute z-10 flex -translate-1/2 animate-pop-in items-center justify-center rounded-full border-[1.5px] bg-surface transition-[scale] duration-300 hover:scale-120",
-            e.on ? "border-ring-2 text-ring-2 motion-safe:animate-ping-soft" : "border-muted-foreground/40 text-muted-foreground/70",
+            "absolute z-10 flex -translate-1/2 animate-pop-in items-center justify-center rounded-full border-[1.5px] transition-[scale] duration-300 hover:scale-120",
+            // Bought: filled with the pair colour, chain icon. Not yet: pale, padlock, still.
+            e.on
+              ? "border-pair bg-pair text-bg motion-safe:animate-ping-soft"
+              : "border-muted-foreground/40 bg-surface text-muted-foreground",
           );
           const style = { left: p.x, top: p.y, width: chainSize, height: chainSize };
           const body = (
             <>
-              <Link2 className="size-[48%]" strokeWidth={2} aria-hidden />
+              {e.on ? (
+                <Link2 className="size-[48%]" strokeWidth={2} aria-hidden />
+              ) : (
+                <Lock className="size-[44%]" strokeWidth={2} aria-hidden />
+              )}
               {e.count !== undefined && (
-                <span
-                  className={cn(
-                    "absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[11px] font-bold text-bg",
-                    e.on ? "bg-ring-2" : "bg-muted-foreground",
-                  )}
-                >
+                <span className="absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-fg px-1 text-[11px] font-bold text-bg">
                   {e.count}
                 </span>
               )}
@@ -778,28 +804,41 @@ export function PlanetSystem({
           </div>
         </div>
 
-        {/* Reading buttons */}
+        {/* Info button + reading buttons around the selected planet */}
+        {selBody &&
+          (() => {
+            const a = angles[0];
+            const x = Math.min(w - ringEdge, Math.max(ringEdge, selBody.x + Math.cos(a) * ringR));
+            const y = Math.min(h - ringEdge - 40, Math.max(ringEdge + 64, selBody.y + Math.sin(a) * ringR));
+            const owner = sel === ME ? data.me.name : (selPerson?.name ?? "");
+            const id = sel === ME ? data.me.id : sel!;
+            return (
+              <Link
+                key={`${sel}-info`}
+                href={`/people/${id}`}
+                scroll={false}
+                aria-label={t.infoAria(owner)}
+                className="group/r absolute z-30 -translate-1/2 animate-pop-in"
+                style={{ left: x, top: y, width: ringButton, height: ringButton }}
+              >
+                <span
+                  className={`flex size-full items-center justify-center rounded-full border-2 border-fg bg-fg text-bg shadow-[0_8px_20px_rgb(0_0_0/0.16)] transition-[scale] duration-300 ${SPRING} group-hover/r:scale-112`}
+                >
+                  <UserRound className="size-[44%]" strokeWidth={1.8} aria-hidden />
+                </span>
+                {ringLabel(a, x, y, t.info)}
+              </Link>
+            );
+          })()}
         {selBody &&
           selReadings.map((r, i) => {
-            const a = angles[i];
+            const a = angles[i + 1];
             // The fan is already turned to fit; clamping only guards a screen too small for it.
             const x = Math.min(w - ringEdge, Math.max(ringEdge, selBody.x + Math.cos(a) * ringR));
             const y = Math.min(h - ringEdge - 40, Math.max(ringEdge + 64, selBody.y + Math.sin(a) * ringR));
             const product = data.products[r.code];
             const owner = sel === ME ? data.me.name : (selPerson?.name ?? "");
             const name = t.short[r.code] ?? product?.name.replace(/ зурхай$/u, "") ?? r.code;
-            // The name sits just outside its button, straight away from the planet, so
-            // neighbours' names point different ways; kept on screen.
-            const cos = Math.cos(a);
-            const sin = Math.sin(a);
-            const labelW = Math.min(LABEL_W, name.length * 6.6 + 22);
-            const labelH = 22;
-            const reach = ringButton / 2 + 6;
-            const cx = Math.min(
-              w - 8 - labelW / 2,
-              Math.max(8 + labelW / 2, x + cos * (reach + labelW / 2)),
-            );
-            const cy = y + sin * (reach + labelH / 2);
             return (
               <Link
                 key={`${sel}-${r.code}`}
@@ -807,7 +846,7 @@ export function PlanetSystem({
                 scroll={false}
                 aria-label={t.reading(product?.name ?? r.code, owner, !!r.purchaseId)}
                 className="group/r absolute z-30 -translate-1/2 animate-pop-in"
-                style={{ left: x, top: y, width: ringButton, height: ringButton, animationDelay: `${i * 0.05}s` }}
+                style={{ left: x, top: y, width: ringButton, height: ringButton, animationDelay: `${(i + 1) * 0.05}s` }}
               >
                 <span
                   className={cn(
@@ -817,12 +856,7 @@ export function PlanetSystem({
                 >
                   <ProductGlyph icon={product?.icon} className="size-[46%]" />
                 </span>
-                <span
-                  className="pointer-events-none absolute max-w-28 -translate-1/2 truncate rounded-full bg-surface px-2.5 py-1 text-xs leading-none font-semibold whitespace-nowrap shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
-                  style={{ left: `calc(50% + ${cx - x}px)`, top: `calc(50% + ${cy - y}px)` }}
-                >
-                  {name}
-                </span>
+                {ringLabel(a, x, y, name)}
               </Link>
             );
           })}

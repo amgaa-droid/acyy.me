@@ -1,18 +1,18 @@
-import { ArrowRight, Check, ChevronDown, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Avatar } from "@/components/app/avatar";
-import { BrandMark } from "@/components/app/brand-mark";
 import { ConstellationArt } from "@/components/app/constellation";
-import { BirthdayReveal } from "@/components/landing/birthday-reveal";
+import { LandingPlanets } from "@/components/landing/landing-planets";
 import { StickyCta } from "@/components/landing/sticky-cta";
 import { ProductIcon } from "@/components/readings/product-icon";
 import { ScoreRing } from "@/components/readings/score-ring";
 import { APP_NAME } from "@/env";
 import { formatMnt, mn } from "@/i18n/mn";
 import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
+import { avatarDataUri } from "@/lib/avatars";
 import { cn } from "@/lib/utils";
 import { getSession } from "@/server/auth/session";
 import { listActiveProducts } from "@/server/catalog";
@@ -23,6 +23,15 @@ export const metadata: Metadata = {
   title: { absolute: `${APP_NAME} — ${mn.landing.hero.title}` },
   description: mn.landing.metaDescription,
 };
+
+/** Example people on the landing's planet system (relation names, no invented personal data). */
+const DEMO_PEOPLE = [
+  { name: "Ээж", tint: "bg-tint-2" },
+  { name: "Хайрт", tint: "bg-tint-1" },
+  { name: "Аав", tint: "bg-tint-3" },
+  { name: "Найз", tint: "bg-tint-3" },
+  { name: "Дүү", tint: "bg-tint-2" },
+];
 
 const loginTo = (next: string) => `/login?${new URLSearchParams({ next })}`;
 
@@ -41,46 +50,32 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-dvh overflow-x-clip bg-bg">
-      {/* ---- Top bar ---- */}
-      <header className="sticky top-0 z-20 bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <BrandMark className="size-7 text-highlight" />
-            <span className="font-heading text-xl font-semibold">{APP_NAME}</span>
-          </Link>
-          <Link
-            href="/login"
-            className="flex h-11 items-center rounded-full bg-surface px-5 text-sm font-semibold"
-          >
-            {t.login}
-          </Link>
-        </div>
-      </header>
+      {/* ---- First screen: the planet system, as in the app ---- */}
+      <LandingPlanets
+        appName={APP_NAME}
+        people={DEMO_PEOPLE.map((d, i) => ({
+          id: `demo-${i}`,
+          name: d.name,
+          tint: d.tint,
+          avatarUri: avatarDataUri(AVATAR_SEEDS[(i * 3 + 1) % AVATAR_SEEDS.length]),
+        }))}
+        products={products
+          .filter((p) => p.personCount === 1)
+          .map((p) => ({
+            code: p.code,
+            name: p.nameMn,
+            icon: p.icon,
+            price: p.price,
+            hook: t.productHooks[p.code] ?? p.description ?? "",
+          }))}
+        synastry={synastry ? { price: synastry.price } : null}
+        birthdayPrice={birthdayPrice}
+      />
 
-      <main className="mx-auto flex max-w-6xl flex-col gap-16 px-4 pb-32 lg:gap-24 lg:px-8 lg:pb-24">
-        {/* ---- Hero + free reveal ---- */}
-        <section
-          id="reveal"
-          className="grid scroll-mt-20 items-center gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-12"
-        >
-          <div className="relative">
-            <ConstellationArt
-              sign="leo"
-              className="pointer-events-none absolute -top-10 -right-16 -z-0 size-64 opacity-30 lg:-top-16 lg:right-0 lg:size-96"
-            />
-            <div className="relative flex flex-col gap-5">
-              <span className="flex w-fit items-center gap-1.5 rounded-full bg-tint-1 px-3 py-1.5 text-xs font-semibold text-highlight">
-                <Sparkles className="size-3.5" aria-hidden /> {t.hero.eyebrow}
-              </span>
-              <h1 className="font-heading text-[42px] leading-[1.02] font-semibold text-balance lg:text-7xl">
-                {t.hero.title}
-              </h1>
-              <p className="max-w-xl text-lg text-muted-foreground lg:text-xl">{t.hero.subtitle}</p>
-            </div>
-          </div>
-          <BirthdayReveal price={birthdayPrice} />
-        </section>
-
+      <main
+        id="more"
+        className="mx-auto flex max-w-6xl scroll-mt-4 flex-col gap-16 px-4 pt-14 pb-32 lg:gap-24 lg:px-8 lg:pt-20 lg:pb-24"
+      >
         {/* ---- Proof strip (real catalogue facts, not invented reviews) ---- */}
         <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
           {t.stats.map((s, i) => (
@@ -315,7 +310,7 @@ export default async function LandingPage() {
       </main>
 
       {/* ---- Mobile sticky CTA ---- */}
-      <StickyCta targetId="reveal" label={t.stickyCta} />
+      <StickyCta targetId="top" label={t.stickyCta} />
     </div>
   );
 }
