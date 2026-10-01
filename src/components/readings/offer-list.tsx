@@ -1,8 +1,9 @@
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight, Lock } from "lucide-react";
 import Link from "next/link";
 
 import { ProductIcon } from "@/components/readings/product-icon";
 import { formatMnt, mn } from "@/i18n/mn";
+import { cn } from "@/lib/utils";
 
 export type Offer = {
   code: string;
@@ -14,32 +15,50 @@ export type Offer = {
   purchaseId: string | null;
 };
 
-/** Products available for one person; bought ones read "Унших". */
+/**
+ * Products available for one person. Bought ones are tinted, keep their own icon colour
+ * and read "Унших"; unbought ones have a grey icon and a padlock.
+ */
 export function OfferList({ personId, offers }: { personId: string; offers: Offer[] }) {
   return (
     <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
       {offers.map((o) => {
-        const href = o.purchaseId ? `/r/${o.purchaseId}` : `/buy/${o.code}?a=${personId}`;
+        const bought = o.purchaseId !== null;
+        const href = bought ? `/r/${o.purchaseId}` : `/buy/${o.code}?a=${personId}`;
         return (
           <li key={o.code}>
             <Link
               href={href}
-              className="flex items-center gap-3 rounded-3xl bg-surface p-3.5 hover:ring-2 hover:ring-border"
+              className={cn(
+                "flex items-center gap-3 rounded-3xl p-3.5",
+                bought
+                  ? "bg-highlight/12 ring-1 ring-highlight/45 ring-inset hover:ring-2"
+                  : "bg-surface hover:ring-2 hover:ring-border",
+              )}
             >
-              <ProductIcon product={o} />
+              <ProductIcon product={o} muted={!bought} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-semibold">
                   {o.code === "synastry" ? mn.people.compare : o.name}
                 </span>
-                <span className="text-sm text-muted-foreground">
-                  {o.purchaseId ? (
-                    <span className="font-semibold text-highlight">{mn.readings.read}</span>
-                  ) : (
-                    formatMnt(o.price)
-                  )}
-                </span>
+                {bought ? (
+                  <span className="flex items-center gap-1 text-sm font-semibold text-highlight">
+                    <Check className="size-3.5" strokeWidth={2.6} aria-hidden />
+                    {mn.readings.read}
+                  </span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">{formatMnt(o.price)}</span>
+                )}
               </span>
-              <ChevronRight className="size-5 text-muted-foreground" aria-hidden />
+              {bought ? (
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-highlight text-highlight-fg">
+                  <ChevronRight className="size-4.5" strokeWidth={2.4} aria-hidden />
+                </span>
+              ) : (
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-subtle text-muted-foreground">
+                  <Lock className="size-4" aria-label={mn.readings.locked} />
+                </span>
+              )}
             </Link>
           </li>
         );

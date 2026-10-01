@@ -292,6 +292,7 @@ export const mn = {
     all: "Бүгд",
     choose: "Сонгох",
     read: "Унших",
+    locked: "Худалдаж аваагүй",
     open: (price: string) => `Нээх · ${price}`,
     pair: "2 хүн",
     single: "1 хүн",
