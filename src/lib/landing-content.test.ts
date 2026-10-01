@@ -63,6 +63,38 @@ describe("landingContentSchema", () => {
   });
 });
 
+describe("example avatars match gender", () => {
+  it("every default avatar suits its person's gender", () => {
+    const res = landingContentSchema.safeParse(LANDING_DEFAULTS);
+    expect(res.success).toBe(true);
+    expect(LANDING_DEFAULTS.demo.people.find((p) => p.id === "mom")?.gender).toBe("female");
+  });
+
+  it("rejects a male drawing on a woman, wherever avatars are chosen", () => {
+    const person = clone();
+    person.demo.people[0] = { ...person.demo.people[0], gender: "female", seed: 1 }; // Birch
+    expect(issuesByPath(landingContentSchema.safeParse(person).error!)).toHaveProperty(
+      "demo.people.0.seed",
+      "avatar_gender",
+    );
+
+    const relation = clone();
+    relation.people.relations[0] = { label: "Ээж", gender: "female", seed: 9 }; // Juniper (beard)
+    expect(landingContentSchema.safeParse(relation).success).toBe(false);
+
+    const pair = clone();
+    pair.synastry.pair[1] = { ...pair.synastry.pair[1], gender: "male", seed: 5 }; // Fern
+    expect(landingContentSchema.safeParse(pair).success).toBe(false);
+  });
+
+  it("accepts a neutral drawing for either gender", () => {
+    const c = clone();
+    c.demo.people[0] = { ...c.demo.people[0], gender: "female", seed: 28 }; // Dawn
+    c.demo.people[1] = { ...c.demo.people[1], gender: "male", seed: 16 }; // Quill
+    expect(landingContentSchema.safeParse(c).success).toBe(true);
+  });
+});
+
 describe("mergeLandingContent", () => {
   it("falls back to defaults for missing or broken input", () => {
     expect(mergeLandingContent(null)).toEqual(LANDING_DEFAULTS);
@@ -92,6 +124,38 @@ describe("mergeLandingContent", () => {
       { key: "stats", visible: true },
     ]);
     expect(merged.layout.map((l) => l.key).sort()).toEqual([...BODY_SECTIONS].sort());
+  });
+});
+
+describe("legacy content (saved before avatars had a gender)", () => {
+  // The shape the first CMS version stored (JSON → untyped on purpose).
+  const legacy = () => {
+    const c = JSON.parse(JSON.stringify(LANDING_DEFAULTS));
+    c.demo.people.forEach((p: Record<string, unknown>, i: number) => {
+      delete p.gender;
+      p.seed = [2, 4, 7, 10, 13][i];
+    });
+    c.people.relations = ["Ээж", "Аав"];
+    c.synastry.pair = ["Та", "Хайрт"];
+    c.layout = [{ key: "stats", visible: false }];
+    return c;
+  };
+
+  it("keeps the admin's edits instead of falling back to defaults", () => {
+    const merged = mergeLandingContent(legacy());
+    // Genders come from the drawings: Cedar is female, Haze (Хайрт) male.
+    expect(merged.demo.people.map((p) => [p.seed, p.gender])).toEqual([
+      [2, "female"],
+      [4, "male"],
+      [7, "male"],
+      [10, "male"],
+      [13, "female"],
+    ]);
+    expect(merged.people.relations.map((r) => r.label)).toEqual(["Ээж", "Аав"]);
+    expect(merged.people.relations[0].gender).toBe("female");
+    expect(merged.synastry.pair.map((p) => p.label)).toEqual(["Та", "Хайрт"]);
+    expect(merged.layout[0]).toEqual({ key: "stats", visible: false });
+    expect(landingContentSchema.safeParse(merged).success).toBe(true);
   });
 });
 

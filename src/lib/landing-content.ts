@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { mn } from "@/i18n/mn";
-import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
+import { AVATAR_SEEDS, avatarFits, avatarGender } from "@/lib/avatar-seeds";
 import { parseIsoDate } from "@/lib/birth-date";
 
 /**
@@ -27,17 +27,34 @@ const birthDate = z
   .string()
   .refine((v) => parseIsoDate(v) !== null && v >= "1900-01-01", { message: "invalid_date" });
 
-const demoPerson = z.object({
-  id: z.string().min(1).max(40),
-  name: str(LIMITS.short),
-  birthDate,
+export const AVATAR_GENDERS = ["female", "male"] as const;
+
+/** An example avatar: gender + seed index; the drawing must suit the gender. */
+const avatar = {
+  gender: z.enum(AVATAR_GENDERS),
   seed: z
     .number()
     .int()
     .min(0)
     .max(AVATAR_SEEDS.length - 1),
-  tint: z.enum(DEMO_TINTS),
-});
+};
+const fitsGender = (v: { gender: (typeof AVATAR_GENDERS)[number]; seed: number }) =>
+  avatarFits(v.seed, v.gender);
+const AVATAR_GENDER_MSG = { message: "avatar_gender", path: ["seed"] };
+
+const demoPerson = z
+  .object({
+    id: z.string().min(1).max(40),
+    name: str(LIMITS.short),
+    birthDate,
+    ...avatar,
+    tint: z.enum(DEMO_TINTS),
+  })
+  .refine(fitsGender, AVATAR_GENDER_MSG);
+
+const labelledAvatar = z
+  .object({ label: str(LIMITS.short), ...avatar })
+  .refine(fitsGender, AVATAR_GENDER_MSG);
 
 const demoLink = z.object({
   id: z.string().min(1).max(40),
@@ -100,14 +117,14 @@ export const SECTION_SCHEMAS = {
     invite: optStr(LIMITS.title * 2),
     cta: str(LIMITS.short),
     example: str(LIMITS.short),
-    pair: z.tuple([str(LIMITS.short), str(LIMITS.short)]),
+    pair: z.tuple([labelledAvatar, labelledAvatar]),
     goodFor: strList(LIMITS.short, 6),
   }),
   people: z.object({
     eyebrow: optStr(LIMITS.short * 2),
     title: str(LIMITS.title),
     body: optStr(LIMITS.text),
-    relations: strList(LIMITS.short, 12),
+    relations: z.array(labelledAvatar).max(12),
   }),
   how: z.object({
     title: str(LIMITS.title),
@@ -161,11 +178,11 @@ export const LANDING_DEFAULTS: LandingContent = {
   },
   demo: {
     people: [
-      { id: "mom", name: "Ээж", birthDate: "1968-03-05", seed: 1, tint: "bg-tint-2" },
-      { id: "dad", name: "Аав", birthDate: "1965-11-12", seed: 4, tint: "bg-tint-3" },
-      { id: "love", name: "Хайрт", birthDate: "1997-08-02", seed: 7, tint: "bg-tint-1" },
-      { id: "friend", name: "Найз", birthDate: "1996-04-10", seed: 10, tint: "bg-tint-3" },
-      { id: "sib", name: "Дүү", birthDate: "2003-01-08", seed: 13, tint: "bg-tint-2" },
+      { id: "mom", name: "Ээж", birthDate: "1968-03-05", gender: "female", seed: 2, tint: "bg-tint-2" },
+      { id: "dad", name: "Аав", birthDate: "1965-11-12", gender: "male", seed: 9, tint: "bg-tint-3" },
+      { id: "love", name: "Хайрт", birthDate: "1997-08-02", gender: "female", seed: 11, tint: "bg-tint-1" },
+      { id: "friend", name: "Найз", birthDate: "1996-04-10", gender: "male", seed: 10, tint: "bg-tint-3" },
+      { id: "sib", name: "Дүү", birthDate: "2003-01-08", gender: "female", seed: 13, tint: "bg-tint-2" },
     ],
     links: [
       {
@@ -225,14 +242,30 @@ export const LANDING_DEFAULTS: LandingContent = {
     invite: l.synastry.invite,
     cta: l.synastry.cta,
     example: l.synastry.example,
-    pair: [l.synastry.pair[0], l.synastry.pair[1]],
+    pair: [
+      { label: l.synastry.pair[0], gender: "male", seed: 3 },
+      { label: l.synastry.pair[1], gender: "female", seed: 5 },
+    ],
     goodFor: ["Гэрлэлт", "Хайр дурлал"],
   },
   people: {
     eyebrow: l.people.eyebrow,
     title: l.people.title,
     body: l.people.body,
-    relations: [...l.people.relations],
+    // Ээж, Аав, Хайрт, Найз, Дүү, Хүүхэд, Краш, Хамт ажиллагч
+    relations: l.people.relations.map((label, i) => ({
+      label,
+      ...([
+        { gender: "female", seed: 27 },
+        { gender: "male", seed: 4 },
+        { gender: "female", seed: 5 },
+        { gender: "male", seed: 1 },
+        { gender: "female", seed: 24 },
+        { gender: "male", seed: 6 },
+        { gender: "female", seed: 20 },
+        { gender: "male", seed: 12 },
+      ] as const)[i % 8],
+    })),
   },
   how: { title: l.how.title, steps: l.how.steps.map((s) => ({ ...s })) },
   wallet: { title: l.wallet.title, subtitle: l.wallet.subtitle },
@@ -246,7 +279,7 @@ export const LANDING_DEFAULTS: LandingContent = {
  * Layout keeps the stored order, drops unknown/duplicate keys and appends sections it lacks.
  */
 export function mergeLandingContent(raw: unknown): LandingContent {
-  const src = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const src = upgradeLegacy(raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {});
   const out = { ...LANDING_DEFAULTS } as Record<string, unknown>;
   for (const key of Object.keys(SECTION_SCHEMAS) as SectionKey[]) {
     const parsed = SECTION_SCHEMAS[key].safeParse(src[key]);
@@ -265,6 +298,52 @@ export function mergeLandingContent(raw: unknown): LandingContent {
   return out as LandingContent;
 }
 
+type Obj = Record<string, unknown>;
+const isObj = (v: unknown): v is Obj => !!v && typeof v === "object" && !Array.isArray(v);
+
+/**
+ * Content saved before avatars had a gender (first CMS version): demo people get the gender
+ * their drawing shows, plain relation labels and pair labels get the default drawings.
+ * Returns a copy; current-shape content passes through unchanged.
+ */
+export function upgradeLegacy(src: Obj): Obj {
+  const out: Obj = { ...src };
+  if (isObj(src.demo) && Array.isArray(src.demo.people)) {
+    out.demo = {
+      ...src.demo,
+      people: src.demo.people.map((p) =>
+        isObj(p) && !("gender" in p) && typeof p.seed === "number"
+          ? {
+              ...p,
+              gender:
+                avatarGender(AVATAR_SEEDS[p.seed] ?? AVATAR_SEEDS[0]) === "male" ? "male" : "female",
+            }
+          : p,
+      ),
+    };
+  }
+  if (isObj(src.people) && Array.isArray(src.people.relations)) {
+    const defaults = LANDING_DEFAULTS.people.relations;
+    out.people = {
+      ...src.people,
+      relations: src.people.relations.map((r, i) => {
+        if (typeof r !== "string") return r;
+        const d = defaults[i % defaults.length];
+        return { label: r, gender: d.gender, seed: d.seed };
+      }),
+    };
+  }
+  if (isObj(src.synastry) && Array.isArray(src.synastry.pair)) {
+    out.synastry = {
+      ...src.synastry,
+      pair: src.synastry.pair.map((v, i) =>
+        typeof v === "string" ? { ...LANDING_DEFAULTS.synastry.pair[i % 2], label: v } : v,
+      ),
+    };
+  }
+  return out;
+}
+
 export type PriceTokens = { minPrice: string; birthdayPrice: string; synastryPrice: string };
 
 /** "{minPrice}-өөс" → "1,000₮-өөс". Unknown tokens are left as typed. */
@@ -274,7 +353,14 @@ export function fillTokens(text: string, tokens: PriceTokens): string {
   );
 }
 
-export type IssueCode = "too_small" | "too_big" | "invalid_date" | "bad_pair" | "duplicate" | "invalid";
+export type IssueCode =
+  | "too_small"
+  | "too_big"
+  | "invalid_date"
+  | "bad_pair"
+  | "avatar_gender"
+  | "duplicate"
+  | "invalid";
 
 /** Zod issues → { "demo.people.0.name": "too_small" }, for showing errors next to fields. */
 export function issuesByPath(error: z.ZodError): Record<string, IssueCode> {
@@ -285,7 +371,9 @@ export function issuesByPath(error: z.ZodError): Record<string, IssueCode> {
     out[key] =
       issue.code === "too_small" || issue.code === "too_big"
         ? issue.code
-        : issue.message === "invalid_date" || issue.message === "bad_pair"
+        : issue.message === "invalid_date" ||
+            issue.message === "bad_pair" ||
+            issue.message === "avatar_gender"
           ? issue.message
           : issue.message.startsWith("duplicate")
             ? "duplicate"

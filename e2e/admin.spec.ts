@@ -105,13 +105,17 @@ test("ranges editor refuses a gap", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Арслан Дуусах (MM-DD)" })).toHaveValue("08-22");
 });
 
-test("landing CMS: edit → save draft → preview → publish → live, then back to defaults", async ({
+test("landing CMS: edit → save draft → preview → publish → live, then restore what was live", async ({
   page,
   browser,
 }) => {
   page.on("dialog", (d) => d.accept());
   await loginWithPassword(page, "editor@test.local", "/admin/landing");
   await expect(page.getByRole("heading", { name: "Нүүр хуудас" })).toBeVisible();
+  // Whatever an admin had published before this test is put back at the end.
+  const wasLive = (await page.getByText(/^Нийтлэгдсэн: v\d+/).count())
+    ? Number((await page.getByText(/^Нийтлэгдсэн: v\d+/).innerText()).match(/v(\d+)/)![1])
+    : null;
 
   const hero = page.locator("details").filter({ has: page.getByText("Эхний дэлгэц", { exact: true }) });
   await hero.locator("summary").click();
@@ -141,10 +145,19 @@ test("landing CMS: edit → save draft → preview → publish → live, then ba
   await visitor.reload();
   await expect(visitor.getByRole("heading", { level: 1 })).toHaveText(marker);
 
-  // Back to the built-in copy so other runs start clean.
+  // Put back what was live before (or the built-in copy).
   await page.reload();
-  await page.locator("summary", { hasText: "⋯" }).click();
-  await page.getByRole("button", { name: "Анхны текст рүү" }).click();
+  if (wasLive) {
+    await page.getByText("Нийтэлсэн түүх", { exact: true }).click();
+    await page
+      .getByRole("listitem")
+      .filter({ has: page.getByText(`v${wasLive}`, { exact: true }) })
+      .getByRole("button", { name: "Ноорог болгох" })
+      .click();
+  } else {
+    await page.locator("summary", { hasText: "⋯" }).click();
+    await page.getByRole("button", { name: "Анхны текст рүү" }).click();
+  }
   await expect(page.getByText(/Ноорог хадгалсан/)).toBeVisible();
   await page.getByRole("button", { name: "Нийтлэх" }).click();
   await expect(page.getByText(/нийтлэгдлээ/)).toBeVisible();

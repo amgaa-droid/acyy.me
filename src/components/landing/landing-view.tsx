@@ -141,11 +141,19 @@ export function LandingView({
             {c.synastry.example}
           </span>
           <div className="flex items-center gap-3 pt-4">
-            <PairAvatar seed={AVATAR_SEEDS[3]} label={c.synastry.pair[0]} tint="bg-tint-1" />
+            <PairAvatar
+              seed={AVATAR_SEEDS[c.synastry.pair[0].seed]}
+              label={c.synastry.pair[0].label}
+              tint="bg-tint-1"
+            />
             <span className="flex size-14 items-center justify-center rounded-full bg-tint-2 text-highlight">
               <HeartHandshake className="size-7" strokeWidth={1.7} aria-hidden />
             </span>
-            <PairAvatar seed={AVATAR_SEEDS[8]} label={c.synastry.pair[1]} tint="bg-tint-2" />
+            <PairAvatar
+              seed={AVATAR_SEEDS[c.synastry.pair[1].seed]}
+              label={c.synastry.pair[1].label}
+              tint="bg-tint-2"
+            />
           </div>
           {c.synastry.goodFor.length > 0 && (
             <div className="flex flex-col items-center gap-2">
@@ -179,10 +187,10 @@ export function LandingView({
           {c.people.body && <p className="text-muted-foreground lg:text-lg">{f(c.people.body)}</p>}
         </div>
         <ul className="grid grid-cols-4 gap-3">
-          {c.people.relations.map((label, i) => (
+          {c.people.relations.map(({ label, seed }, i) => (
             <li key={i} className="flex flex-col items-center gap-1.5 text-center">
               <Avatar
-                seed={AVATAR_SEEDS[(i * 3 + 1) % AVATAR_SEEDS.length]}
+                seed={AVATAR_SEEDS[seed]}
                 size={64}
                 className={cn("border-0", ["bg-tint-1", "bg-tint-2", "bg-tint-3"][i % 3])}
               />

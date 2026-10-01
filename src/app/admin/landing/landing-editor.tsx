@@ -32,6 +32,7 @@ import {
   type IssueCode,
   type LandingContent,
 } from "@/lib/landing-content";
+import { avatarFits, avatarIndexesFor, type AvatarGender } from "@/lib/avatar-seeds";
 import { cn } from "@/lib/utils";
 import { Field, Select, inputClass } from "../products/ui";
 import {
@@ -104,6 +105,8 @@ type Ctx = {
   error: (path: Path) => IssueCode | undefined;
   /** Any issue under this section (for the red dot on a collapsed card). */
   sectionHasIssue: (key: string) => boolean;
+  /** Pre-rendered avatar data URIs, by AVATAR_SEEDS index. */
+  avatars: string[];
 };
 const EditorCtx = createContext<Ctx | null>(null);
 const useEditor = () => useContext(EditorCtx)!;
@@ -114,9 +117,11 @@ export function LandingEditor(props: Props) {
   const [saved, setSaved] = useState(() => JSON.stringify(props.initial));
   const [revision, setRevision] = useState(props.revision);
   const [issues, setIssues] = useState<Record<string, IssueCode>>({});
-  const [status, setStatus] = useState<
-    { kind: "ok" | "error"; text: string; conflict?: boolean } | null
-  >(null);
+  const [status, setStatus] = useState<{
+    kind: "ok" | "error";
+    text: string;
+    conflict?: boolean;
+  } | null>(null);
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
   const [previewKey, setPreviewKey] = useState(0);
@@ -137,9 +142,11 @@ export function LandingEditor(props: Props) {
       content,
       set: (path, value) => setContent((c) => setAt(c, path, value)),
       error: (path) => issues[path.join(".")],
-      sectionHasIssue: (key) => Object.keys(issues).some((p) => p === key || p.startsWith(`${key}.`)),
+      sectionHasIssue: (key) =>
+        Object.keys(issues).some((p) => p === key || p.startsWith(`${key}.`)),
+      avatars: props.avatars,
     }),
-    [content, issues],
+    [content, issues, props.avatars],
   );
 
   const handle = <T,>(res: CmsResult<T>): res is { ok: true } & T => {
@@ -233,7 +240,11 @@ export function LandingEditor(props: Props) {
             <span
               className={cn(
                 "rounded-full px-3 py-1.5",
-                dirty ? "bg-tint-2" : hasDraft ? "bg-tint-1 text-highlight" : "bg-subtle text-muted-foreground",
+                dirty
+                  ? "bg-tint-2"
+                  : hasDraft
+                    ? "bg-tint-1 text-highlight"
+                    : "bg-subtle text-muted-foreground",
               )}
             >
               {dirty
@@ -247,11 +258,13 @@ export function LandingEditor(props: Props) {
 
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
           <div className="flex min-w-0 flex-col gap-3">
-            <p className="rounded-2xl bg-surface px-4 py-3 text-xs text-muted-foreground">{t.tokens}</p>
+            <p className="rounded-2xl bg-surface px-4 py-3 text-xs text-muted-foreground">
+              {t.tokens}
+            </p>
             <LayoutCard />
             <SeoCard />
             <HeroCard />
-            <DemoCard avatars={props.avatars} suggestions={props.suggestions} />
+            <DemoCard suggestions={props.suggestions} />
             <StatsCard />
             <ProductsCard products={props.products} />
             <SynastryCard suggestions={props.suggestions} />
@@ -436,7 +449,9 @@ function Card({ id, children, open }: { id: string; children: React.ReactNode; o
 
 function ErrorText({ path }: { path: Path }) {
   const code = useEditor().error(path);
-  return code ? <span className="text-xs font-medium text-destructive">{t.errors[code]}</span> : null;
+  return code ? (
+    <span className="text-xs font-medium text-destructive">{t.errors[code]}</span>
+  ) : null;
 }
 
 function Text({
@@ -508,17 +523,35 @@ function MoveButtons({
   onMove: (from: number, to: number) => void;
   onRemove?: () => void;
 }) {
-  const btn = "flex size-9 items-center justify-center rounded-full hover:bg-subtle disabled:opacity-30";
+  const btn =
+    "flex size-9 items-center justify-center rounded-full hover:bg-subtle disabled:opacity-30";
   return (
     <span className="flex shrink-0 items-center">
-      <button type="button" aria-label={t.up} disabled={i === 0} onClick={() => onMove(i, i - 1)} className={btn}>
+      <button
+        type="button"
+        aria-label={t.up}
+        disabled={i === 0}
+        onClick={() => onMove(i, i - 1)}
+        className={btn}
+      >
         <ArrowUp className="size-4" />
       </button>
-      <button type="button" aria-label={t.down} disabled={i === n - 1} onClick={() => onMove(i, i + 1)} className={btn}>
+      <button
+        type="button"
+        aria-label={t.down}
+        disabled={i === n - 1}
+        onClick={() => onMove(i, i + 1)}
+        className={btn}
+      >
         <ArrowDown className="size-4" />
       </button>
       {onRemove && (
-        <button type="button" aria-label={t.remove} onClick={onRemove} className={cn(btn, "text-destructive")}>
+        <button
+          type="button"
+          aria-label={t.remove}
+          onClick={onRemove}
+          className={cn(btn, "text-destructive")}
+        >
           <Trash2 className="size-4" />
         </button>
       )}
@@ -567,14 +600,17 @@ function StringList({
             i={i}
             n={items.length}
             onMove={(a, b) => set(path, move(items, a, b))}
-            onRemove={() => set(path, items.filter((_, j) => j !== i))}
+            onRemove={() =>
+              set(
+                path,
+                items.filter((_, j) => j !== i),
+              )
+            }
           />
         </div>
       ))}
       <ErrorText path={path} />
-      {items.length < maxItems && (
-        <AddButton onClick={() => set(path, [...items, ""])} />
-      )}
+      {items.length < maxItems && <AddButton onClick={() => set(path, [...items, ""])} />}
       {hint && <span className="text-xs font-normal text-muted-foreground">{hint}</span>}
     </div>
   );
@@ -617,13 +653,18 @@ function ItemList<T>({
       {items.map((item, i) => (
         <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border p-3">
           <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-sm font-semibold text-muted-foreground">{itemLabel(item, i)}</span>
+            <span className="truncate text-sm font-semibold text-muted-foreground">
+              {itemLabel(item, i)}
+            </span>
             <MoveButtons
               i={i}
               n={items.length}
               onMove={(a, b) => set(path, move(items, a, b))}
               onRemove={() => {
-                set(path, items.filter((_, j) => j !== i));
+                set(
+                  path,
+                  items.filter((_, j) => j !== i),
+                );
                 onRemove?.(item);
               }}
             />
@@ -633,6 +674,62 @@ function ItemList<T>({
       ))}
       <ErrorText path={path} />
       {items.length < maxItems && <AddButton onClick={() => set(path, [...items, blank()])} />}
+    </div>
+  );
+}
+
+/**
+ * Gender + drawing for an example avatar at `path` ({ gender, seed }). Only drawings that suit
+ * the gender are offered; switching gender swaps a drawing that no longer fits.
+ */
+function AvatarPicker({ path, tint }: { path: Path; tint: string }) {
+  const { content, set, avatars } = useEditor();
+  const value = getAt(content, path) as { gender: AvatarGender; seed: number };
+  const setGender = (g: AvatarGender) => {
+    const next = { ...value, gender: g };
+    if (!avatarFits(value.seed, g)) next.seed = avatarIndexesFor(g)[0];
+    set(path, next);
+  };
+  return (
+    <div className="flex flex-col gap-2 text-sm font-medium">
+      <div className="flex items-center gap-2">
+        {tf.gender}
+        {(["female", "male"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            aria-pressed={value.gender === g}
+            onClick={() => setGender(g)}
+            className={cn(
+              "h-9 rounded-full px-3.5 text-xs font-semibold",
+              value.gender === g ? "bg-fg text-bg" : "bg-subtle text-muted-foreground",
+            )}
+          >
+            {tf[g]}
+          </button>
+        ))}
+      </div>
+      <span>{tf.avatar}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {avatarIndexesFor(value.gender).map((i) => (
+          <button
+            key={i}
+            type="button"
+            aria-pressed={value.seed === i}
+            aria-label={`${tf.avatar} ${i + 1}`}
+            onClick={() => set([...path, "seed"], i)}
+            className={cn(
+              "size-11 shrink-0 overflow-hidden rounded-full border-2",
+              tint,
+              value.seed === i ? "border-highlight" : "border-transparent",
+            )}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
+            <img src={avatars[i]} alt="" className="size-full dark:invert" />
+          </button>
+        ))}
+      </div>
+      <ErrorText path={[...path, "seed"]} />
     </div>
   );
 }
@@ -648,7 +745,12 @@ function LayoutCard() {
       <ul className="flex flex-col gap-1.5">
         {layout.map((s, i) => (
           <li key={s.key} className="flex items-center gap-2 rounded-2xl bg-subtle py-1 pr-1 pl-4">
-            <span className={cn("flex-1 text-sm font-semibold", !s.visible && "text-muted-foreground line-through")}>
+            <span
+              className={cn(
+                "flex-1 text-sm font-semibold",
+                !s.visible && "text-muted-foreground line-through",
+              )}
+            >
               {t.sections[s.key]}
             </span>
             <button
@@ -664,7 +766,11 @@ function LayoutCard() {
               {s.visible ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
               {s.visible ? t.visible : t.hidden}
             </button>
-            <MoveButtons i={i} n={layout.length} onMove={(a, b) => set(["layout"], move(layout, a, b))} />
+            <MoveButtons
+              i={i}
+              n={layout.length}
+              onMove={(a, b) => set(["layout"], move(layout, a, b))}
+            />
           </li>
         ))}
       </ul>
@@ -696,10 +802,13 @@ function HeroCard() {
 type DemoPerson = LandingContent["demo"]["people"][number];
 type DemoLink = LandingContent["demo"]["links"][number];
 
-function DemoCard({ avatars, suggestions }: { avatars: string[]; suggestions: string[] }) {
+function DemoCard({ suggestions }: { suggestions: string[] }) {
   const { content, set } = useEditor();
   const people = content.demo.people;
-  const options = [{ value: "", label: "—" }, ...people.map((p) => ({ value: p.id, label: p.name || p.id }))];
+  const options = [
+    { value: "", label: "—" },
+    ...people.map((p) => ({ value: p.id, label: p.name || p.id })),
+  ];
   return (
     <Card id="demo">
       <p className="text-xs text-muted-foreground">{t.demoHint}</p>
@@ -713,7 +822,14 @@ function DemoCard({ avatars, suggestions }: { avatars: string[]; suggestions: st
         label={tf.people}
         maxItems={MAX_DEMO_PEOPLE}
         itemLabel={(p, i) => `${i + 1}. ${p.name || tf.person}`}
-        blank={() => ({ id: newId("p"), name: "", birthDate: "2000-01-01", seed: 0, tint: "bg-tint-1" })}
+        blank={() => ({
+          id: newId("p"),
+          name: "",
+          birthDate: "2000-01-01",
+          gender: "female",
+          seed: avatarIndexesFor("female")[0],
+          tint: "bg-tint-1",
+        })}
         onRemove={(p) =>
           set(
             ["demo", "links"],
@@ -735,28 +851,7 @@ function DemoCard({ avatars, suggestions }: { avatars: string[]; suggestions: st
                 <ErrorText path={[...path, "birthDate"]} />
               </Field>
             </div>
-            <div className="flex flex-col gap-1.5 text-sm font-medium">
-              {tf.avatar}
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {avatars.map((uri, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-pressed={p.seed === i}
-                    aria-label={`${tf.avatar} ${i + 1}`}
-                    onClick={() => set([...path, "seed"], i)}
-                    className={cn(
-                      "size-11 shrink-0 overflow-hidden rounded-full border-2",
-                      p.tint,
-                      p.seed === i ? "border-highlight" : "border-transparent",
-                    )}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
-                    <img src={uri} alt="" className="size-full dark:invert" />
-                  </button>
-                ))}
-              </div>
-            </div>
+            <AvatarPicker path={path} tint={p.tint} />
             <div className="flex items-center gap-2 text-sm font-medium">
               {tf.tint}
               {DEMO_TINTS.map((tint) => (
@@ -766,7 +861,11 @@ function DemoCard({ avatars, suggestions }: { avatars: string[]; suggestions: st
                   aria-pressed={p.tint === tint}
                   aria-label={tint}
                   onClick={() => set([...path, "tint"], tint)}
-                  className={cn("size-9 rounded-full border-2", tint, p.tint === tint ? "border-highlight" : "border-border")}
+                  className={cn(
+                    "size-9 rounded-full border-2",
+                    tint,
+                    p.tint === tint ? "border-highlight" : "border-border",
+                  )}
                 />
               ))}
             </div>
@@ -792,10 +891,20 @@ function DemoCard({ avatars, suggestions }: { avatars: string[]; suggestions: st
           <>
             <div className="grid grid-cols-2 gap-3">
               <Field label={tf.personA}>
-                <Select value={l.a} onChange={(v) => set([...path, "a"], v)} options={options} label={tf.personA} />
+                <Select
+                  value={l.a}
+                  onChange={(v) => set([...path, "a"], v)}
+                  options={options}
+                  label={tf.personA}
+                />
               </Field>
               <Field label={tf.personB}>
-                <Select value={l.b} onChange={(v) => set([...path, "b"], v)} options={options} label={tf.personB} />
+                <Select
+                  value={l.b}
+                  onChange={(v) => set([...path, "b"], v)}
+                  options={options}
+                  label={tf.personB}
+                />
                 <ErrorText path={[...path, "b"]} />
               </Field>
             </div>
@@ -901,14 +1010,25 @@ function SynastryCard({ suggestions }: { suggestions: string[] }) {
       <Text path={["synastry", "eyebrow"]} label={tf.eyebrow} max={LIMITS.short * 2} />
       <Text path={["synastry", "title"]} label={tf.title} max={LIMITS.title} />
       <Text path={["synastry", "body"]} label={tf.body} max={LIMITS.text} multiline />
-      <StringList path={["synastry", "points"]} label={tf.points} max={LIMITS.short * 2} maxItems={6} />
+      <StringList
+        path={["synastry", "points"]}
+        label={tf.points}
+        max={LIMITS.short * 2}
+        maxItems={6}
+      />
       <Text path={["synastry", "invite"]} label={tf.invite} max={LIMITS.title * 2} />
       <Text path={["synastry", "cta"]} label={tf.cta} max={LIMITS.short} />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Text path={["synastry", "example"]} label={tf.example} max={LIMITS.short} />
-        <Text path={["synastry", "pair", 0]} label={tf.pairA} max={LIMITS.short} />
-        <Text path={["synastry", "pair", 1]} label={tf.pairB} max={LIMITS.short} />
-      </div>
+      <Text path={["synastry", "example"]} label={tf.example} max={LIMITS.short} />
+      {[0, 1].map((i) => (
+        <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border p-3">
+          <Text
+            path={["synastry", "pair", i, "label"]}
+            label={i === 0 ? tf.pairA : tf.pairB}
+            max={LIMITS.short}
+          />
+          <AvatarPicker path={["synastry", "pair", i]} tint={i === 0 ? "bg-tint-1" : "bg-tint-2"} />
+        </div>
+      ))}
       <StringList
         path={["synastry", "goodFor"]}
         label={tf.goodFor}
@@ -927,7 +1047,19 @@ function PeopleCard() {
       <Text path={["people", "eyebrow"]} label={tf.eyebrow} max={LIMITS.short * 2} />
       <Text path={["people", "title"]} label={tf.title} max={LIMITS.title} />
       <Text path={["people", "body"]} label={tf.body} max={LIMITS.text} multiline />
-      <StringList path={["people", "relations"]} label={tf.relations} max={LIMITS.short} maxItems={12} />
+      <ItemList<{ label: string; gender: AvatarGender; seed: number }>
+        path={["people", "relations"]}
+        label={tf.relations}
+        maxItems={12}
+        itemLabel={(r, i) => `${i + 1}. ${r.label}`}
+        blank={() => ({ label: "", gender: "female", seed: avatarIndexesFor("female")[0] })}
+        render={(path, _r, i) => (
+          <>
+            <Text path={[...path, "label"]} label={tf.label} max={LIMITS.short} />
+            <AvatarPicker path={path} tint={DEMO_TINTS[i % 3]} />
+          </>
+        )}
+      />
     </Card>
   );
 }
@@ -1013,37 +1145,44 @@ function HistoryCard({
       </summary>
       <div className="flex flex-col gap-2 px-5 pb-5">
         {versions.length === 0 && <p className="text-sm text-muted-foreground">{t.historyEmpty}</p>}
-        {versions.map((v) => (
-          <div key={v.id} className="flex flex-wrap items-center gap-2 rounded-2xl bg-subtle px-4 py-2.5 text-sm">
-            <span className="font-semibold">v{v.version}</span>
-            {v.version === liveVersion && (
-              <span className="rounded-full bg-tint-3 px-2 py-0.5 text-[11px] font-semibold">{t.current}</span>
-            )}
-            <span className="text-muted-foreground">
-              {fmt(v.publishedAt)}
-              {v.publishedBy ? ` · ${v.publishedBy}` : ""}
-            </span>
-            {v.note && <span className="w-full text-xs text-muted-foreground">“{v.note}”</span>}
-            <span className="ml-auto flex gap-1.5">
-              <a
-                href={`/preview/landing?v=${v.id}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex h-9 items-center rounded-full bg-surface px-3 text-xs font-semibold"
-              >
-                {t.view}
-              </a>
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => onRestore(v.id, t.restoreConfirm(v.version))}
-                className="h-9 rounded-full bg-surface px-3 text-xs font-semibold disabled:opacity-50"
-              >
-                {t.restore}
-              </button>
-            </span>
-          </div>
-        ))}
+        <ul className="flex flex-col gap-2">
+          {versions.map((v) => (
+            <li
+              key={v.id}
+              className="flex flex-wrap items-center gap-2 rounded-2xl bg-subtle px-4 py-2.5 text-sm"
+            >
+              <span className="font-semibold">v{v.version}</span>
+              {v.version === liveVersion && (
+                <span className="rounded-full bg-tint-3 px-2 py-0.5 text-[11px] font-semibold">
+                  {t.current}
+                </span>
+              )}
+              <span className="text-muted-foreground">
+                {fmt(v.publishedAt)}
+                {v.publishedBy ? ` · ${v.publishedBy}` : ""}
+              </span>
+              {v.note && <span className="w-full text-xs text-muted-foreground">“{v.note}”</span>}
+              <span className="ml-auto flex gap-1.5">
+                <a
+                  href={`/preview/landing?v=${v.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-9 items-center rounded-full bg-surface px-3 text-xs font-semibold"
+                >
+                  {t.view}
+                </a>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onRestore(v.id, t.restoreConfirm(v.version))}
+                  className="h-9 rounded-full bg-surface px-3 text-xs font-semibold disabled:opacity-50"
+                >
+                  {t.restore}
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </details>
   );
