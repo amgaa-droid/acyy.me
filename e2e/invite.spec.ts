@@ -1,18 +1,13 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-import { payTopup, readOtpFromDevMail, signUpFresh } from "./helpers";
+import { payTopup, payWithMockBank, readOtpFromDevMail, signUpFresh } from "./helpers";
 
 async function topUp10k(page: Page) {
   await page.goto("/wallet");
   await page.getByRole("button", { name: "Цэнэглэх", exact: true }).last().click();
   const sheet = page.getByRole("dialog", { name: "Хэтэвч цэнэглэх" });
   await payTopup(sheet, 10_000);
-  await page.getByRole("link", { name: "Mock төлбөрийн хуудас" }).click();
-  await expect(page).toHaveURL(/\/dev\/qpay\/mock_/);
-  await page.getByRole("button", { name: "Төлсөн", exact: true }).click();
-  await expect(page.getByText("Амжилттай!")).toBeVisible();
-  // The invoice page auto-returns after a moment; let it finish before navigating on.
-  await expect(page).toHaveURL(/\/wallet$/, { timeout: 10_000 });
+  await payWithMockBank(page);
 }
 
 /** Reads the invitation link sent to `email` from the dev outbox. */

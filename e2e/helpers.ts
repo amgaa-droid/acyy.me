@@ -69,3 +69,24 @@ export async function payTopup(sheet: Locator, min: number) {
   await sheet.getByRole("button", { name: `QPay-ээр ${mnt(amount)} төлөх` }).click();
   return { amount, credited };
 }
+
+/**
+ * In the open invoice popup: pays with the mock "bank app", which opens in its own tab like the
+ * QPay app would. Waits until the popup shows the payment and closes by itself; returns the
+ * top-up id (the bank tab lands on /wallet/topup/<id>).
+ */
+export async function payWithMockBank(page: Page): Promise<string> {
+  const invoice = page.getByRole("dialog", { name: "Төлбөр төлөх" });
+  const [bank] = await Promise.all([
+    page.waitForEvent("popup"),
+    invoice.getByRole("link", { name: "Mock төлбөрийн хуудас" }).click(),
+  ]);
+  await expect(bank).toHaveURL(/\/dev\/qpay\/mock_/);
+  await bank.getByRole("button", { name: "Төлсөн", exact: true }).click();
+  await expect(bank).toHaveURL(/\/wallet\/topup\/[0-9a-f-]{36}/);
+  const topupId = new URL(bank.url()).pathname.split("/").pop()!;
+  await bank.close();
+  await expect(invoice.getByText("Амжилттай!")).toBeVisible({ timeout: 10_000 });
+  await expect(invoice).toBeHidden({ timeout: 10_000 });
+  return topupId;
+}

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { loginWithPassword, mnt, payTopup, signUpFresh } from "./helpers";
+import { loginWithPassword, mnt, payTopup, payWithMockBank, signUpFresh } from "./helpers";
 
 const money = (s: string | null) => Number((s ?? "").replace(/[^\d]/g, ""));
 
@@ -80,13 +80,10 @@ test("new user: short balance → top-up → back to confirm → buys every acti
   await sheet.getByRole("button", { name: "Цэнэглээд үргэлжлүүлэх" }).click();
   const topup = page.getByRole("dialog", { name: "Хэтэвч цэнэглэх" });
   const { credited } = await payTopup(topup, total);
-  await page.getByRole("link", { name: "Mock төлбөрийн хуудас" }).click();
-  await expect(page).toHaveURL(/\/dev\/qpay\/mock_/);
-  await page.getByRole("button", { name: "Төлсөн", exact: true }).click();
-  await expect(page.getByText("Амжилттай!")).toBeVisible();
+  await payWithMockBank(page);
 
-  // …and we're back on the buy page with the confirm sheet already open.
-  await expect(page).toHaveURL(/\/buy\/birthday\?a=.*confirm=1/, { timeout: 15_000 });
+  // …the popup closes over the buy page, and the confirm sheet shows the new balance.
+  await expect(page).toHaveURL(/\/buy\/birthday\?a=/);
   const back = page.getByRole("dialog", { name: "Баталгаажуулах" });
   await expect(back.getByTestId("balance-change")).toHaveText(
     `Үлдэгдэл ${mnt(credited)} → ${mnt(credited - price("birthday"))}`,

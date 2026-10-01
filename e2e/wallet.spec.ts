@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { loginWithPassword, payTopup, signUpFresh } from "./helpers";
+import { loginWithPassword, payTopup, payWithMockBank, signUpFresh } from "./helpers";
 
 const isDesktop = (name: string) => name.startsWith("desktop");
 
@@ -25,21 +25,19 @@ test("top-up via mock QPay adds amount + bonus; callbacks are idempotent", async
   const sheet = page.getByRole("dialog", { name: "Хэтэвч цэнэглэх" });
   const { credited } = await payTopup(sheet, 10_000);
 
-  await expect(page).toHaveURL(/\/wallet\/topup\/[0-9a-f-]{36}\?next=%2Fwallet$/);
-  const topupId = new URL(page.url()).pathname.split("/").pop()!;
-  if (isDesktop(info.project.name)) await expect(page.getByAltText("QPay QR")).toBeVisible();
+  // The invoice opens in the same popup — the page underneath stays.
+  const invoice = page.getByRole("dialog", { name: "Төлбөр төлөх" });
+  await expect(page).toHaveURL(/\/wallet$/);
+  if (isDesktop(info.project.name)) await expect(invoice.getByAltText("QPay QR")).toBeVisible();
   else {
     // QPay only — no bank list.
-    await expect(page.getByRole("link", { name: "QPay-ээр төлөх" })).toBeVisible();
-    await expect(page.getByText(/банк/i)).toHaveCount(0);
+    await expect(invoice.getByRole("button", { name: "QPay-ээр төлөх" })).toBeVisible();
+    await expect(invoice.getByText(/банк/i)).toHaveCount(0);
   }
 
   // The QPay app (mock) pays and calls our real callback.
-  await page.getByRole("link", { name: "Mock төлбөрийн хуудас" }).click();
-  await expect(page).toHaveURL(/\/dev\/qpay\/mock_/);
-  await page.getByRole("button", { name: "Төлсөн", exact: true }).click();
-  await expect(page.getByText("Амжилттай!")).toBeVisible();
-  await expect(page).toHaveURL(/\/wallet$/, { timeout: 10_000 });
+  const topupId = await payWithMockBank(page);
+  await expect(page).toHaveURL(/\/wallet$/);
   expect(await balance(page)).toBe(before + credited);
 
   // QPay retries the callback: nothing more is credited.
