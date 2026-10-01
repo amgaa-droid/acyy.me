@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { THEME_COOKIE, themeSchema } from "@/lib/theme";
@@ -14,4 +15,6 @@ export async function setTheme(formData: FormData): Promise<void> {
     sameSite: "lax",
     httpOnly: false,
   });
+  // `data-theme` lives on <html> in the root layout, which a plain action refresh keeps as is.
+  revalidatePath("/", "layout");
 }

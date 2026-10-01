@@ -272,6 +272,7 @@ export function PlanetSystem({
   return (
     <div
       ref={rootRef}
+      data-screen="home"
       className="fixed inset-0 h-dvh touch-none overflow-hidden bg-tint-1 select-none"
       aria-label={t.label}
     >

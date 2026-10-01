@@ -382,6 +382,8 @@ export const mn = {
     "cosmic-dark": { name: "Cosmic dark", description: "Үргэлж бараан" },
     white: { name: "White", description: "Цагаан хар, minimal" },
   },
+  /** Floating colour-mode button on every page (cycles through the themes). */
+  themeToggle: (current: string, next: string) => `Өнгөний горим: ${current}. ${next} болгох`,
   hero: {
     yourSign: "Таны орд",
   },

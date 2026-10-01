@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Golos_Text } from "next/font/google";
 import { cookies } from "next/headers";
 
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import { APP_NAME } from "@/env";
 import { mn } from "@/i18n/mn";
 import { THEME_COOKIE, isAlwaysDark, parseTheme } from "@/lib/theme";
@@ -49,7 +50,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang="mn" data-theme={theme} className={`${sans.variable} ${serif.variable} h-full`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <ThemeToggle current={theme} />
+      </body>
     </html>
   );
 }
