@@ -24,6 +24,7 @@ pnpm dev                      # http://localhost:3000
 pnpm db:generate              # схемээс migration үүсгэх
 pnpm db:migrate
 pnpm db:seed                  # орд, 48 үе, бүтээгдэхүүн, тестийн хэрэглэгчид, placeholder текст
+pnpm db:seed:demo [--reset]   # dev: 90 хоногийн demo хэрэглэгч/цэнэглэлт/худалдан авалт (admin самбарт)
 pnpm lint && pnpm typecheck
 pnpm test                     # Vitest
 pnpm test:e2e                 # Playwright
