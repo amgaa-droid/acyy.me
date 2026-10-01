@@ -35,14 +35,22 @@ describe("pairsFromPurchases", () => {
 });
 
 describe("byCloseness", () => {
-  it("puts romantic, then family, then friends, then others; keeps order within a group", () => {
+  it("puts romantic, family, friends, others, then «Хэн ч биш»; keeps order within a group", () => {
     const people = [
       { id: "1", relation: "coworker" as const },
       { id: "2", relation: "friend" as const },
       { id: "3", relation: "mother" as const },
       { id: "4", relation: "crush" as const },
       { id: "5", relation: "father" as const },
+      { id: "6", relation: "nobody" as const },
     ];
-    expect(byCloseness(people).map((p) => p.id)).toEqual(["4", "3", "5", "2", "1"]);
+    expect(byCloseness([people[5], ...people.slice(0, 5)]).map((p) => p.id)).toEqual([
+      "4",
+      "3",
+      "5",
+      "2",
+      "1",
+      "6",
+    ]);
   });
 });

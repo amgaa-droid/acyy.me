@@ -5,21 +5,25 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { useCloseAllModals } from "@/components/app/modal-scope";
 import { mn } from "@/i18n/mn";
 
 /**
  * A detail screen opened from the home planet system: it slides up as a sheet over the planets
- * (full width on phones, a wide centred sheet on desktop). Closing goes back in history, so the
- * browser back button and the close button behave the same and the URL stays shareable.
+ * (full width on phones, a wide centred sheet on desktop). Closing goes back to home through
+ * history (every popup opened on the way closes too); the browser back button steps back one.
  */
 export function RouteModal({ label, children }: { label: string; children: ReactNode }) {
   const router = useRouter();
+  const closeAll = useCloseAllModals();
 
   return (
     <DialogPrimitive.Root
       open
       onOpenChange={(open) => {
-        if (!open) router.back();
+        if (open) return;
+        if (closeAll) closeAll();
+        else router.back();
       }}
     >
       <DialogPrimitive.Portal>

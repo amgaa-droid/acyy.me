@@ -205,6 +205,15 @@ export const mn = {
       empty: "Ээж, найз, хайртаа нэмээд нийцлээ хараарай",
       dropOn: (name: string) => `${name} дээр тавибал нийцэл үүснэ`,
       dropAway: "Өөр хүн дээр аваачиж тавина уу",
+      dropMove: "Энд тавибал байраа сольно · хүн дээр тавибал нийцнэ",
+      /** Short names next to reading buttons, by product code (else the name minus "зурхай"). */
+      short: {
+        birthday: "Төрсөн өдөр",
+        sign: "Орд",
+        love: "Хайр дурлал",
+        sex: "Секс",
+        dating: "Болзоо",
+      } as Record<string, string>,
       meAria: (name: string, sign: string) => `${name} (та), ${sign} — миний зурхайнууд`,
       personAria: (name: string, relation: string, sign: string) =>
         `${name}, ${relation}, ${sign} — дарж зурхайг нь харах, чирж нийцэл үүсгэх`,
@@ -219,7 +228,7 @@ export const mn = {
       more: "Бусад",
       moreAria: (n: number) => `Бусад ${n} хүн`,
       closeDock: "Бусад хүмүүсийг хаах",
-      dockTitle: (n: number) => `Бусад ${n} хүн — дарж гаргах, чирж нийцүүлэх`,
+      dockTitle: (n: number) => `Бусад ${n} хүн · чирж нийцүүл`,
     },
   },
   people: {
@@ -832,6 +841,7 @@ export const mn = {
     friend: "Найз",
     coworker: "Хамт ажиллагч",
     other: "Бусад",
+    nobody: "Хэн ч биш",
   } satisfies Record<Relation, string>,
 } as const;
 

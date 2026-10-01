@@ -244,6 +244,7 @@
   --animate-line-flow: line-flow 1.2s linear infinite;
   --animate-pop-in: pop-in 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.3) both;
   --animate-rise-in: rise-in 0.4s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+  --animate-fly-in: fly-in 0.9s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
   --animate-twinkle: twinkle 3.6s ease-in-out infinite;
   --animate-ping-soft: ping-soft 2.6s ease-out infinite;
 
@@ -302,6 +303,14 @@
     from {
       opacity: 0;
       scale: 0.4;
+    }
+  }
+  /* From the centre (offset in --fly-x / --fly-y) out to the planet's place. */
+  @keyframes fly-in {
+    from {
+      opacity: 0;
+      scale: 0.2;
+      translate: var(--fly-x, 0) var(--fly-y, 0);
     }
   }
   @keyframes rise-in {

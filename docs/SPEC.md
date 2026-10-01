@@ -53,6 +53,7 @@
 | `friend` | Найз | `friend` |
 | `coworker` | Хамт ажиллагч | `other` |
 | `other` | Бусад (өөрөө нэрлэнэ) | `other` |
+| `nobody` | Хэн ч биш | `other` — нүүрний гараг систем дээр үргэлж «+N» дотор байна |
 
 ### 2.3 Avatar
 - `@dicebear/core` + `notionists` (эсвэл `lorelei`) style — хар цагаан шугаман зураг, minimal дизайнд тохирно.

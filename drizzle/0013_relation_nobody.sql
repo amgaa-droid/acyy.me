@@ -1,0 +1,1 @@
+ALTER TYPE "public"."relation" ADD VALUE 'nobody';

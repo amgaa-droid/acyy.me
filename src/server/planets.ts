@@ -1,5 +1,5 @@
 import { formatBirthDate } from "@/lib/birth-date";
-import { RELATION_GROUP, type Relation, type RelationGroup } from "@/lib/domain";
+import { RELATION_GROUP, isOffOrbit, type Relation, type RelationGroup } from "@/lib/domain";
 import { avatarDataUri } from "@/lib/avatars";
 import { relationText } from "@/lib/people";
 import { pairKey, type PairLink } from "@/lib/planet-system";
@@ -44,15 +44,16 @@ const CLOSENESS: Record<RelationGroup, number> = {
   self: 9,
 };
 
-/** Closest people first (romantic → family → friend → other); ties keep their order. */
+const closeness = (r: Relation) => (isOffOrbit(r) ? 10 : CLOSENESS[RELATION_GROUP[r]]);
+
+/**
+ * Closest people first (romantic → family → friend → other → "Хэн ч биш"); ties keep their
+ * order.
+ */
 export function byCloseness<T extends { relation: Relation }>(people: readonly T[]): T[] {
   return people
     .map((p, i) => ({ p, i }))
-    .sort(
-      (a, b) =>
-        CLOSENESS[RELATION_GROUP[a.p.relation]] - CLOSENESS[RELATION_GROUP[b.p.relation]] ||
-        a.i - b.i,
-    )
+    .sort((a, b) => closeness(a.p.relation) - closeness(b.p.relation) || a.i - b.i)
     .map(({ p }) => p);
 }
 

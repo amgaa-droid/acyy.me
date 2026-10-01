@@ -3,6 +3,8 @@
  * intercepted into `modal` (see `@modal/(..)*`) and slide up over the planets; the same URLs
  * opened directly, or from a full page, render as normal pages in `(shell)`.
  */
+import { ModalScope } from "@/components/app/modal-scope";
+
 export default function HomeLayout({
   children,
   modal,
@@ -11,9 +13,9 @@ export default function HomeLayout({
   modal: React.ReactNode;
 }) {
   return (
-    <>
+    <ModalScope home="/home">
       {children}
       {modal}
-    </>
+    </ModalScope>
   );
 }

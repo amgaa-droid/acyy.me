@@ -19,23 +19,29 @@ import { SignOutButton } from "@/components/app/sign-out-button";
 import { WalletChip } from "@/components/app/wallet-chip";
 import { PRODUCT_ICON_COMPONENTS } from "@/components/readings/product-icon";
 import { mn } from "@/i18n/mn";
-import type { ProductIconName } from "@/lib/domain";
+import { isOffOrbit, type ProductIconName } from "@/lib/domain";
 import { relationTint } from "@/lib/people";
 import {
-  MAX_SEATS,
   arrangeLinks,
+  bodyPx,
   bringIn,
   chainPoint,
+  clampToStage,
   dropTarget,
+  fitRing,
   initialSeating,
   layoutScale,
-  lineBetween,
   pairKey,
   pickLayout,
+  rimLine,
   ringAngles,
+  scatter,
+  toPct,
   toPx,
   type Body,
+  type LayoutKey,
   type PairLink,
+  type Point,
   type Seating,
 } from "@/lib/planet-system";
 import { cn } from "@/lib/utils";
@@ -44,14 +50,7 @@ import type { PlanetPerson, PlanetReading, PlanetSystemData } from "@/server/pla
 const t = mn.home.planets;
 const ME = "me";
 
-const DRIFT = [
-  "motion-safe:animate-drift-a",
-  "motion-safe:animate-drift-b",
-  "motion-safe:animate-drift-c",
-  "motion-safe:animate-drift-a",
-  "motion-safe:animate-drift-c",
-  "motion-safe:animate-drift-b",
-];
+const DRIFT = ["motion-safe:animate-drift-a", "motion-safe:animate-drift-b", "motion-safe:animate-drift-c"];
 const STARS = [
   { x: 30, y: 9, d: 0 },
   { x: 72, y: 12, d: 1.2 },
@@ -63,10 +62,14 @@ const STARS = [
   { x: 42, y: 34, d: 1.5 },
 ];
 const SPRING = "ease-[cubic-bezier(.2,.9,.25,1.3)]";
+/** Planet faces: pastel by relation; light in dark mode so the line-art avatar reads. */
+const FACE = "dark:bg-nav";
 /** Smallest gap between planets in the "+N" dock before it shows a "see all" link instead. */
 const DOCK_MIN_STEP = 60;
-/** Widest a reading button's name gets (Tailwind max-w-24). */
-const LABEL_W = 96;
+/** Widest a reading button's name gets (Tailwind max-w-28). */
+const LABEL_W = 112;
+/** How long the opening fly-out lasts (ms). */
+const INTRO_MS = 1600;
 
 type Drag = {
   id: string;
@@ -81,12 +84,13 @@ type Drag = {
   target: string | null;
 };
 
-type Stored = { seating: Seating; links: PairLink[] };
+type Places = Record<LayoutKey, Record<string, Point>>;
+type Stored = { seating: Seating; links: PairLink[]; places: Places };
 
-function load(key: string): Stored | null {
+function load(key: string): Partial<Stored> | null {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Stored) : null;
+    return raw ? (JSON.parse(raw) as Partial<Stored>) : null;
   } catch {
     return null;
   }
@@ -98,9 +102,11 @@ function ProductGlyph({ icon, className }: { icon: string | undefined; className
 }
 
 /**
- * The signed-in home: "me" in the middle of the whole screen and my people as planets around.
- * Tap a planet for its readings, drag it onto another to open their pair reading; everything
- * opens as a popup (intercepted routes). Beyond six people the rest wait in a "+N" dock.
+ * The signed-in home: "me" in the middle of the whole screen and my people as planets around,
+ * scattered at random the first time and then wherever the user drags them. Tap a planet for its
+ * readings and its links; drag it onto another to open their pair reading; drop it on empty
+ * space to move it. Details open as popups (intercepted routes). Beyond six planets, and for
+ * everyone marked "Хэн ч биш", people wait in a "+N" dock.
  */
 export function PlanetSystem({
   data,
@@ -114,11 +120,14 @@ export function PlanetSystem({
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const ids = data.people.map((p) => p.id);
-  const storeKey = `planets:v1:${data.me.id}`;
-  const [seating, setSeating] = useState<Seating>(() => initialSeating(ids));
+  const orbitIds = data.people.filter((p) => !isOffOrbit(p.relation)).map((p) => p.id);
+  const offCount = data.people.length - orbitIds.length;
+  const storeKey = `planets:v2:${data.me.id}`;
+  const [seating, setSeating] = useState<Seating>(() => initialSeating(orbitIds, null, offCount));
+  const [places, setPlaces] = useState<Places>({ phone: {}, desktop: {} });
   const [drawn, setDrawn] = useState<PairLink[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [intro, setIntro] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [dockOpen, setDockOpen] = useState(false);
   const [drag, setDragState] = useState<Drag | null>(null);
@@ -141,27 +150,80 @@ export function PlanetSystem({
     return () => ro.disconnect();
   }, []);
 
-  // Seating and hand-drawn pairs live in this browser only.
-  const idsKey = ids.join(",");
+  // Seating, places and hand-drawn pairs live in this browser only.
+  const orbitKey = orbitIds.join(",");
+  const allKey = data.people.map((p) => p.id).join(",");
   useEffect(() => {
     const saved = load(storeKey);
-    const known = new Set(idsKey.split(","));
+    const orbit = orbitKey ? orbitKey.split(",") : [];
+    const all = new Set(allKey ? allKey.split(",") : []);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- restoring browser-only state after mount
-    setSeating(initialSeating(idsKey ? idsKey.split(",") : [], saved?.seating));
-    setDrawn((saved?.links ?? []).filter((l) => known.has(l.a) && known.has(l.b)));
+    setSeating(initialSeating(orbit, saved?.seating, offCount));
+    setDrawn((saved?.links ?? []).filter((l) => all.has(l.a) && all.has(l.b)));
+    setPlaces(saved?.places ?? { phone: {}, desktop: {} });
     setLoaded(true);
-  }, [storeKey, idsKey]);
+  }, [storeKey, orbitKey, allKey, offCount]);
   useEffect(() => {
     if (!loaded) return;
     try {
-      localStorage.setItem(storeKey, JSON.stringify({ seating, links: drawn } satisfies Stored));
+      localStorage.setItem(
+        storeKey,
+        JSON.stringify({ seating, links: drawn, places } satisfies Stored),
+      );
     } catch {
-      // Private mode or storage full: the orbit just won't remember its order.
+      // Private mode or storage full: the planets just won't remember.
     }
-  }, [loaded, storeKey, seating, drawn]);
+  }, [loaded, storeKey, seating, drawn, places]);
+
+  function radiusOf(rank: number, k: number) {
+    const layout = pickLayout(size?.w ?? 0);
+    return layout.sizes[Math.min(rank, layout.sizes.length - 1)] * k;
+  }
+  const rankOf = (id: string) => Math.max(0, orbitIds.indexOf(id));
+
+  // Planets without a place yet are scattered at random spots.
+  const layoutKey = size ? pickLayout(size.w).key : null;
+  const seatsKey = seating.seats.join(",");
+  useEffect(() => {
+    if (!loaded || !size || !layoutKey) return;
+    const layout = pickLayout(size.w);
+    const k = layoutScale(layout, size.w, size.h);
+    const mine = places[layoutKey];
+    const missing = seating.seats.filter((id) => !mine[id]);
+    if (missing.length === 0) return;
+    const taken: Body[] = [
+      bodyPx(layout.me, size.w, size.h, k),
+      bodyPx(layout.more, size.w, size.h, k),
+      bodyPx(layout.add, size.w, size.h, k),
+      ...seating.seats
+        .filter((id) => mine[id])
+        .map((id) => ({ ...toPx(mine[id], size.w, size.h), r: radiusOf(rankOf(id), k) })),
+    ];
+    const placed = scatter(
+      missing.map((id) => ({ id, r: radiusOf(rankOf(id), k) })),
+      taken,
+      size.w,
+      size.h,
+      layout,
+    );
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- places depend on the measured screen
+    setPlaces((cur) => ({ ...cur, [layoutKey]: { ...cur[layoutKey], ...placed } }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-scatter only when seats or screen change
+  }, [loaded, layoutKey, seatsKey, size?.w, size?.h]);
+
+  // The opening fly-out from the centre plays once per visit.
+  useEffect(() => {
+    if (!loaded || !size) return;
+    const id = window.setTimeout(() => setIntro(false), INTRO_MS);
+    return () => window.clearTimeout(id);
+  }, [loaded, size]);
 
   const byId = new Map(data.people.map((p) => [p.id, p]));
   const nameOf = (id: string) => (id === ME ? data.me.name : (byId.get(id)?.name ?? ""));
+  const offOrbit = (id: string) => {
+    const p = byId.get(id);
+    return !!p && isOffOrbit(p.relation);
+  };
   const seated = (id: string) => seating.seats.includes(id);
   const hidden = data.people.filter((p) => !seated(p.id));
   const showDock = dockOpen && hidden.length > 0;
@@ -179,7 +241,26 @@ export function PlanetSystem({
   const readingHref = (personId: string, r: PlanetReading) =>
     r.purchaseId ? `/r/${r.purchaseId}` : `/buy/${r.code}?a=${personId === ME ? data.me.id : personId}`;
 
-  const root = (
+  /** Seats people (never "Хэн ч биш"); a newcomer takes over the place of whoever left. */
+  const seat = (ids: string[], extra?: Partial<Record<LayoutKey, Record<string, Point>>>) => {
+    const result = bringIn(
+      seating,
+      ids.filter((id) => id !== ME && !offOrbit(id)),
+    );
+    setSeating({ seats: result.seats, touch: result.touch, tick: result.tick });
+    setPlaces((cur) => {
+      const next: Places = { phone: { ...cur.phone }, desktop: { ...cur.desktop } };
+      for (const [incoming, outgoing] of result.swaps) {
+        for (const key of ["phone", "desktop"] as const) {
+          if (next[key][outgoing]) next[key][incoming] = next[key][outgoing];
+        }
+      }
+      for (const key of ["phone", "desktop"] as const) Object.assign(next[key], extra?.[key]);
+      return next;
+    });
+  };
+
+  return (
     <div
       ref={rootRef}
       className="fixed inset-0 h-dvh touch-none overflow-hidden bg-tint-1 select-none"
@@ -202,7 +283,7 @@ export function PlanetSystem({
           style={{ left: `${s.x}%`, top: `${s.y}%`, animationDelay: `${s.d}s` }}
         />
       ))}
-      {size && renderStage()}
+      {size && loaded && renderStage()}
 
       <div className="absolute top-[max(env(safe-area-inset-top),1rem)] left-4 z-40 flex items-center gap-3 lg:top-8 lg:left-8">
         <button
@@ -224,19 +305,20 @@ export function PlanetSystem({
 
       <BottomSheet title={t.menu} open={menuOpen} onOpenChange={setMenuOpen}>
         <nav aria-label="Үндсэн цэс" className="flex flex-col gap-2">
-          {[...NAV_ITEMS.filter((n) => n.href !== "/home"), { href: "/wallet", label: mn.header.wallet, Icon: Wallet }].map(
-            ({ href, label, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMenuOpen(false)}
-                className="flex min-h-14 items-center gap-3 rounded-2xl bg-subtle px-4 text-base font-semibold"
-              >
-                <Icon className="size-5" aria-hidden />
-                {label}
-              </Link>
-            ),
-          )}
+          {[
+            ...NAV_ITEMS.filter((n) => n.href !== "/home"),
+            { href: "/wallet", label: mn.header.wallet, Icon: Wallet },
+          ].map(({ href, label, Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMenuOpen(false)}
+              className="flex min-h-14 items-center gap-3 rounded-2xl bg-subtle px-4 text-base font-semibold"
+            >
+              <Icon className="size-5" aria-hidden />
+              {label}
+            </Link>
+          ))}
           <div className="pt-2">
             <SignOutButton />
           </div>
@@ -263,7 +345,7 @@ export function PlanetSystem({
                       href={href}
                       onClick={() => {
                         setFoldedFor(null);
-                        setSeating((s) => bringIn(s, [l.a, l.b]));
+                        seat([l.a, l.b]);
                       }}
                       className="flex min-h-16 items-center gap-3 rounded-2xl bg-subtle px-3 py-2"
                     >
@@ -271,7 +353,7 @@ export function PlanetSystem({
                       <img
                         src={p.avatarUri}
                         alt=""
-                        className={cn("size-10 rounded-full dark:invert", relationTint(p.relation))}
+                        className={cn("size-10 rounded-full", relationTint(p.relation), FACE)}
                       />
                       <span className="flex flex-1 flex-col">
                         <span className="font-semibold">
@@ -294,15 +376,14 @@ export function PlanetSystem({
       )}
     </div>
   );
-  return root;
 
   function renderStage() {
     const { w, h } = size!;
     const layout = pickLayout(w);
     const k = layoutScale(layout, w, h);
-    const me = toPx(layout.me, w, h, k);
-    const usedSeats = layout.seats.slice(0, seating.seats.length);
-    const moreSeat = hidden.length > 0 ? toPx(layout.seats[MAX_SEATS - 1], w, h, k) : null;
+    const mine = places[layout.key];
+    const me = bodyPx(layout.me, w, h, k);
+    const more = hidden.length > 0 ? bodyPx(layout.more, w, h, k) : null;
     const center = { x: w / 2, y: h / 2 };
 
     // The "+N" dock: hidden people in a row near the bottom, as many as fit.
@@ -317,58 +398,51 @@ export function PlanetSystem({
 
     const home = new Map<string, Body>();
     home.set(ME, me);
-    seating.seats.forEach((id, i) => home.set(id, toPx(usedSeats[i], w, h, k)));
+    for (const id of seating.seats) {
+      if (mine[id]) home.set(id, { ...toPx(mine[id], w, h), r: radiusOf(rankOf(id), k) });
+    }
     docked.forEach((p, i) => home.set(p.id, { x: dockX0 + i * step, y: dockY, r: dockR }));
     const pos = (id: string): Body | undefined => {
       const b = home.get(id);
       if (drag?.moved && drag.id === id && b) return { x: drag.x, y: drag.y, r: b.r };
       return b;
     };
-    const isShown = (id: string) => home.has(id);
     const dim = (id: string) => (selected && selected !== id ? "opacity-30" : "opacity-100");
-
-    const { drawn: drawnLinks, folded } = arrangeLinks(links, isShown);
+    const { drawn: drawnLinks, folded } = arrangeLinks(links, (id) => home.has(id));
 
     const onDown = (id: string, fromDock: boolean) => (e: ReactPointerEvent<HTMLButtonElement>) => {
       if (e.button !== 0) return;
       const b = home.get(id);
       if (!b) return;
       e.currentTarget.setPointerCapture(e.pointerId);
-      setDrag({
-        id,
-        fromDock,
-        sx: e.clientX,
-        sy: e.clientY,
-        ox: e.clientX - b.x,
-        oy: e.clientY - b.y,
-        x: b.x,
-        y: b.y,
-        moved: false,
-        target: null,
-      });
+      setDrag({ id, fromDock, sx: e.clientX, sy: e.clientY, ox: e.clientX - b.x, oy: e.clientY - b.y, x: b.x, y: b.y, moved: false, target: null });
     };
     const onMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-      const moved = drag.moved || Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6;
-      const x = e.clientX - drag.ox;
-      const y = e.clientY - drag.oy;
-      const r = home.get(drag.id)?.r ?? 30;
-      const others = [...home.entries()]
-        .filter(([id]) => id !== drag.id)
-        .map(([id, body]) => ({ id, body }));
-      setDrag({ ...drag, moved, x, y, target: moved ? dropTarget({ x, y, r }, others) : null });
+      const d = dragRef.current;
+      if (!d) return;
+      const moved = d.moved || Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6;
+      const x = e.clientX - d.ox;
+      const y = e.clientY - d.oy;
+      const r = home.get(d.id)?.r ?? 30;
+      const others = [...home.entries()].filter(([id]) => id !== d.id).map(([id, body]) => ({ id, body }));
+      setDrag({ ...d, moved, x, y, target: moved ? dropTarget({ x, y, r }, others) : null });
     };
     const onUp = () => {
       const d = dragRef.current;
       if (!d) return;
       setDrag(null);
       if (!d.moved) return tap(d.id, d.fromDock);
-      if (d.target) connect(d.id, d.target);
+      if (d.target) return connect(d.id, d.target);
+      // Dropped on empty space: the planet stays there (a docked one joins the orbit there).
+      if (d.fromDock && offOrbit(d.id)) return;
+      const r = home.get(d.id)?.r ?? radiusOf(rankOf(d.id), k);
+      const at = toPct(clampToStage({ x: d.x, y: d.y }, r, w, h, layout), w, h);
+      seat([d.id], { [layout.key]: { [d.id]: at } });
+      if (d.fromDock) setDockOpen(false);
     };
     const tap = (id: string, fromDock: boolean) => {
-      if (fromDock) {
-        setSeating((s) => bringIn(s, [id]));
+      if (fromDock && !offOrbit(id)) {
+        seat([id]);
         setDockOpen(false);
         setSelected(id);
       } else {
@@ -376,155 +450,148 @@ export function PlanetSystem({
       }
     };
     const connect = (a: string, b: string) => {
-      const key = pairKey(a, b);
       let href: string | null;
       if (b === ME) href = pairHref(ME, a, data.mePairs[a] ?? null);
       else {
-        const existing = links.find((l) => pairKey(l.a, l.b) === key);
+        const existing = links.find((l) => pairKey(l.a, l.b) === pairKey(a, b));
         if (!existing) setDrawn((cur) => [...cur, { a, b, purchaseId: null }]);
         href = pairHref(a, b, existing?.purchaseId ?? null);
       }
-      setSeating((s) => bringIn(s, [a, b].filter((id) => id !== ME)));
+      seat([a, b]);
       setDockOpen(false);
       setSelected(null);
       if (href) router.push(href, { scroll: false });
     };
 
-    const line = (a: Body, b: Body, kind: "plain" | "on" | "ghost", faded: boolean, key: string) => {
-      const l = lineBetween(a, b);
-      return (
-        <span
-          key={key}
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute planet-line transition-opacity duration-300",
-            kind === "on" && "planet-line-on motion-safe:animate-line-flow",
-            kind === "ghost" && "planet-line-ghost motion-safe:animate-line-flow",
-            faded ? "opacity-25" : "opacity-100",
-          )}
-          style={{ left: l.x, top: l.y - 1, width: l.length, transform: `rotate(${l.angle}deg)` }}
-        />
-      );
+    // Lines and chains only for the tapped planet (or me) — the rest stay uncluttered.
+    const sel = selected && home.has(selected) && !drag?.moved ? selected : null;
+    type Edge = {
+      key: string;
+      a: Body;
+      b: Body;
+      on: boolean;
+      label: string;
+      href?: string | null;
+      onClick?: () => void;
+      count?: number;
+      /** Where the chain sits along the line (0.5 = middle). */
+      at?: number;
     };
-    const chainSize = layout.chain * k;
-    const chain = (
-      p: { x: number; y: number },
-      on: boolean,
-      faded: boolean,
-      label: string,
-      key: string,
-      action: { href: string | null } | { onClick: () => void },
-      count?: number,
-    ) => {
-      const cls = cn(
-        "absolute z-10 flex -translate-1/2 items-center justify-center rounded-full border-[1.5px] bg-surface transition-[scale,opacity] duration-300 hover:scale-120",
-        on ? "border-ring-2 text-ring-2 motion-safe:animate-ping-soft" : "border-muted-foreground/40 text-muted-foreground/70",
-        faded || drag ? "opacity-25" : "opacity-100",
-      );
-      const style = { left: p.x, top: p.y, width: chainSize, height: chainSize };
-      const body = (
-        <>
-          <Link2 className="size-[48%]" strokeWidth={2} aria-hidden />
-          {count !== undefined && (
-            <span
-              className={cn(
-                "absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[11px] font-bold text-bg",
-                on ? "bg-ring-2" : "bg-muted-foreground",
-              )}
-            >
-              {count}
-            </span>
-          )}
-        </>
-      );
-      if ("onClick" in action) {
-        return (
-          <button key={key} type="button" aria-label={label} onClick={action.onClick} className={cls} style={style}>
-            {body}
-          </button>
-        );
+    const edges: Edge[] = [];
+    if (sel === ME) {
+      for (const id of seating.seats) {
+        const b = pos(id);
+        const purchaseId = data.mePairs[id] ?? null;
+        if (b) edges.push({ key: `me-${id}`, a: me, b, on: !!purchaseId, label: t.pair(data.me.name, nameOf(id), !!purchaseId), href: pairHref(ME, id, purchaseId) });
       }
-      if (!action.href) return null;
-      return (
-        <Link key={key} href={action.href} scroll={false} aria-label={label} className={cls} style={style}>
-          {body}
-        </Link>
-      );
-    };
+    } else if (sel) {
+      const b = pos(sel)!;
+      const purchaseId = data.mePairs[sel] ?? null;
+      edges.push({ key: `me-${sel}`, a: me, b, on: !!purchaseId, label: t.pair(data.me.name, nameOf(sel), !!purchaseId), href: pairHref(ME, sel, purchaseId) });
+      for (const l of drawnLinks) {
+        if (l.a !== sel && l.b !== sel) continue;
+        const a = pos(l.a);
+        const c = pos(l.b);
+        if (a && c)
+          edges.push({
+            key: `l-${pairKey(l.a, l.b)}`,
+            a,
+            b: c,
+            on: !!l.purchaseId,
+            label: t.pair(nameOf(l.a), nameOf(l.b), !!l.purchaseId),
+            onClick: () => {
+              seat([l.a, l.b]);
+              const href = pairHref(l.a, l.b, l.purchaseId);
+              if (href) router.push(href, { scroll: false });
+            },
+          });
+      }
+      const f = folded.get(sel);
+      if (f && more)
+        edges.push({ key: `f-${sel}`, a: b, b: more, on: f.some((l) => l.purchaseId), label: t.folded(nameOf(sel), f.length), onClick: () => setFoldedFor(sel), count: f.length, at: 0.75 });
+    }
+    const ghost = drag?.moved && drag.target ? { a: pos(drag.id)!, b: home.get(drag.target)! } : null;
 
-    const planet = (p: PlanetPerson, seat: number | null) => {
+    const chainSize = layout.chain * k;
+    const planet = (p: PlanetPerson, fromDock: boolean, index: number) => {
       const b = pos(p.id)!;
-      const fromDock = seat === null;
       const isDrag = drag?.moved && drag.id === p.id;
+      const fly =
+        intro && !fromDock
+          ? ({ "--fly-x": `${me.x - b.x}px`, "--fly-y": `${me.y - b.y}px`, animationDelay: `${index * 0.08}s` } as CSSProperties)
+          : undefined;
       return (
         <div
           key={p.id}
           className={cn(
             "absolute -translate-1/2",
-            isDrag
-              ? "z-30"
-              : cn(`z-10 transition-[left,top,opacity] duration-500 ${SPRING}`, fromDock ? "z-20 animate-rise-in" : dim(p.id)),
+            isDrag ? "z-30" : cn(`transition-[left,top,opacity] duration-500 ${SPRING}`, fromDock ? "z-20" : cn("z-10", dim(p.id))),
           )}
           style={{ left: b.x, top: b.y, width: b.r * 2, height: b.r * 2 }}
         >
-          <div
-            className={cn("size-full", !isDrag && !fromDock && seat !== null && DRIFT[seat])}
-            style={{ animationDelay: `${-(seat ?? 0) * 1.7}s` }}
-          >
-            <button
-              type="button"
-              aria-label={t.personAria(p.name, p.relationText, p.signName)}
-              aria-pressed={selected === p.id}
-              onPointerDown={onDown(p.id, fromDock)}
-              onPointerMove={onMove}
-              onPointerUp={onUp}
-              onPointerCancel={() => setDrag(null)}
-              onClick={(e) => {
-                if (e.detail === 0) tap(p.id, fromDock);
-              }}
-              className={cn("group/p relative block size-full touch-none rounded-full", isDrag ? "cursor-grabbing" : "cursor-grab")}
+          <div className={cn("size-full", fromDock ? "animate-rise-in" : intro && "motion-safe:animate-fly-in")} style={fly}>
+            <div
+              className={cn("size-full", !isDrag && !fromDock && DRIFT[index % DRIFT.length])}
+              style={{ animationDelay: `${-index * 1.7}s` }}
             >
-              {seat === 1 && (
-                <span
-                  aria-hidden
-                  className="absolute top-1/2 left-1/2 h-[42%] w-[150%] -translate-1/2 -rotate-[18deg] rounded-[50%] border-[1.5px] border-highlight/35"
-                />
-              )}
-              <span
-                className={cn(
-                  `relative block size-full overflow-hidden rounded-full border-[3px] border-surface shadow-[0_8px_24px_rgb(0_0_0/0.14)] transition-[scale,box-shadow] duration-500 ${SPRING} group-hover/p:scale-108`,
-                  relationTint(p.relation),
-                  drag?.target === p.id && "scale-115 shadow-[0_0_0_8px_color-mix(in_oklab,var(--highlight)_25%,transparent)]",
-                  selected === p.id && "shadow-[0_0_0_5px_var(--surface),0_0_0_8px_var(--highlight)]",
-                )}
+              <button
+                type="button"
+                aria-label={t.personAria(p.name, p.relationText, p.signName)}
+                aria-pressed={selected === p.id}
+                onPointerDown={onDown(p.id, fromDock)}
+                onPointerMove={onMove}
+                onPointerUp={onUp}
+                onPointerCancel={() => setDrag(null)}
+                onClick={(e) => {
+                  if (e.detail === 0) tap(p.id, fromDock);
+                }}
+                className={cn("group/p relative block size-full touch-none rounded-full", isDrag ? "cursor-grabbing" : "cursor-grab")}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
-                <img src={p.avatarUri} alt="" draggable={false} className="size-full dark:invert" />
-              </span>
-              <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 flex w-28 -translate-x-1/2 flex-col items-center">
-                <span className="max-w-full truncate text-[13px] leading-tight font-semibold lg:text-[15px]">
-                  {p.name}
-                </span>
-                {!fromDock && (
-                  <span className="max-w-full truncate text-[11px] leading-tight text-muted-foreground">
-                    {p.signName}
-                  </span>
+                {index === 1 && !fromDock && (
+                  <span
+                    aria-hidden
+                    className="absolute top-1/2 left-1/2 h-[42%] w-[150%] -translate-1/2 -rotate-[18deg] rounded-[50%] border-[1.5px] border-highlight/35"
+                  />
                 )}
-              </span>
-            </button>
+                <span
+                  className={cn(
+                    `relative block size-full overflow-hidden rounded-full border-[3px] border-surface shadow-[0_8px_24px_rgb(0_0_0/0.14)] transition-[scale,box-shadow] duration-500 ${SPRING} group-hover/p:scale-108`,
+                    relationTint(p.relation),
+                    FACE,
+                    drag?.target === p.id && "scale-115 shadow-[0_0_0_8px_color-mix(in_oklab,var(--highlight)_25%,transparent)]",
+                    selected === p.id && "shadow-[0_0_0_5px_var(--bg),0_0_0_8px_var(--highlight)]",
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
+                  <img src={p.avatarUri} alt="" draggable={false} className="size-full" />
+                </span>
+                <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 flex w-28 -translate-x-1/2 flex-col items-center">
+                  <span className="max-w-full truncate text-[13px] leading-tight font-semibold lg:text-[15px]">{p.name}</span>
+                  {!fromDock && (
+                    <span className="max-w-full truncate text-[11px] leading-tight text-muted-foreground">{p.signName}</span>
+                  )}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       );
     };
 
     // Reading buttons around the selected planet (or me).
-    const sel = selected && home.has(selected) && !drag ? selected : null;
     const selPerson = sel === ME ? null : sel ? byId.get(sel) : null;
     const selReadings = sel === ME ? data.me.readings : (selPerson?.readings ?? []);
     const selBody = sel ? home.get(sel)! : null;
     const ringButton = layout.ring.button * Math.min(1, k);
+    const ringR = selBody ? selBody.r + layout.ring.gap * Math.min(1, k) : 0;
+    const ringEdge = ringButton / 2 + 8;
     const angles = selBody
-      ? ringAngles(selBody, center, selReadings.length, sel === ME, layout.ring.step)
+      ? fitRing(selBody, ringR, ringAngles(selBody, center, selReadings.length, sel === ME, layout.ring.step), {
+          left: ringEdge,
+          top: ringEdge + 64,
+          right: w - ringEdge,
+          bottom: h - ringEdge - 40,
+        })
       : [];
 
     return (
@@ -540,68 +607,68 @@ export function PlanetSystem({
           style={{ left: me.x, top: me.y, width: me.r * 7.8, height: me.r * 7.8 }}
         />
 
-        {/* Lines: me ↔ everyone seated, me ↔ "+N", pairs between people, folded pairs. */}
-        {seating.seats.map((id) => {
-          const b = pos(id);
-          return b && line(me, b, data.mePairs[id] ? "on" : "plain", !!selected && selected !== ME && selected !== id, `me-${id}`);
-        })}
-        {moreSeat && line(me, moreSeat, "plain", !!selected, "me-more")}
-        {drawnLinks.map((l) => {
-          const a = pos(l.a);
-          const b = pos(l.b);
-          return a && b && line(a, b, l.purchaseId ? "on" : "plain", !!selected && selected !== l.a && selected !== l.b, `l-${pairKey(l.a, l.b)}`);
-        })}
-        {moreSeat &&
-          [...folded.entries()].map(([id, ls]) => {
-            const a = pos(id);
-            return a && line(a, moreSeat, ls.some((l) => l.purchaseId) ? "on" : "plain", !!selected && selected !== id, `f-${id}`);
-          })}
-        {drag?.moved && drag.target && pos(drag.id) && line(pos(drag.id)!, home.get(drag.target)!, "ghost", false, "ghost")}
-
-        {/* Chains */}
-        {seating.seats.map((id) => {
-          const b = pos(id);
-          const purchaseId = data.mePairs[id] ?? null;
+        {/* Links of the tapped planet, rim to rim, with the chain in the middle. */}
+        {[...edges, ...(ghost ? [{ key: "ghost", ...ghost, on: false }] : [])].map((e) => {
+          const l = rimLine(e.a, e.b);
           return (
-            b &&
-            chain(chainPoint(me, b, 14 * k), !!purchaseId, !!selected && selected !== ME && selected !== id, t.pair(data.me.name, nameOf(id), !!purchaseId), `cme-${id}`, { href: pairHref(ME, id, purchaseId) })
+            <span
+              key={`line-${e.key}`}
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute planet-line",
+                e.key === "ghost"
+                  ? "planet-line-ghost motion-safe:animate-line-flow"
+                  : e.on && "planet-line-on motion-safe:animate-line-flow",
+              )}
+              style={{ left: l.x, top: l.y - 1, width: l.length, transform: `rotate(${l.angle}deg)` }}
+            />
           );
         })}
-        {drawnLinks.map((l) => {
-          const a = pos(l.a);
-          const b = pos(l.b);
-          return (
-            a &&
-            b &&
-            chain(chainPoint(a, b), !!l.purchaseId, !!selected && selected !== l.a && selected !== l.b, t.pair(nameOf(l.a), nameOf(l.b), !!l.purchaseId), `cl-${pairKey(l.a, l.b)}`, {
-              onClick: () => {
-                setSeating((s) => bringIn(s, [l.a, l.b]));
-                const href = pairHref(l.a, l.b, l.purchaseId);
-                if (href) router.push(href, { scroll: false });
-              },
-            })
+        {edges.map((e) => {
+          const p = chainPoint(e.a, e.b, e.at);
+          const cls = cn(
+            "absolute z-10 flex -translate-1/2 animate-pop-in items-center justify-center rounded-full border-[1.5px] bg-surface transition-[scale] duration-300 hover:scale-120",
+            e.on ? "border-ring-2 text-ring-2 motion-safe:animate-ping-soft" : "border-muted-foreground/40 text-muted-foreground/70",
           );
-        })}
-        {moreSeat &&
-          !showDock &&
-          [...folded.entries()].map(([id, ls]) => {
-            const a = pos(id);
+          const style = { left: p.x, top: p.y, width: chainSize, height: chainSize };
+          const body = (
+            <>
+              <Link2 className="size-[48%]" strokeWidth={2} aria-hidden />
+              {e.count !== undefined && (
+                <span
+                  className={cn(
+                    "absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[11px] font-bold text-bg",
+                    e.on ? "bg-ring-2" : "bg-muted-foreground",
+                  )}
+                >
+                  {e.count}
+                </span>
+              )}
+            </>
+          );
+          if (e.onClick)
             return (
-              a &&
-              chain(chainPoint(a, moreSeat), ls.some((l) => l.purchaseId), !!selected && selected !== id, t.folded(nameOf(id), ls.length), `cf-${id}`, { onClick: () => setFoldedFor(id) }, ls.length)
+              <button key={`chain-${e.key}`} type="button" aria-label={e.label} onClick={e.onClick} className={cls} style={style}>
+                {body}
+              </button>
             );
-          })}
+          return e.href ? (
+            <Link key={`chain-${e.key}`} href={e.href} scroll={false} aria-label={e.label} className={cls} style={style}>
+              {body}
+            </Link>
+          ) : null;
+        })}
 
         {/* Planets */}
         {seating.seats.map((id, i) => {
           const p = byId.get(id);
-          return p && planet(p, i);
+          return p && home.has(id) && planet(p, false, i);
         })}
 
-        {moreSeat && (
+        {more && (
           <div
-            className={cn("absolute z-20 -translate-1/2 transition-opacity duration-300", selected ? "opacity-30" : "opacity-100")}
-            style={{ left: moreSeat.x, top: moreSeat.y, width: moreSeat.r * 2, height: moreSeat.r * 2 }}
+            className={cn("absolute z-20 -translate-1/2 transition-opacity duration-300", selected && !showDock ? "opacity-30" : "opacity-100")}
+            style={{ left: more.x, top: more.y, width: more.r * 2, height: more.r * 2 }}
           >
             <div className="size-full motion-safe:animate-drift-a" style={{ animationDelay: "-4s" }}>
               <button
@@ -632,16 +699,13 @@ export function PlanetSystem({
               role="region"
               aria-label={t.dockTitle(hidden.length)}
               className="absolute z-[15] -translate-x-1/2 animate-rise-in rounded-[36px] bg-surface/85 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] backdrop-blur-md"
-              style={{
-                left: w / 2,
-                top: dockY - dockR - 40,
-                width: Math.min(w - 32, dockCount * step + 48),
-                height: dockR * 2 + 76,
-              }}
+              style={{ left: w / 2, top: dockY - dockR - 40, width: Math.min(w - 32, Math.max(240, dockCount * step + 48)), height: dockR * 2 + 76 }}
             >
-              <p className="absolute top-3.5 left-6 text-xs font-semibold text-highlight">{t.dockTitle(hidden.length)}</p>
+              <p className="absolute inset-x-6 top-3.5 truncate text-center text-xs font-semibold text-highlight">
+                {t.dockTitle(hidden.length)}
+              </p>
             </div>
-            {docked.map((p) => planet(p, null))}
+            {docked.map((p, i) => planet(p, true, i))}
             {dockOverflow && (
               <Link
                 href="/people"
@@ -657,7 +721,7 @@ export function PlanetSystem({
         <div
           className={cn("absolute z-10 -translate-1/2 transition-opacity duration-300", selected || showDock ? "opacity-30" : "opacity-100")}
           style={(() => {
-            const a = toPx(layout.add, w, h, k);
+            const a = bodyPx(layout.add, w, h, k);
             return { left: a.x, top: a.y, width: a.r * 2, height: a.r * 2 } as CSSProperties;
           })()}
         >
@@ -666,7 +730,7 @@ export function PlanetSystem({
               href="/people/new"
               scroll={false}
               aria-label={mn.people.add}
-              className={`group/add relative flex size-full items-center justify-center rounded-full border-2 border-dashed border-highlight text-highlight transition-[scale,rotate] duration-500 ${SPRING} hover:scale-110 hover:rotate-90`}
+              className={`relative flex size-full items-center justify-center rounded-full border-2 border-dashed border-highlight text-highlight transition-[scale,rotate] duration-500 ${SPRING} hover:scale-110 hover:rotate-90`}
             >
               <Plus className="size-6" aria-hidden />
             </Link>
@@ -677,7 +741,10 @@ export function PlanetSystem({
         </div>
 
         {/* Me */}
-        <div className={cn("absolute z-[16] -translate-1/2 transition-opacity duration-300", dim(ME))} style={{ left: me.x, top: me.y, width: me.r * 2, height: me.r * 2 }}>
+        <div
+          className={cn("absolute z-[16] -translate-1/2 transition-opacity duration-300", dim(ME))}
+          style={{ left: me.x, top: me.y, width: me.r * 2, height: me.r * 2 }}
+        >
           <button
             type="button"
             aria-label={t.meAria(data.me.name, data.me.signName)}
@@ -687,7 +754,7 @@ export function PlanetSystem({
           >
             <span
               className={cn(
-                `block size-full overflow-hidden rounded-full border-4 border-fg bg-surface transition-[scale] duration-500 ${SPRING} group-hover/me:scale-104`,
+                `block size-full overflow-hidden rounded-full border-4 border-fg bg-surface transition-[scale] duration-500 ${SPRING} group-hover/me:scale-104 dark:border-highlight dark:bg-nav`,
                 drag?.target === ME && "scale-110",
               )}
               style={{
@@ -696,7 +763,7 @@ export function PlanetSystem({
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
-              <img src={data.me.avatarUri} alt="" draggable={false} className="size-full dark:invert" />
+              <img src={data.me.avatarUri} alt="" draggable={false} className="size-full" />
             </span>
           </button>
           <div className="pointer-events-none absolute top-full left-1/2 flex -translate-x-1/2 -translate-y-[18px] flex-col items-center gap-1">
@@ -715,27 +782,24 @@ export function PlanetSystem({
         {selBody &&
           selReadings.map((r, i) => {
             const a = angles[i];
-            const rr = selBody.r + layout.ring.gap * Math.min(1, k);
-            const x = selBody.x + Math.cos(a) * rr;
-            const y = selBody.y + Math.sin(a) * rr;
+            // The fan is already turned to fit; clamping only guards a screen too small for it.
+            const x = Math.min(w - ringEdge, Math.max(ringEdge, selBody.x + Math.cos(a) * ringR));
+            const y = Math.min(h - ringEdge - 40, Math.max(ringEdge + 64, selBody.y + Math.sin(a) * ringR));
             const product = data.products[r.code];
             const owner = sel === ME ? data.me.name : (selPerson?.name ?? "");
-            // The name sits on the far side of the button, away from the planet, unless that
-            // would run off screen; around me (centre of the screen) it goes above or below.
+            const name = t.short[r.code] ?? product?.name.replace(/ зурхай$/u, "") ?? r.code;
+            // The name sits just outside its button, straight away from the planet, so
+            // neighbours' names point different ways; kept on screen.
             const cos = Math.cos(a);
             const sin = Math.sin(a);
-            const off = ringButton / 2 + 6;
-            const vertical = sin < 0 ? "above" : "below";
-            let side: "left" | "right" | "above" | "below" =
-              sel === ME ? vertical : cos < -0.35 ? "left" : cos > 0.35 ? "right" : vertical;
-            if (side === "left" && x - off - LABEL_W < 8) side = vertical;
-            if (side === "right" && x + off + LABEL_W > w - 8) side = vertical;
-            const labelAt = {
-              left: { dx: -off, dy: 0, cls: "-translate-x-full -translate-y-1/2 text-right" },
-              right: { dx: off, dy: 0, cls: "-translate-y-1/2 text-left" },
-              above: { dx: 0, dy: -off, cls: "-translate-x-1/2 -translate-y-full text-center" },
-              below: { dx: 0, dy: off, cls: "-translate-x-1/2 text-center" },
-            }[side];
+            const labelW = Math.min(LABEL_W, name.length * 6.6 + 22);
+            const labelH = 22;
+            const reach = ringButton / 2 + 6;
+            const cx = Math.min(
+              w - 8 - labelW / 2,
+              Math.max(8 + labelW / 2, x + cos * (reach + labelW / 2)),
+            );
+            const cy = y + sin * (reach + labelH / 2);
             return (
               <Link
                 key={`${sel}-${r.code}`}
@@ -751,16 +815,13 @@ export function PlanetSystem({
                     r.purchaseId ? "border-highlight bg-highlight text-highlight-fg" : "border-highlight/30 bg-surface text-highlight",
                   )}
                 >
-                  <ProductGlyph icon={product?.icon} className="size-[44%]" />
+                  <ProductGlyph icon={product?.icon} className="size-[46%]" />
                 </span>
                 <span
-                  className={cn(
-                    "pointer-events-none absolute w-max max-w-24 rounded-xl bg-surface px-2 py-0.5 text-[11px] leading-tight font-semibold shadow-[0_2px_8px_rgb(0_0_0/0.08)]",
-                    labelAt.cls,
-                  )}
-                  style={{ left: `calc(50% + ${labelAt.dx}px)`, top: `calc(50% + ${labelAt.dy}px)` }}
+                  className="pointer-events-none absolute max-w-28 -translate-1/2 truncate rounded-full bg-surface px-2.5 py-1 text-xs leading-none font-semibold whitespace-nowrap shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
+                  style={{ left: `calc(50% + ${cx - x}px)`, top: `calc(50% + ${cy - y}px)` }}
                 >
-                  {product?.name.replace(/ зурхай$/u, "") ?? r.code}
+                  {name}
                 </span>
               </Link>
             );
@@ -770,13 +831,15 @@ export function PlanetSystem({
           aria-live="polite"
           className={cn(
             "pointer-events-none absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-5 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground transition-opacity lg:bottom-8",
-            showDock ? "opacity-0" : "opacity-100",
+            showDock && !drag?.moved ? "opacity-0" : "opacity-100",
           )}
         >
           {drag?.moved
             ? drag.target
               ? t.dropOn(nameOf(drag.target))
-              : t.dropAway
+              : drag.fromDock && offOrbit(drag.id)
+                ? t.dropAway
+                : t.dropMove
             : data.people.length === 0
               ? t.empty
               : t.hint}

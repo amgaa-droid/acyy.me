@@ -13,6 +13,7 @@ export const RELATIONS = [
   "friend",
   "coworker",
   "other",
+  "nobody",
 ] as const;
 export type Relation = (typeof RELATIONS)[number];
 
@@ -32,7 +33,16 @@ export const RELATION_GROUP: Record<Relation, RelationGroup> = {
   friend: "friend",
   coworker: "other",
   other: "other",
+  nobody: "other",
 };
+
+/**
+ * "Хэн ч биш": someone the user keeps around but not close — readings work as for "other",
+ * and on the home planet system they always wait in the "+N" dock instead of orbiting.
+ */
+export function isOffOrbit(relation: Relation): boolean {
+  return relation === "nobody";
+}
 
 export const GENDERS = ["male", "female", "unspecified"] as const;
 export type Gender = (typeof GENDERS)[number];
