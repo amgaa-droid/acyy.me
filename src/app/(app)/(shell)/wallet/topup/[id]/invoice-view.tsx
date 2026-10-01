@@ -8,6 +8,7 @@ import { useEffect, useState, useTransition } from "react";
 import { TopUpSheet } from "@/components/app/top-up-sheet";
 import { Button } from "@/components/ui/button";
 import { formatMnt, mn } from "@/i18n/mn";
+import { qpayAppLink } from "@/lib/qpay-link";
 import type { InvoiceData } from "@/server/db/schema";
 import { checkTopupAction } from "../../actions";
 
@@ -22,7 +23,7 @@ type Props = {
 };
 
 /**
- * Invoice screen (SPEC §4.3): bank deeplinks on phones, QR on desktop.
+ * Invoice screen (SPEC §4.3): QPay only — the QPay app on phones, its QR on desktop.
  * Polls /api/topups/:id every 3 s; on success returns the user to where they came from.
  */
 export function InvoiceView({ topup, balance: initialBalance, next, mockPayUrl }: Props) {
@@ -122,29 +123,17 @@ export function InvoiceView({ topup, balance: initialBalance, next, mockPayUrl }
 
       {inv && (
         <>
-          {/* Phones: open the bank app directly. */}
-          <section className="flex flex-col gap-3 lg:hidden">
-            <h1 className="text-xl font-semibold">{t.openBank}</h1>
-            <ul className="grid grid-cols-2 gap-2">
-              {inv.deeplinks.map((d) => (
-                <li key={d.name}>
-                  <a
-                    href={d.link}
-                    className="flex h-14 items-center gap-3 rounded-2xl bg-surface px-3 text-sm font-semibold"
-                  >
-                    {d.logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- remote bank logos from QPay
-                      <img src={d.logo} alt="" className="size-8 rounded-lg object-contain" />
-                    ) : (
-                      <span className="flex size-8 items-center justify-center rounded-lg bg-tint-2 text-xs">
-                        {d.name.slice(0, 1)}
-                      </span>
-                    )}
-                    <span className="truncate">{d.name}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+          {/* Phones: open the QPay app directly. */}
+          <section className="flex flex-col gap-2 lg:hidden">
+            <Button
+              size="lg"
+              className="h-14 rounded-full text-base"
+              render={<a href={qpayAppLink(inv)} />}
+              nativeButton={false}
+            >
+              {t.payInApp}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">{t.payInAppHint}</p>
           </section>
 
           {/* Desktop: scan the QR with a phone. */}

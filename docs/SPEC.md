@@ -156,8 +156,8 @@
 ```
 [Цэнэглэх] дүн сонгох
   → topups (pending) үүсгэх → QPayProvider.createInvoice()
-  → Утсан дээр: банкны апп-уудын deeplink товчнууд (лого + нэр); desktop: QR зураг
-  → Хэрэглэгч банкны апп-д төлнө
+  → Төлбөр зөвхөн QPay (банк сонгуулахгүй): утсан дээр нэг "QPay-ээр төлөх" товч (QPay апп deeplink); desktop: QR зураг
+  → Хэрэглэгч QPay апп-д төлнө
   → QPay → POST /api/qpay/callback?topup_id=…&sig=HMAC(topup_id, QPAY_CALLBACK_SECRET)
       → sig шалгах → checkPayment(invoiceId) → paid & дүн таарвал
       → credit(amount, idempotency=paymentId) + credit(bonus) → topups.status=paid

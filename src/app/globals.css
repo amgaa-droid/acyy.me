@@ -351,6 +351,112 @@
   }
 }
 
+/*
+ * Unlock + reveal moments (src/components/readings/unlock-overlay.tsx, compat-reveal.tsx).
+ * Sparkles fly out to (--dx, --dy); letters land one by one via an inline animation-delay.
+ */
+@theme {
+  --animate-reveal-fade: reveal-fade 0.6s ease-out both;
+  --animate-reveal-letter: reveal-letter 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-reveal-glow: reveal-glow 2.4s ease-in-out infinite;
+  --animate-sparkle-burst: sparkle-burst 1s cubic-bezier(0.1, 0.8, 0.3, 1) both;
+  --animate-lock-wobble: lock-wobble 0.9s ease-in-out infinite;
+  --animate-unlock-pop: unlock-pop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.4) both;
+  --animate-flash: flash 0.7s ease-out both;
+  --animate-land-glow: land-glow 1.4s ease-out both;
+
+  @keyframes reveal-fade {
+    from {
+      opacity: 0;
+      translate: 0 10px;
+    }
+  }
+  @keyframes reveal-letter {
+    from {
+      opacity: 0;
+      filter: blur(14px);
+      translate: 0 0.35em;
+      scale: 1.4;
+    }
+  }
+  @keyframes reveal-glow {
+    0%,
+    100% {
+      opacity: 0.55;
+      scale: 0.92;
+    }
+    50% {
+      opacity: 1;
+      scale: 1.08;
+    }
+  }
+  @keyframes sparkle-burst {
+    0% {
+      opacity: 0;
+      translate: 0 0;
+      scale: 0.2;
+    }
+    25% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      translate: var(--dx, 0) var(--dy, 0);
+      scale: 1;
+      rotate: 180deg;
+    }
+  }
+  @keyframes lock-wobble {
+    0%,
+    100% {
+      rotate: 0deg;
+    }
+    20% {
+      rotate: -9deg;
+    }
+    40% {
+      rotate: 7deg;
+    }
+    60% {
+      rotate: -4deg;
+    }
+    80% {
+      rotate: 2deg;
+    }
+  }
+  @keyframes unlock-pop {
+    0% {
+      scale: 0.6;
+      rotate: -12deg;
+    }
+    60% {
+      scale: 1.18;
+      rotate: 4deg;
+    }
+  }
+  @keyframes flash {
+    0% {
+      opacity: 0;
+      scale: 0.3;
+    }
+    30% {
+      opacity: 0.9;
+    }
+    100% {
+      opacity: 0;
+      scale: 2.6;
+    }
+  }
+  @keyframes land-glow {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--highlight) 55%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 22px transparent;
+    }
+  }
+}
+
 /* Dashed connection between two planets (a rotated box): pale when the pair isn't bought. */
 @utility planet-line {
   height: 2px;

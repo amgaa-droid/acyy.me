@@ -28,9 +28,13 @@ test("top-up via mock QPay adds amount + bonus; callbacks are idempotent", async
   await expect(page).toHaveURL(/\/wallet\/topup\/[0-9a-f-]{36}\?next=%2Fwallet$/);
   const topupId = new URL(page.url()).pathname.split("/").pop()!;
   if (isDesktop(info.project.name)) await expect(page.getByAltText("QPay QR")).toBeVisible();
-  else await expect(page.getByRole("link", { name: /Хаан банк/ })).toBeVisible();
+  else {
+    // QPay only — no bank list.
+    await expect(page.getByRole("link", { name: "QPay-ээр төлөх" })).toBeVisible();
+    await expect(page.getByText(/банк/i)).toHaveCount(0);
+  }
 
-  // The "bank app" (mock) pays and calls our real callback.
+  // The QPay app (mock) pays and calls our real callback.
   await page.getByRole("link", { name: "Mock төлбөрийн хуудас" }).click();
   await expect(page).toHaveURL(/\/dev\/qpay\/mock_/);
   await page.getByRole("button", { name: "Төлсөн", exact: true }).click();

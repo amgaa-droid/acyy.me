@@ -43,13 +43,7 @@ export class MockQPayProvider implements QPayProvider {
       invoiceId,
       qrText: payUrl,
       qrImage: await QRCode.toDataURL(payUrl, { margin: 1, width: 320 }),
-      deeplinks: ["Хаан банк", "Голомт банк", "ХасБанк", "ТДБ", "Төрийн банк", "M bank"].map(
-        (name) => ({
-          name,
-          logo: "",
-          link: payUrl,
-        }),
-      ),
+      deeplinks: [{ name: "qPay wallet", logo: "", link: payUrl }],
     };
   }
 
