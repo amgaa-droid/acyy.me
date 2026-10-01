@@ -654,14 +654,14 @@ export function PlanetSystem({
             "absolute z-10 flex -translate-1/2 animate-pop-in items-center justify-center rounded-full border-[1.5px] transition-[scale] duration-300 hover:scale-120",
             // Bought: filled with the pair colour, chain icon. Not yet: pale, padlock, still.
             e.on
-              ? "border-pair bg-pair text-bg motion-safe:animate-ping-soft"
-              : "border-muted-foreground/40 bg-surface text-muted-foreground",
+              ? "scale-110 border-pair bg-pair text-pair-fg shadow-[0_0_0_4px_color-mix(in_oklab,var(--pair)_30%,transparent)] motion-safe:animate-ping-soft"
+              : "border-muted-foreground/50 bg-surface text-muted-foreground",
           );
           const style = { left: p.x, top: p.y, width: chainSize, height: chainSize };
           const body = (
             <>
               {e.on ? (
-                <Link2 className="size-[48%]" strokeWidth={2} aria-hidden />
+                <Link2 className="size-[52%]" strokeWidth={2.4} aria-hidden />
               ) : (
                 <Lock className="size-[44%]" strokeWidth={2} aria-hidden />
               )}
