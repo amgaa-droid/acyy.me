@@ -25,6 +25,22 @@ export function UnlockOverlay({ state }: { state: UnlockState }) {
       role="status"
       aria-live="polite"
       className="fixed inset-0 z-[70] flex animate-reveal-fade flex-col items-center justify-center gap-7 bg-scrim/80 backdrop-blur-md"
+      // Also inline (with fallbacks): a stylesheet cached before these classes existed must not
+      // leave it unpositioned and see-through.
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 70,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 28,
+        color: "var(--scrim-fg, #eeebfb)",
+        background: "color-mix(in oklab, var(--scrim, #07061a) 80%, transparent)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
     >
       <div className="relative flex size-44 items-center justify-center">
         <span
@@ -45,6 +61,7 @@ export function UnlockOverlay({ state }: { state: UnlockState }) {
                 className="absolute top-1/2 left-1/2 -mt-2 -ml-2 animate-sparkle-burst text-scrim-fg"
                 style={
                   {
+                    opacity: 0,
                     "--dx": b.dx,
                     "--dy": b.dy,
                     animationDelay: `${(b.i % 4) * 50}ms`,

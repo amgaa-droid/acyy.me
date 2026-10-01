@@ -19,6 +19,14 @@ const LETTER_STEP_MS = 75;
 const HOLD_MS = 1800;
 const FLY_MS = 1000;
 
+/**
+ * The overlay's essentials are also set inline (with fallback colours): a stylesheet cached from
+ * before these classes/tokens existed (seen after hot reloads) would otherwise leave it unpositioned
+ * under the home popup — invisible, with the real card hidden.
+ */
+const SCRIM = "var(--scrim, #07061a)";
+const SCRIM_FG = "var(--scrim-fg, #eeebfb)";
+
 const SKY = [
   [8, 14], [22, 78], [15, 42], [34, 8], [30, 92], [52, 18], [60, 86], [72, 30],
   [80, 70], [88, 12], [92, 52], [44, 64], [66, 4], [10, 60], [84, 92],
@@ -150,7 +158,12 @@ export function CompatReveal({
     backdropRef.current?.animate([{ opacity: 1 }, { opacity: 0 }], opts);
     chromeRef.current?.animate([{ opacity: 1 }, { opacity: 0 }], { ...opts, duration: 300 });
     fly.onfinish = land;
-    return () => fly.cancel();
+    // Belt and braces: never leave the real card hidden if `finish` doesn't arrive.
+    const fallback = setTimeout(land, FLY_MS + 800);
+    return () => {
+      clearTimeout(fallback);
+      fly.cancel();
+    };
   }, [phase, card.zoom]);
 
   // Leaving the page mid-reveal must not leave the real card hidden.
@@ -190,6 +203,15 @@ export function CompatReveal({
   return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 70,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: SCRIM_FG,
+      }}
       onClick={() => phase === "show" && setPhase("fly")}
       role="status"
       aria-label={`${mn.reading.revealEyebrow} ${label}: ${text}`}
@@ -198,12 +220,24 @@ export function CompatReveal({
         ref={backdropRef}
         aria-hidden
         className="absolute inset-0 animate-reveal-fade bg-scrim/85 backdrop-blur-md"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `color-mix(in oklab, ${SCRIM} 85%, transparent)`,
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
       >
         {SKY.map(([top, left], i) => (
           <span
             key={i}
             className="absolute size-[3px] animate-twinkle rounded-full bg-scrim-fg"
-            style={{ top: `${top}%`, left: `${left}%`, animationDelay: `${(i % 5) * 0.5}s` }}
+            style={{
+              top: `${top}%`,
+              left: `${left}%`,
+              background: SCRIM_FG,
+              animationDelay: `${(i % 5) * 0.5}s`,
+            }}
           />
         ))}
       </div>
@@ -249,6 +283,7 @@ export function CompatReveal({
               className="pointer-events-none absolute top-1/2 left-1/2 z-10 -mt-2 -ml-2 animate-sparkle-burst text-scrim-fg"
               style={
                 {
+                  opacity: 0,
                   "--dx": b.dx,
                   "--dy": b.dy,
                   animationDelay: `${lettersDoneMs - 400 + (b.i % 4) * 50}ms`,
@@ -266,7 +301,8 @@ export function CompatReveal({
             ref={cardRef}
             label={label}
             value={value}
-            className="opacity-0 shadow-[0_30px_80px_rgb(0_0_0/0.35)]"
+            className="shadow-[0_30px_80px_rgb(0_0_0/0.35)]"
+            style={{ opacity: 0 }}
           />
         </div>
 
