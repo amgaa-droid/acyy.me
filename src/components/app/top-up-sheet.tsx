@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition, type ReactElement } from "react";
 
-import { createTopupAction } from "@/app/(app)/wallet/actions";
+import { createTopupAction } from "@/app/(app)/(shell)/wallet/actions";
 import { BottomSheet } from "@/components/app/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { useTopupPackages } from "@/components/app/topup-packages";

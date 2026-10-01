@@ -17,26 +17,41 @@ test.describe("signed in", () => {
     await loginWithPassword(page);
   });
 
-  test("primary nav switches between the 4 sections", async ({ page }) => {
-    // One nav is visible per breakpoint: floating tab bar (mobile) or sidebar (desktop).
+  test("primary nav switches between sections on full pages", async ({ page }) => {
+    // Direct visits are full pages; one nav is visible per breakpoint: floating tab bar
+    // (mobile) or sidebar (desktop).
+    await page.goto("/people");
     const nav = page.getByRole("navigation", { name: "Үндсэн цэс" }).locator("visible=true");
     await expect(nav).toHaveCount(1);
     for (const [label, path] of [
-      ["Хүмүүс", "/people"],
       ["Зурхай", "/readings"],
       ["Би", "/me"],
-      ["Нүүр", "/home"],
+      ["Хүмүүс", "/people"],
     ] as const) {
       await nav.getByRole("link", { name: label }).click();
       await expect(page).toHaveURL(new RegExp(`${path}$`));
+      await expect(page.getByRole("dialog")).toHaveCount(0);
       await expect(nav.getByRole("link", { name: label })).toHaveAttribute("aria-current", "page");
     }
+    await nav.getByRole("link", { name: "Нүүр" }).click();
+    await expect(page).toHaveURL(/\/home$/);
+  });
+
+  test("home menu opens screens as popups over the planets", async ({ page }) => {
+    await page.getByRole("button", { name: "Цэс" }).click();
+    await page
+      .getByRole("navigation", { name: "Үндсэн цэс" })
+      .getByRole("link", { name: "Хүмүүс" })
+      .click();
+    await expect(page).toHaveURL(/\/people$/);
+    const popup = page.getByRole("dialog", { name: "Хүмүүс" });
+    await expect(popup).toBeVisible();
+    await popup.getByRole("button", { name: "Хаах" }).click();
+    await expect(page).toHaveURL(/\/home$/);
   });
 
   test("top-up opens a bottom sheet on mobile and a dialog on desktop", async ({ page }, info) => {
-    const opener = isDesktop(info.project.name)
-      ? page.locator("aside").getByRole("button", { name: "Цэнэглэх" })
-      : page.getByRole("button", { name: /Хэтэвч: .*Цэнэглэх/ });
+    const opener = page.getByRole("button", { name: /Хэтэвч: .*Цэнэглэх/ });
     await opener.click();
     const dialog = page.getByRole("dialog", { name: "Хэтэвч цэнэглэх" });
     await expect(dialog).toBeVisible();

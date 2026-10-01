@@ -67,9 +67,25 @@ test("'Би' has no delete button and its relation can't be edited", async ({ pa
   await expect(sheet.getByRole("radiogroup", { name: "Таны хэн бэ?" })).toHaveCount(0);
 });
 
-test("home shows my sign and my people", async ({ page }) => {
+test("home shows me and my people as planets", async ({ page }) => {
   await loginWithPassword(page);
+  await expect(page.getByRole("heading", { name: "Анар" })).toBeVisible();
   await expect(page.getByText("Хилэнц", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ээж Матар" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Хайрт Арслан" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Сарангэрэл, Ээж, Матар/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Тэмүүлэн, Хайрт, Арслан/ })).toBeVisible();
+});
+
+test("tapping a planet shows its readings; they open as a popup over home", async ({ page }) => {
+  // Planets drift; with reduced motion they hold still (and the page must honour that).
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await loginWithPassword(page);
+  await page.getByRole("button", { name: /^Сарангэрэл, Ээж/ }).click();
+  const reading = page.getByRole("link", { name: /^Төрсөн өдрийн зурхай — Сарангэрэл/ });
+  await reading.click();
+  // The first visit compiles the popup route in dev; allow for that.
+  await expect(page).toHaveURL(/\/(buy|r)\//, { timeout: 20_000 });
+  await expect(page.getByRole("dialog")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Хаах" }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });

@@ -3,7 +3,7 @@
 import { ShieldCheck } from "lucide-react";
 import { useTransition } from "react";
 
-import { confirmAdultAction } from "@/app/(app)/readings/actions";
+import { confirmAdultAction } from "@/app/(app)/(shell)/readings/actions";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
 

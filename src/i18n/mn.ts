@@ -196,22 +196,30 @@ export const mn = {
     },
   },
   home: {
-    greeting: "Сайн уу,",
-    myPeople: "Миний хүмүүс",
-    forMe: "Надад зориулсан",
-    suggestion: (name: string) => `${name} та хоёрын нийцэл`,
-    suggestionSub: (a: string, b: string) => `${a} × ${b}`,
     all: "Бүгд",
-    add: "Нэмэх",
     title: "Нүүр",
-    empty: "Удахгүй энд таны зурхай, хүмүүс харагдана.",
-    allPeople: "Бүх хүмүүс",
-    orbit: {
+    planets: {
       label: "Миний орчлон",
-      meAria: (name: string, sign: string) => `${name} (та) — ${sign}`,
-      pair: (name: string) => `Нийцэл: та × ${name}`,
+      menu: "Цэс",
+      hint: "Дарж зурхайг нь нээ · чирж нийцүүл",
+      empty: "Ээж, найз, хайртаа нэмээд нийцлээ хараарай",
+      dropOn: (name: string) => `${name} дээр тавибал нийцэл үүснэ`,
+      dropAway: "Өөр хүн дээр аваачиж тавина уу",
+      meAria: (name: string, sign: string) => `${name} (та), ${sign} — миний зурхайнууд`,
+      personAria: (name: string, relation: string, sign: string) =>
+        `${name}, ${relation}, ${sign} — дарж зурхайг нь харах, чирж нийцэл үүсгэх`,
+      reading: (product: string, name: string, bought: boolean) =>
+        `${product} — ${name}${bought ? "" : " (аваагүй)"}`,
+      pair: (a: string, b: string, bought: boolean) =>
+        `Нийцэл: ${a} × ${b}${bought ? "" : " (аваагүй)"}`,
+      folded: (name: string, n: number) => `${name} — бусад ${n} хүнтэй нийцэл`,
+      foldedTitle: (name: string) => `${name} ба бусад`,
+      bought: "Худалдаж авсан",
+      notBought: "Аваагүй",
       more: "Бусад",
-      moreAria: (n: number) => `Бусад ${n} хүн — бүх хүмүүсийг харах`,
+      moreAria: (n: number) => `Бусад ${n} хүн`,
+      closeDock: "Бусад хүмүүсийг хаах",
+      dockTitle: (n: number) => `Бусад ${n} хүн — дарж гаргах, чирж нийцүүлэх`,
     },
   },
   people: {

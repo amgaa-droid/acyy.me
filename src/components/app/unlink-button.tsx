@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
-import { unlinkMeAction } from "@/app/(app)/people/[id]/invite-actions";
+import { unlinkMeAction } from "@/app/(app)/(shell)/people/[id]/invite-actions";
 import { BottomSheet } from "@/components/app/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
