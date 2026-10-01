@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 
-import type { ColumnSpec, ImportKindSpec } from "./kinds";
+import { uploadColumns, type ColumnSpec, type ImportKindSpec } from "./kinds";
 
 export type ParsedRow = { row: number; values: Record<string, string> };
 export type ParseResult = {
@@ -71,11 +71,12 @@ export async function parseWorkbook(
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer as ArrayBuffer);
   const ws = wb.worksheets[0];
+  const columns = uploadColumns(spec);
   if (!ws)
     return {
       rows: [],
       mapping: {},
-      missingColumns: spec.columns.map((c) => c.name),
+      missingColumns: columns.filter((c) => c.required).map((c) => c.name),
       sheetName: null,
     };
 
@@ -85,7 +86,13 @@ export async function parseWorkbook(
     headers.push(cellText(headerRow.getCell(i).value));
   }
 
-  const { mapping, found, missing } = mapColumns(headers, spec.columns, overrides);
+  const { mapping, found, missing } = mapColumns(headers, columns, overrides);
+  // Without a legacy `body` column, the required sub-section columns must be there.
+  if (spec.target && !("body" in mapping)) {
+    for (const f of spec.target.fields) {
+      if (f.required && !(f.code in mapping)) missing.push(f.code);
+    }
+  }
   const rows: ParsedRow[] = [];
   if (missing.length === 0) {
     for (let r = 2; r <= ws.rowCount; r++) {

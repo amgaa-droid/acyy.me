@@ -5,7 +5,7 @@ import { auditLogs, topups, walletEntries } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import { MockQPayProvider } from "@/server/qpay/mock";
 import { verifyTopupSignature } from "@/server/qpay/signature";
-import { createTestDb, insertUser } from "@/test/db";
+import { createTestDb, insertUser, offerFor } from "@/test/db";
 import {
   InvalidTierError,
   TopupNotFoundError,
@@ -23,9 +23,9 @@ let db: AppDb;
 let close: () => Promise<void>;
 let seq = 0;
 const newUser = async () => (await insertUser(db, `t${++seq}@test.local`)).id;
-const opts = (userId: string, amount: number) => ({
+const opts = async (userId: string, amount: number) => ({
   userId,
-  amount,
+  offer: await offerFor(db, amount),
   appUrl: APP,
   callbackSecret: SECRET,
   description: "Хэтэвч цэнэглэх",
@@ -39,14 +39,14 @@ afterAll(() => close());
 describe("createTopup", () => {
   it("only allows configured tiers", async () => {
     const qpay = new MockQPayProvider(APP);
-    await expect(createTopup(db, qpay, opts(await newUser(), 3_000))).rejects.toBeInstanceOf(
+    await expect(createTopup(db, qpay, await opts(await newUser(), 3_000))).rejects.toBeInstanceOf(
       InvalidTierError,
     );
   });
 
   it("stores the invoice and a signed callback URL", async () => {
     const qpay = new MockQPayProvider(APP);
-    const t = await createTopup(db, qpay, opts(await newUser(), 10_000));
+    const t = await createTopup(db, qpay, await opts(await newUser(), 10_000));
     expect(t).toMatchObject({ amount: 10_000, bonus: 1_000, status: "pending", provider: "mock" });
     expect(t.invoiceId).toBe(`mock_${t.id}`);
     expect(t.invoiceData?.qrImage).toMatch(/^data:image\/png;base64,/);
@@ -62,7 +62,7 @@ describe("settleTopup", () => {
   it("10,000₮ top-up credits 11,000 (amount + bonus as separate entries)", async () => {
     const qpay = new MockQPayProvider(APP);
     const u = await newUser();
-    const t = await createTopup(db, qpay, opts(u, 10_000));
+    const t = await createTopup(db, qpay, await opts(u, 10_000));
 
     expect(await settleTopup(db, qpay, t.id, { source: "callback" })).toEqual({
       status: "pending",
@@ -89,7 +89,7 @@ describe("settleTopup", () => {
   it("calling the callback twice (or concurrently) credits once", async () => {
     const qpay = new MockQPayProvider(APP);
     const u = await newUser();
-    const t = await createTopup(db, qpay, opts(u, 5_000));
+    const t = await createTopup(db, qpay, await opts(u, 5_000));
     qpay.markPaid(t.invoiceId!);
     await Promise.all([
       settleTopup(db, qpay, t.id, { source: "callback" }),
@@ -103,7 +103,7 @@ describe("settleTopup", () => {
   it("an amount mismatch marks the top-up failed and credits nothing", async () => {
     const qpay = new MockQPayProvider(APP);
     const u = await newUser();
-    const t = await createTopup(db, qpay, opts(u, 20_000));
+    const t = await createTopup(db, qpay, await opts(u, 20_000));
     qpay.markPaid(t.invoiceId!, 2_000);
     expect(await settleTopup(db, qpay, t.id, { source: "callback" })).toEqual({
       status: "failed",
@@ -127,9 +127,9 @@ describe("checkPendingTopups (cron)", () => {
   it("credits paid invoices without any callback and expires old unpaid ones", async () => {
     const qpay = new MockQPayProvider(APP);
     const u = await newUser();
-    const paid = await createTopup(db, qpay, opts(u, 2_000));
-    const stale = await createTopup(db, qpay, opts(u, 5_000));
-    const fresh = await createTopup(db, qpay, opts(u, 10_000));
+    const paid = await createTopup(db, qpay, await opts(u, 2_000));
+    const stale = await createTopup(db, qpay, await opts(u, 5_000));
+    const fresh = await createTopup(db, qpay, await opts(u, 10_000));
     await db
       .update(topups)
       .set({ createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000) })
@@ -159,7 +159,7 @@ describe("getTopupForUser", () => {
     const qpay = new MockQPayProvider(APP);
     const a = await newUser();
     const b = await newUser();
-    const t = await createTopup(db, qpay, opts(a, 2_000));
+    const t = await createTopup(db, qpay, await opts(a, 2_000));
     expect((await getTopupForUser(db, a, t.id)).id).toBe(t.id);
     await expect(getTopupForUser(db, b, t.id)).rejects.toBeInstanceOf(TopupNotFoundError);
   });

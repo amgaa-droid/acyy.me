@@ -5,11 +5,13 @@ import {
   char,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -18,12 +20,19 @@ import {
 } from "drizzle-orm/pg-core";
 
 import {
-  CONTENT_SECTIONS,
+  FIELD_KINDS,
   GENDERS,
+  KEY_TYPES,
+  PRODUCT_ICONS,
+  PRODUCT_TINTS,
   RELATIONS,
-  type ContentSection,
+  type FieldKind,
   type Gender,
+  type KeyType,
 } from "../../lib/domain";
+
+const inList = (column: string, values: readonly string[]) =>
+  sql.raw(`${column} IN (${values.map((v) => `'${v}'`).join(", ")})`);
 
 /**
  * Column names are snake_case via `casing: "snake_case"` (see db/index.ts, drizzle.config.ts).
@@ -203,12 +212,77 @@ export const products = pgTable(
     adultOnly: boolean().notNull().default(false),
     isActive: boolean().notNull().default(true),
     sort: integer().notNull().default(0),
+    icon: text().notNull().default("sparkles"),
+    tint: text().notNull().default("tint-1"),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check("products_price_nonneg", sql`${t.price} >= 0`),
     check("products_person_count", sql`${t.personCount} IN (1, 2)`),
+    check("products_icon", inList("icon", PRODUCT_ICONS)),
+    check("products_tint", inList("tint", PRODUCT_TINTS)),
   ],
 );
+
+/**
+ * A product's texts come in 1+ parts (synastry: sign pair + period pair), each keyed by its
+ * `key_type` (SPEC §3). `by_gender` (1-person parts only) doubles the keys: "aries|male".
+ */
+export const productParts = pgTable(
+  "product_parts",
+  {
+    productCode: text()
+      .notNull()
+      .references(() => products.code, { onUpdate: "cascade", onDelete: "cascade" }),
+    code: text().notNull(),
+    nameMn: text().notNull(),
+    keyType: text().$type<KeyType>().notNull(),
+    byGender: boolean().notNull().default(false),
+    sort: integer().notNull().default(0),
+    /**
+     * Archived parts are no longer sold, imported or counted; readings bought while the part
+     * was active keep showing it (their snapshot has its key).
+     */
+    archivedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.productCode, t.code] }),
+    check("product_parts_key_type", inList("key_type", KEY_TYPES)),
+  ],
+);
+
+/**
+ * Sub-sections of a part's text ("Давуу тал", "Бясалгах үг"…). `kind` picks the reading-screen
+ * presentation; `is_free` ones are shown in the paywall preview. Archived fields stay in the
+ * stored texts but are no longer shown, imported or edited.
+ */
+export const productFields = pgTable(
+  "product_fields",
+  {
+    productCode: text().notNull(),
+    partCode: text().notNull(),
+    code: text().notNull(),
+    nameMn: text().notNull(),
+    kind: text().$type<FieldKind>().notNull(),
+    isFree: boolean().notNull().default(false),
+    required: boolean().notNull().default(false),
+    sort: integer().notNull().default(0),
+    archivedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.productCode, t.partCode, t.code] }),
+    foreignKey({
+      columns: [t.productCode, t.partCode],
+      foreignColumns: [productParts.productCode, productParts.code],
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
+    check("product_fields_kind", inList("kind", FIELD_KINDS)),
+  ],
+);
+
+/** Field code → text. Item kinds (list, cards…) hold one item per line. */
+export type ContentFields = Record<string, string>;
 
 export const contentEntries = pgTable(
   "content_entries",
@@ -217,10 +291,11 @@ export const contentEntries = pgTable(
     productCode: text()
       .notNull()
       .references(() => products.code, { onUpdate: "cascade" }),
-    section: text().$type<ContentSection>().notNull(),
+    /** The product part's code. */
+    section: text().notNull(),
     key: text().notNull(),
     title: text().notNull(),
-    body: text().notNull(),
+    fields: jsonb().$type<ContentFields>().notNull().default({}),
     /** Free teaser shown in the paywall preview as-is (SPEC §3.1); null = none. */
     teaser: text(),
     score: integer(),
@@ -233,10 +308,11 @@ export const contentEntries = pgTable(
   },
   (t) => [
     unique("content_entries_product_section_key").on(t.productCode, t.section, t.key),
-    check(
-      "content_entries_section",
-      sql.raw(`section IN (${CONTENT_SECTIONS.map((s) => `'${s}'`).join(", ")})`),
-    ),
+    foreignKey({
+      name: "content_entries_part_fk",
+      columns: [t.productCode, t.section],
+      foreignColumns: [productParts.productCode, productParts.code],
+    }).onUpdate("cascade"),
     check("content_entries_score", sql`${t.score} IS NULL OR ${t.score} BETWEEN 0 AND 100`),
   ],
 );
@@ -279,6 +355,23 @@ export const walletEntries = pgTable(
   ],
 );
 
+/** Top-up packages offered in the wallet (SPEC §4.1), managed at /admin/packages. */
+export const topupPackages = pgTable(
+  "topup_packages",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    amount: money().notNull().unique(),
+    bonus: money().notNull().default(0),
+    isActive: boolean().notNull().default(true),
+    sort: integer().notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("topup_packages_amount_pos", sql`${t.amount} > 0`),
+    check("topup_packages_bonus_nonneg", sql`${t.bonus} >= 0`),
+  ],
+);
+
 export const topups = pgTable(
   "topups",
   {
@@ -286,6 +379,8 @@ export const topups = pgTable(
     userId: uuid()
       .notNull()
       .references(() => user.id),
+    /** The package bought; amount/bonus are copied so later package edits don't rewrite history. */
+    packageId: uuid().references(() => topupPackages.id, { onDelete: "set null" }),
     amount: money().notNull(),
     bonus: money().notNull().default(0),
     status: topupStatusEnum().notNull().default("pending"),
@@ -300,6 +395,7 @@ export const topups = pgTable(
   (t) => [
     index("topups_user_idx").on(t.userId),
     index("topups_status_created_idx").on(t.status, t.createdAt),
+    index("topups_paid_at_idx").on(t.paidAt),
     check("topups_amount_pos", sql`${t.amount} > 0`),
     check("topups_bonus_nonneg", sql`${t.bonus} >= 0`),
   ],
@@ -321,7 +417,8 @@ export type PurchaseSnapshot = {
     sign: string;
     period: number;
   }[];
-  keys: Partial<Record<ContentSection, string>>;
+  /** Part code → content key. */
+  keys: Record<string, string>;
 };
 
 export const purchases = pgTable(
@@ -345,9 +442,36 @@ export const purchases = pgTable(
   (t) => [
     unique("purchases_user_product_subject").on(t.userId, t.productCode, t.subjectKey),
     index("purchases_user_idx").on(t.userId, t.createdAt),
+    index("purchases_created_idx").on(t.createdAt),
     index("purchases_person_a_idx").on(t.personAId),
     index("purchases_person_b_idx").on(t.personBId),
     check("purchases_price_nonneg", sql`${t.pricePaid} >= 0`),
+  ],
+);
+
+// ---------- Analytics ----------
+
+/**
+ * Paywall previews shown (buy screen, SPEC §3.1): one row per user × product × subject, so
+ * "free views → purchases" conversion can be measured on the admin dashboard.
+ */
+export const previewViews = pgTable(
+  "preview_views",
+  {
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    productCode: text()
+      .notNull()
+      .references(() => products.code, { onUpdate: "cascade", onDelete: "cascade" }),
+    subjectKey: text().notNull(),
+    viewCount: integer().notNull().default(1),
+    firstViewedAt: createdAt(),
+    lastViewedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.productCode, t.subjectKey] }),
+    index("preview_views_first_viewed_idx").on(t.firstViewedAt),
   ],
 );
 

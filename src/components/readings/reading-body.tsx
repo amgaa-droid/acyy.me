@@ -1,65 +1,112 @@
-import { readingBlocks } from "@/lib/body";
+import { parseBody } from "@/lib/body";
+import { fieldItems } from "@/lib/fields";
 import { cn } from "@/lib/utils";
+import type { ReadingField } from "@/server/reading";
 
 /**
- * A content body: paragraphs and "## " sub-headings (src/lib/body.ts). "Бясалгах үг" becomes a
- * large quote card and "Зөвлөгөө" one card per item, so the key lines stand out from the prose.
+ * Type rules for readings: serif only at display sizes (names, titles, quotes, key values);
+ * everything read — prose, lists, labels — in sans.
  */
-export function ReadingBody({ body }: { body: string }) {
-  return readingBlocks(body).map((block, i) => {
-    switch (block.type) {
-      case "heading":
-        return (
-          <h3 key={i} className="pt-3 text-xl leading-tight font-semibold lg:text-2xl">
-            {block.text}
-          </h3>
-        );
-      case "quote":
-        return (
-          <figure
-            key={i}
-            className="my-2 flex flex-col gap-3.5 rounded-[28px] bg-fg px-6 py-7 text-center text-bg lg:px-10 lg:py-9"
-          >
-            <figcaption className="font-sans text-xs font-semibold tracking-[0.18em] text-nav-fg uppercase">
-              {block.label}
-            </figcaption>
-            <blockquote className="font-serif text-[30px] leading-[1.15] font-semibold whitespace-pre-line lg:text-4xl">
-              {block.text}
-            </blockquote>
-          </figure>
-        );
-      case "cards":
-        return (
-          <section key={i} className="flex flex-col gap-3" aria-label={block.label}>
-            <h3 className="pt-3 text-xl leading-tight font-semibold lg:text-2xl">{block.label}</h3>
-            <ul className="flex flex-col gap-2.5">
-              {block.items.map((item, j) => (
-                <li
-                  key={j}
-                  className="rounded-[22px] border border-border bg-surface px-5 py-4 text-center font-serif text-[22px] leading-tight font-semibold lg:text-2xl"
-                >
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      default:
-        return (
-          <p key={i} className="text-[17px] leading-[1.7] whitespace-pre-line lg:text-lg">
-            {block.text}
-          </p>
-        );
-    }
-  });
+
+/** A prose value: paragraphs and "## " sub-headings (src/lib/body.ts). */
+export function ProseBody({ value }: { value: string }) {
+  return parseBody(value).map((block, i) =>
+    block.type === "heading" ? (
+      <h4
+        key={i}
+        className="flex items-center gap-2.5 pt-2.5 text-[13px] font-semibold tracking-[0.12em] uppercase"
+      >
+        <span aria-hidden className="h-px w-4 shrink-0 bg-highlight" />
+        {block.text}
+      </h4>
+    ) : (
+      <p key={i} className="text-base leading-[1.7] whitespace-pre-line text-fg/85 lg:text-lg">
+        {block.text}
+      </p>
+    ),
+  );
 }
 
-/** The free teaser (SPEC §3.1) — shown in the preview and at the top of the reading. */
+/** Sub-section heading: serif title over a hairline, optional item count on the right. */
+function FieldHeading({ children, count }: { children: React.ReactNode; count?: number }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-fg pb-3">
+      <h3 className="text-[28px] leading-[1.1] font-semibold lg:text-[34px]">{children}</h3>
+      {count !== undefined && (
+        <span className="text-xs font-medium text-muted-foreground tabular-nums">{count}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One article sub-section by its kind: text (heading + prose), quote (large dark card),
+ * cards (numbered list). `showHeading` is off when a text is the reading's only section.
+ */
+export function ArticleField({
+  field,
+  showHeading = true,
+}: {
+  field: ReadingField;
+  showHeading?: boolean;
+}) {
+  switch (field.kind) {
+    case "quote":
+      return (
+        <figure className="flex flex-col items-center gap-3.5 rounded-[28px] bg-fg px-6 pt-7.5 pb-8.5 text-center text-bg lg:rounded-[32px] lg:px-12 lg:pt-10 lg:pb-11">
+          <svg viewBox="0 0 24 24" aria-hidden className="size-[18px] fill-current text-nav-fg">
+            <path d="M12 1.5l2.2 8.3 8.3 2.2-8.3 2.2L12 22.5l-2.2-8.3L1.5 12l8.3-2.2z" />
+          </svg>
+          <figcaption className="font-sans text-[11px] font-semibold tracking-[0.2em] text-nav-fg uppercase lg:text-xs">
+            {field.name}
+          </figcaption>
+          <blockquote className="font-serif text-[32px] leading-[1.12] font-semibold whitespace-pre-line lg:text-[44px] lg:leading-[1.1]">
+            {field.value}
+          </blockquote>
+        </figure>
+      );
+    case "cards": {
+      const items = fieldItems(field.value, field.kind);
+      return (
+        <section className="flex flex-col" aria-label={field.name}>
+          <FieldHeading count={items.length}>{field.name}</FieldHeading>
+          <ol>
+            {items.map((item, j) => (
+              <li
+                key={j}
+                className="grid grid-cols-[44px_minmax(0,1fr)] items-baseline border-b border-border py-4.5 last:border-b-0 lg:grid-cols-[56px_minmax(0,1fr)] lg:py-5"
+              >
+                <span
+                  aria-hidden
+                  className="font-serif text-[22px] leading-none font-semibold text-highlight lining-nums tabular-nums lg:text-[26px]"
+                >
+                  {String(j + 1).padStart(2, "0")}
+                </span>
+                <span className="text-base leading-normal lg:text-lg">{item}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      );
+    }
+    default:
+      return (
+        <section className="flex flex-col gap-3.5" aria-label={field.name}>
+          {showHeading && <FieldHeading>{field.name}</FieldHeading>}
+          <div className={cn("flex flex-col gap-3.5", showHeading && "pt-1")}>
+            <ProseBody value={field.value} />
+          </div>
+        </section>
+      );
+  }
+}
+
+/** The free teaser (SPEC §3.1) — an italic serif lead above the reading and in previews. */
 export function Teaser({ text, className }: { text: string; className?: string }) {
   return (
     <p
       className={cn(
-        "rounded-3xl bg-tint-2 px-5 py-4 text-base leading-relaxed whitespace-pre-line",
+        "font-serif text-[22px] leading-[1.35] font-medium whitespace-pre-line text-fg/80 italic lg:text-[26px]",
         className,
       )}
     >

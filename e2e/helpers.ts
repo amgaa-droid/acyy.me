@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export const SEED_PASSWORD = process.env.SEED_PASSWORD ?? "";
 
@@ -48,4 +48,24 @@ export async function signUpFresh(page: Page, prefix = "e2e"): Promise<string> {
   await page.getByRole("button", { name: "Дараа" }).click();
   await expect(page).toHaveURL(/\/home$/);
   return email;
+}
+
+const money = (s: string | null) => Number((s ?? "").replace(/[^\d]/g, ""));
+export const mnt = (n: number) => `${n.toLocaleString("en-US")}₮`;
+
+/**
+ * In an open top-up sheet: picks the smallest active package of at least `min`₮ and presses
+ * "QPay-ээр … төлөх". Packages are edited in /admin/packages, so tests never hard-code them —
+ * `credited` is what the sheet says the wallet will get (amount + bonus).
+ */
+export async function payTopup(sheet: Locator, min: number) {
+  const radios = sheet.getByRole("radio");
+  const amounts = (await radios.allTextContents()).map((t) => money(t.split("+")[0]));
+  const fits = amounts.map((a, i) => [a, i] as const).filter(([a]) => a >= min);
+  expect(fits.length, `an active top-up package of at least ${min}₮`).toBeGreaterThan(0);
+  const [amount, index] = fits.reduce((best, x) => (x[0] < best[0] ? x : best));
+  await radios.nth(index).click();
+  const credited = money(await sheet.getByText(/^Хэтэвчинд /).textContent());
+  await sheet.getByRole("button", { name: `QPay-ээр ${mnt(amount)} төлөх` }).click();
+  return { amount, credited };
 }

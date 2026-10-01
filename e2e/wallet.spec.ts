@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { loginWithPassword, signUpFresh } from "./helpers";
+import { loginWithPassword, payTopup, signUpFresh } from "./helpers";
 
 const isDesktop = (name: string) => name.startsWith("desktop");
 
@@ -13,7 +13,7 @@ async function balance(page: Page) {
   return money(await page.getByTestId("wallet-balance").textContent());
 }
 
-test("top-up 10,000₮ via mock QPay adds 11,000; callbacks are idempotent", async ({
+test("top-up via mock QPay adds amount + bonus; callbacks are idempotent", async ({
   page,
 }, info) => {
   // A fresh account each run: starts at 0 and stays under the 10-invoices/hour limit.
@@ -23,9 +23,7 @@ test("top-up 10,000₮ via mock QPay adds 11,000; callbacks are idempotent", asy
 
   await page.getByRole("button", { name: "Цэнэглэх", exact: true }).last().click();
   const sheet = page.getByRole("dialog", { name: "Хэтэвч цэнэглэх" });
-  await sheet.getByRole("radio", { name: /10,000₮/ }).click();
-  await expect(sheet.getByText("Хэтэвчинд 11,000₮")).toBeVisible();
-  await sheet.getByRole("button", { name: "QPay-ээр 10,000₮ төлөх" }).click();
+  const { credited } = await payTopup(sheet, 10_000);
 
   await expect(page).toHaveURL(/\/wallet\/topup\/[0-9a-f-]{36}\?next=%2Fwallet$/);
   const topupId = new URL(page.url()).pathname.split("/").pop()!;
@@ -38,7 +36,7 @@ test("top-up 10,000₮ via mock QPay adds 11,000; callbacks are idempotent", asy
   await page.getByRole("button", { name: "Төлсөн", exact: true }).click();
   await expect(page.getByText("Амжилттай!")).toBeVisible();
   await expect(page).toHaveURL(/\/wallet$/, { timeout: 10_000 });
-  expect(await balance(page)).toBe(before + 11_000);
+  expect(await balance(page)).toBe(before + credited);
 
   // QPay retries the callback: nothing more is credited.
   const secret = process.env.QPAY_CALLBACK_SECRET!;
@@ -48,7 +46,7 @@ test("top-up 10,000₮ via mock QPay adds 11,000; callbacks are idempotent", asy
     expect(res.status()).toBe(200);
     expect(await res.json()).toEqual({ status: "paid" });
   }
-  expect(await balance(page)).toBe(before + 11_000);
+  expect(await balance(page)).toBe(before + credited);
 
   // A forged callback is refused.
   const forged = await page.request.post(

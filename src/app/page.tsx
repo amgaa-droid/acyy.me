@@ -10,7 +10,6 @@ import { BirthdayReveal } from "@/components/landing/birthday-reveal";
 import { StickyCta } from "@/components/landing/sticky-cta";
 import { ProductIcon } from "@/components/readings/product-icon";
 import { ScoreRing } from "@/components/readings/score-ring";
-import { TOPUP_TIERS } from "@/config/topup";
 import { APP_NAME } from "@/env";
 import { formatMnt, mn } from "@/i18n/mn";
 import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
@@ -18,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { getSession } from "@/server/auth/session";
 import { listActiveProducts } from "@/server/catalog";
 import { db } from "@/server/db";
+import { bestValueIndex, listActivePackages } from "@/server/topup-packages";
 
 export const metadata: Metadata = {
   title: { absolute: `${APP_NAME} — ${mn.landing.hero.title}` },
@@ -33,11 +33,11 @@ export default async function LandingPage() {
   if (await getSession()) redirect("/home");
 
   const t = mn.landing;
-  const products = await listActiveProducts(db);
+  const [products, packages] = await Promise.all([listActiveProducts(db), listActivePackages(db)]);
   const birthdayPrice = products.find((p) => p.code === "birthday")?.price ?? 2000;
   const synastry = products.find((p) => p.code === "synastry");
   const cheapest = Math.min(...products.map((p) => p.price));
-  const bestBonus = Math.max(...TOPUP_TIERS.map((tier) => tier.bonus / tier.amount));
+  const best = bestValueIndex(packages);
 
   return (
     <div className="min-h-dvh overflow-x-clip bg-bg">
@@ -75,9 +75,7 @@ export default async function LandingPage() {
               <h1 className="font-heading text-[42px] leading-[1.02] font-semibold text-balance lg:text-7xl">
                 {t.hero.title}
               </h1>
-              <p className="max-w-xl text-lg text-muted-foreground lg:text-xl">
-                {t.hero.subtitle}
-              </p>
+              <p className="max-w-xl text-lg text-muted-foreground lg:text-xl">{t.hero.subtitle}</p>
             </div>
           </div>
           <BirthdayReveal price={birthdayPrice} />
@@ -114,7 +112,7 @@ export default async function LandingPage() {
                     className="flex h-full flex-col gap-4 rounded-[28px] bg-surface p-5 transition hover:ring-2 hover:ring-border"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <ProductIcon code={p.code} />
+                      <ProductIcon product={p} />
                       {badge && (
                         <span className="rounded-full bg-subtle px-3 py-1 text-xs font-semibold">
                           {badge}
@@ -178,7 +176,10 @@ export default async function LandingPage() {
               </div>
               <div className="flex flex-wrap justify-center gap-2">
                 {t.synastry.points.slice(0, 2).map((point) => (
-                  <span key={point} className="rounded-full bg-subtle px-3 py-1.5 text-xs font-medium">
+                  <span
+                    key={point}
+                    className="rounded-full bg-subtle px-3 py-1.5 text-xs font-medium"
+                  >
                     {point}
                   </span>
                 ))}
@@ -234,23 +235,23 @@ export default async function LandingPage() {
         <section className="flex flex-col gap-6">
           <SectionTitle title={t.wallet.title} subtitle={t.wallet.subtitle} />
           <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-            {TOPUP_TIERS.map((tier) => {
-              const best = tier.bonus > 0 && tier.bonus / tier.amount === bestBonus;
+            {packages.map((tier, i) => {
+              const isBest = i === best;
               const total = tier.amount + tier.bonus;
               return (
                 <li
-                  key={tier.amount}
+                  key={tier.id}
                   className={cn(
                     "relative flex flex-col gap-1 rounded-3xl p-5",
-                    best ? "bg-fg text-bg" : "bg-surface",
+                    isBest ? "bg-fg text-bg" : "bg-surface",
                   )}
                 >
-                  {best && (
+                  {isBest && (
                     <span className="mb-1 w-fit rounded-full bg-highlight px-2.5 py-1 text-[11px] font-semibold text-highlight-fg">
                       {t.wallet.best}
                     </span>
                   )}
-                  <span className={cn("text-xs", best ? "opacity-70" : "text-muted-foreground")}>
+                  <span className={cn("text-xs", isBest ? "opacity-70" : "text-muted-foreground")}>
                     {t.wallet.pay}
                   </span>
                   <span className="font-heading text-2xl font-semibold">
@@ -259,13 +260,16 @@ export default async function LandingPage() {
                   <span
                     className={cn(
                       "text-sm font-semibold",
-                      best ? "text-bg" : tier.bonus ? "text-highlight" : "text-muted-foreground",
+                      isBest ? "text-bg" : tier.bonus ? "text-highlight" : "text-muted-foreground",
                     )}
                   >
                     {tier.bonus ? t.wallet.bonus(formatMnt(tier.bonus)) : "—"}
                   </span>
-                  <span className={cn("mt-2 text-xs", best ? "opacity-70" : "text-muted-foreground")}>
-                    {t.wallet.get} {formatMnt(total)} · {t.wallet.readings(Math.floor(total / cheapest))}
+                  <span
+                    className={cn("mt-2 text-xs", isBest ? "opacity-70" : "text-muted-foreground")}
+                  >
+                    {t.wallet.get} {formatMnt(total)} ·{" "}
+                    {t.wallet.readings(Math.floor(total / cheapest))}
                   </span>
                 </li>
               );

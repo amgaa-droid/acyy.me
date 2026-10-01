@@ -6,14 +6,17 @@ import { z } from "zod";
 
 import { Avatar } from "@/components/app/avatar";
 import { ProductIcon } from "@/components/readings/product-icon";
-import { Teaser } from "@/components/readings/reading-body";
+import { ArticleField, Teaser } from "@/components/readings/reading-body";
+import { SummaryFields } from "@/components/readings/reading-highlights";
 import { formatMnt, mn } from "@/i18n/mn";
-import type { Relation } from "@/lib/domain";
+import { sectionLabel } from "@/lib/content-keys-display";
+import { SUMMARY_FIELD_KINDS, type Relation } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
 import { cn } from "@/lib/utils";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
-import { getProduct, isEligible, loadViewer } from "@/server/catalog";
+import { isEligible, loadViewer } from "@/server/catalog";
+import { GenderRequiredError } from "@/server/content/keys";
 import { db } from "@/server/db";
 import { listPeople } from "@/server/persons";
 import {
@@ -22,8 +25,11 @@ import {
   findPurchase,
   preparePurchase,
 } from "@/server/purchase";
+import { loadProductDef } from "@/server/products";
+import { recordPreviewView } from "@/server/preview-views";
 import { getPreview } from "@/server/reading";
 import { getBalance } from "@/server/wallet";
+import { setGenderForPurchaseAction } from "../../readings/actions";
 import { BuyConfirm } from "./buy-confirm";
 
 export const metadata: Metadata = { title: mn.readings.title };
@@ -36,7 +42,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
   const { product: code } = await params;
   const sp = await searchParams;
   const { user } = await requireOnboardedUser();
-  const product = await getProduct(db, code);
+  const product = await loadProductDef(db, code);
   if (!product || !product.isActive) notFound();
   const t = mn.buy;
 
@@ -63,7 +69,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
       >
         <ChevronLeft className="size-5" aria-hidden />
       </Link>
-      <ProductIcon code={product.code} />
+      <ProductIcon product={product} />
       <div className="flex min-w-0 flex-col">
         <span className="truncate font-semibold">{product.nameMn}</span>
         <span className="text-sm text-muted-foreground">{formatMnt(product.price)}</span>
@@ -140,14 +146,56 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
     prepared = await preparePurchase(db, user.id, product.code, personIds);
   } catch (err) {
     if (err instanceof NotEligibleError || err instanceof PersonsInvalidError) notFound();
+    if (err instanceof GenderRequiredError) {
+      // Gender-split texts are keyed by the first person's gender: ask for it, then come back.
+      return (
+        <div className="mx-auto flex max-w-2xl flex-col gap-6">
+          {header}
+          <form
+            action={setGenderForPurchaseAction}
+            className="flex flex-col gap-4 rounded-[32px] bg-surface p-6"
+          >
+            <h1 className="text-[30px] leading-tight font-semibold">
+              {t.genderTitle(chosenA!.name)}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t.genderHint}</p>
+            <input type="hidden" name="personId" value={chosenA!.id} />
+            <input
+              type="hidden"
+              name="returnTo"
+              value={here({ a: chosenA!.id, ...(chosenB ? { b: chosenB.id } : {}) })}
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              {(["male", "female"] as const).map((g) => (
+                <button
+                  key={g}
+                  type="submit"
+                  name="gender"
+                  value={g}
+                  className="h-14 rounded-full bg-subtle text-base font-semibold hover:ring-2 hover:ring-border"
+                >
+                  {t[g]}
+                </button>
+              ))}
+            </div>
+          </form>
+        </div>
+      );
+    }
     throw err;
   }
   const owned = await findPurchase(db, user.id, product.code, prepared.subject);
   if (owned) redirect(`/r/${owned.id}`);
 
+  const signNames = Object.fromEntries(refs.signs.map((x) => [x.code, x.nameMn]));
   const [preview, balance] = await Promise.all([
     getPreview(db, product.code, prepared.snapshot.keys),
     getBalance(db, user.id),
+    recordPreviewView(db, {
+      userId: user.id,
+      productCode: product.code,
+      subjectKey: prepared.subject,
+    }),
   ]);
   const returnTo = here({ a: chosenA!.id, ...(chosenB ? { b: chosenB.id } : {}), confirm: "1" });
 
@@ -169,18 +217,26 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
         <span className="text-xs font-semibold tracking-widest text-highlight uppercase">
           {t.preview}
         </span>
-        {preview.sections.map((s) => (
-          <section key={s.section} className="flex flex-col gap-2">
-            {s.section !== "main" && (
-              <span className="text-xs font-semibold text-muted-foreground uppercase">
-                {mn.reading.sections[s.section]}
-              </span>
-            )}
-            <h2 className="text-[28px] leading-tight font-semibold">{s.title}</h2>
-            {s.teaser && <Teaser text={s.teaser} />}
-            {s.excerpt && <p className="text-base leading-relaxed">{s.excerpt}</p>}
-          </section>
-        ))}
+        {preview.sections.map((s) => {
+          const summary = s.free.filter((f) => SUMMARY_FIELD_KINDS.includes(f.kind));
+          const article = s.free.filter((f) => !SUMMARY_FIELD_KINDS.includes(f.kind));
+          return (
+            <section key={`${s.section}|${s.key}`} className="flex flex-col gap-2">
+              {preview.sections.length > 1 && (
+                <span className="text-xs font-semibold text-muted-foreground uppercase">
+                  {sectionLabel(s, signNames)}
+                </span>
+              )}
+              <h2 className="text-[28px] leading-tight font-semibold">{s.title}</h2>
+              {s.teaser && <Teaser text={s.teaser} />}
+              {summary.length > 0 && <SummaryFields fields={summary} />}
+              {article.map((f) => (
+                <ArticleField key={f.code} field={f} />
+              ))}
+              {s.excerpt && <p className="text-base leading-relaxed">{s.excerpt}</p>}
+            </section>
+          );
+        })}
         {/* Decorative placeholder lines — the real text is not on the page. */}
         <div aria-hidden className="flex flex-col gap-2.5 pt-1">
           {[100, 94, 97, 62].map((w) => (

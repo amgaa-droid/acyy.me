@@ -10,6 +10,7 @@ import { topups } from "@/server/db/schema";
 import { qpay } from "@/server/qpay";
 import {
   InvalidTierError,
+  PackageChangedError,
   TopupNotFoundError,
   createTopup,
   getTopupForUser,
@@ -18,12 +19,21 @@ import {
 
 const INVOICES_PER_HOUR = 10; // SPEC §12
 
+const offerSchema = z.object({
+  packageId: z.uuid(),
+  amount: z.number().int().positive(),
+  bonus: z.number().int().min(0),
+});
+
 export async function createTopupAction(
-  amount: number,
-): Promise<{ ok: true; id: string } | { ok: false; error: "invalid_tier" | "rate" | "generic" }> {
+  input: unknown,
+): Promise<
+  | { ok: true; id: string }
+  | { ok: false; error: "invalid_tier" | "package_changed" | "rate" | "generic" }
+> {
   const { user } = await requireOnboardedUser();
-  if (!z.number().int().positive().safeParse(amount).success)
-    return { ok: false, error: "invalid_tier" };
+  const offer = offerSchema.safeParse(input);
+  if (!offer.success) return { ok: false, error: "invalid_tier" };
 
   const [{ recent }] = await db
     .select({ recent: count() })
@@ -36,14 +46,15 @@ export async function createTopupAction(
   try {
     const t = await createTopup(db, qpay(), {
       userId: user.id,
-      amount,
+      offer: offer.data,
       appUrl: env().APP_URL,
       callbackSecret: env().QPAY_CALLBACK_SECRET,
       description: `${APP_NAME}: хэтэвч цэнэглэх`,
     });
     return { ok: true, id: t.id };
   } catch (err) {
-    if (err instanceof InvalidTierError) return { ok: false, error: "invalid_tier" };
+    if (err instanceof InvalidTierError) return { ok: false, error: "package_changed" };
+    if (err instanceof PackageChangedError) return { ok: false, error: "package_changed" };
     console.error("[topup:create]", err);
     return { ok: false, error: "generic" };
   }

@@ -7,10 +7,16 @@ import { ProductIcon } from "@/components/readings/product-icon";
 import { formatMnt, mn } from "@/i18n/mn";
 import { cn } from "@/lib/utils";
 import { requireOnboardedUser } from "@/server/auth/current";
-import { listActiveProducts, loadViewer, viewerIsAdult } from "@/server/catalog";
+import {
+  listActiveProducts,
+  loadViewer,
+  productsByCode,
+  viewerIsAdult,
+  type Product,
+} from "@/server/catalog";
 import { db } from "@/server/db";
 import { listPurchases } from "@/server/purchase";
-import { linkedSynastryIds } from "@/server/reading";
+import { linkedPairReadings } from "@/server/reading";
 
 export const metadata: Metadata = { title: mn.readings.title };
 
@@ -63,7 +69,7 @@ export default async function ReadingsPage({ searchParams }: PageProps<"/reading
                 className="flex h-full flex-col gap-3 rounded-3xl bg-surface p-5 hover:ring-2 hover:ring-border"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <ProductIcon code={p.code} className="size-12" />
+                  <ProductIcon product={p} className="size-12" />
                   <span className="rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold">
                     {p.adultOnly ? t.adult : p.personCount === 2 ? t.pair : t.single}
                   </span>
@@ -86,7 +92,7 @@ export default async function ReadingsPage({ searchParams }: PageProps<"/reading
         <MyReadings
           userId={user.id}
           product={typeof product === "string" ? product : undefined}
-          productNames={Object.fromEntries(products.map((p) => [p.code, p.nameMn]))}
+          catalog={await productsByCode(db)}
         />
       )}
     </div>
@@ -96,16 +102,16 @@ export default async function ReadingsPage({ searchParams }: PageProps<"/reading
 async function MyReadings({
   userId,
   product,
-  productNames,
+  catalog,
 }: {
   userId: string;
   product?: string;
-  productNames: Record<string, string>;
+  catalog: Map<string, Product>;
 }) {
   const t = mn.readings;
   const [all, linked] = await Promise.all([
     listPurchases(db, userId),
-    linkedSynastryIds(db, userId),
+    linkedPairReadings(db, userId),
   ]);
   const list = product ? all.filter((p) => p.productCode === product) : all;
   const codes = [...new Set(all.map((p) => p.productCode))];
@@ -125,7 +131,7 @@ async function MyReadings({
           </FilterChip>
           {codes.map((c) => (
             <FilterChip key={c} href={`/readings?tab=mine&product=${c}`} active={product === c}>
-              {productNames[c] ?? c}
+              {catalog.get(c)?.nameMn ?? c}
             </FilterChip>
           ))}
         </div>
@@ -137,10 +143,10 @@ async function MyReadings({
               href={`/r/${p.id}`}
               className="flex items-center gap-4 rounded-3xl bg-surface p-4 hover:ring-2 hover:ring-border"
             >
-              <ProductIcon code={p.productCode} />
+              <ProductIcon product={catalog.get(p.productCode)} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-semibold">
-                  {productNames[p.productCode] ?? p.productCode}
+                  {catalog.get(p.productCode)?.nameMn ?? p.productCode}
                 </span>
                 <span className="truncate text-sm text-muted-foreground">
                   {p.snapshot.persons.map((x) => x.name).join(" × ")} ·{" "}
@@ -156,14 +162,16 @@ async function MyReadings({
         <section className="flex flex-col gap-2">
           <h2 className="text-xl font-semibold">{t.linkedTitle}</h2>
           <ul className="flex flex-col gap-2">
-            {linked.map((id) => (
+            {linked.map(({ id, productCode }) => (
               <li key={id}>
                 <Link
                   href={`/r/${id}`}
                   className="flex items-center gap-4 rounded-3xl bg-surface p-4"
                 >
-                  <ProductIcon code="synastry" />
-                  <span className="font-semibold">{productNames.synastry}</span>
+                  <ProductIcon product={catalog.get(productCode)} />
+                  <span className="font-semibold">
+                    {catalog.get(productCode)?.nameMn ?? productCode}
+                  </span>
                 </Link>
               </li>
             ))}

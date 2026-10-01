@@ -72,6 +72,7 @@ export async function runImport(
   await db.transaction(async (tx) => {
     if (spec.target) {
       const { product, section } = spec.target;
+      const activeCodes = `{${spec.target.fields.map((f) => f.code).join(",")}}`;
       for (let i = 0; i < report.entries.length; i += 500) {
         await tx
           .insert(contentEntries)
@@ -81,7 +82,7 @@ export async function runImport(
               section,
               key: e.key,
               title: e.title,
-              body: e.body,
+              fields: e.fields,
               teaser: e.teaser,
               score: e.score,
               status: "published" as const,
@@ -92,7 +93,8 @@ export async function runImport(
             target: [contentEntries.productCode, contentEntries.section, contentEntries.key],
             set: {
               title: sql.raw("excluded.title"),
-              body: sql.raw("excluded.body"),
+              // Replace the active sub-sections; archived ones keep their stored text.
+              fields: sql`(${contentEntries.fields} - ${activeCodes}::text[]) || excluded.fields`,
               teaser: sql.raw("excluded.teaser"),
               score: sql.raw("excluded.score"),
               status: sql.raw("excluded.status"),

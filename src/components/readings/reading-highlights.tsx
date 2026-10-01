@@ -1,10 +1,11 @@
-import { CalendarDays, TriangleAlert } from "lucide-react";
+import { CalendarDays, Sparkle, TriangleAlert } from "lucide-react";
 
 import { Avatar } from "@/components/app/avatar";
 import { mn } from "@/i18n/mn";
 import { formatBirthDate } from "@/lib/birth-date";
-import type { Highlights } from "@/lib/body";
+import { fieldItems } from "@/lib/fields";
 import { cn } from "@/lib/utils";
+import type { ReadingField } from "@/server/reading";
 
 /** One of the two people in a synastry hero: avatar, name, relation and birth date up front. */
 export function PairPerson({
@@ -42,78 +43,100 @@ export function PairPerson({
   );
 }
 
-/** The key facts of a pair text, lifted out of the prose (src/lib/body.ts extractHighlights). */
-export function ReadingHighlights({ highlights }: { highlights: Highlights }) {
-  const t = mn.reading.highlights;
-  const { goodFor, cautionFor, strengths, weaknesses } = highlights;
+/**
+ * The summary sub-sections next to the hero, in field order. Consecutive chips/alert fields share
+ * one card as rows; two list fields in a row share one row as a pair of tiles
+ * (e.g. "Давуу тал" / "Сул тал").
+ */
+export function SummaryFields({ fields }: { fields: ReadingField[] }) {
+  const isRow = (f: ReadingField) => f.kind === "chips" || f.kind === "alert";
+  const groups: ReadingField[][] = [];
+  for (const f of fields) {
+    const last = groups.at(-1);
+    if (f.kind === "list" && last?.length === 1 && last[0].kind === "list") last.push(f);
+    else if (isRow(f) && last && isRow(last[0])) last.push(f);
+    else groups.push([f]);
+  }
   return (
     <div className="flex flex-col gap-3">
-      {goodFor.length > 0 && (
-        <section className="flex flex-col gap-3.5 rounded-[28px] bg-highlight px-5 py-5 text-highlight-fg">
-          <h2 className="font-sans text-xs font-semibold tracking-widest uppercase opacity-80">
-            {t.goodFor}
-          </h2>
-          <ul className="flex flex-wrap gap-2.5">
-            {goodFor.map((item, i) => (
-              <li
-                key={item}
+      {groups.map((group) =>
+        group[0].kind === "list" ? (
+          <div key={group[0].code} className="grid grid-cols-2 gap-3">
+            {group.map((f, i) => (
+              <section
+                key={f.code}
                 className={cn(
-                  "rounded-full px-[18px] py-2 font-serif leading-tight font-semibold",
-                  i === 0
-                    ? "bg-highlight-fg text-[30px] text-highlight"
-                    : "border-[1.5px] border-highlight-fg text-[26px]",
+                  "flex flex-col rounded-3xl px-4.5 pt-4.5 pb-2 lg:rounded-[28px] lg:px-5.5 lg:pt-5.5 lg:pb-2.5",
+                  i === 0 ? "bg-tint-3" : "bg-tint-2",
+                  group.length === 1 && "col-span-2",
                 )}
               >
-                {item}
-              </li>
+                <SummaryLabel className="mb-1.5">{f.name}</SummaryLabel>
+                <ul className="text-[15px] leading-[1.3] font-medium lg:text-base">
+                  {fieldItems(f.value, f.kind).map((item) => (
+                    <li key={item} className="border-t border-fg/10 py-2.5 lg:py-[11px]">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
-        </section>
-      )}
-
-      {cautionFor.length > 0 && (
-        <section className="flex items-center gap-3.5 rounded-3xl border border-border bg-surface px-5 py-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-tint-2">
-            <TriangleAlert className="size-5" aria-hidden />
-          </span>
-          <div className="flex flex-col gap-0.5">
-            <h2 className="font-sans text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              {t.cautionFor}
-            </h2>
-            <p className="text-xl font-bold">{cautionFor.join(", ")}</p>
           </div>
-        </section>
+        ) : (
+          <section
+            key={group[0].code}
+            className="flex flex-col divide-y divide-border rounded-3xl bg-surface px-5 py-0.5 lg:rounded-[28px] lg:px-6 lg:py-1"
+          >
+            {group.map((f) => (
+              <SummaryRow key={f.code} field={f} />
+            ))}
+          </section>
+        ),
       )}
+    </div>
+  );
+}
 
-      {(strengths.length > 0 || weaknesses.length > 0) && (
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { title: t.strengths, items: strengths, tint: "bg-tint-3" },
-            { title: t.weaknesses, items: weaknesses, tint: "bg-tint-2" },
-          ].map(
-            (col) =>
-              col.items.length > 0 && (
-                <section
-                  key={col.title}
-                  className={cn(
-                    "flex flex-col gap-2.5 rounded-3xl px-4 py-4",
-                    col.tint,
-                    (strengths.length === 0 || weaknesses.length === 0) && "col-span-2",
-                  )}
-                >
-                  <h2 className="font-sans text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    {col.title}
-                  </h2>
-                  <ul className="flex flex-col gap-1 font-serif text-xl leading-tight font-semibold">
-                    {col.items.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </section>
-              ),
-          )}
-        </div>
-      )}
+const SummaryLabel = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <h3
+    className={cn(
+      "font-sans text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase",
+      className,
+    )}
+  >
+    {children}
+  </h3>
+);
+
+/** A chips or alert field: icon, label and its items as one serif value. */
+function SummaryRow({ field }: { field: ReadingField }) {
+  const alert = field.kind === "alert";
+  const Icon = alert ? TriangleAlert : Sparkle;
+  return (
+    <div className="flex items-center gap-3.5 py-4 lg:gap-4 lg:py-[18px]">
+      <span
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-full lg:size-11",
+          alert ? "bg-tint-2" : "bg-tint-1 text-highlight",
+        )}
+      >
+        <Icon className="size-[18px]" aria-hidden />
+      </span>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <SummaryLabel>{field.name}</SummaryLabel>
+        <p className="font-serif text-[28px] leading-[1.1] font-semibold lg:text-[30px]">
+          {fieldItems(field.value, field.kind).map((item, i) => (
+            <span key={item}>
+              {i > 0 && (
+                <span aria-hidden className="px-2 text-muted-foreground">
+                  ·
+                </span>
+              )}
+              {item}
+            </span>
+          ))}
+        </p>
+      </div>
     </div>
   );
 }

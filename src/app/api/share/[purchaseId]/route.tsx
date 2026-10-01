@@ -57,7 +57,10 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/share/[purch
     avatarUri: avatarBase64Uri(seeds.get(reading.personIds[i] ?? "") ?? p.name),
   }));
   const pair = people.length === 2;
-  const first = reading.sections.find((s) => s.body);
+  // A quote sub-section reads best on a card; otherwise the first prose text.
+  const fields = reading.sections.flatMap((s) => s.fields ?? []);
+  const quoteSource =
+    fields.find((f) => f.kind === "quote") ?? fields.find((f) => f.kind === "text");
 
   const image = await renderCard({
     format,
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/share/[purch
     people,
     title: pair ? `${people[0].signName} & ${people[1].signName}` : people[0].signName,
     score: reading.sections.find((s) => s.score !== null)?.score ?? null,
-    quote: cardQuote(first?.body),
+    quote: cardQuote(quoteSource?.value),
     appName: APP_NAME,
     host: new URL(env().APP_URL).host,
   });

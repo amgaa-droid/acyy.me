@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 
 import { mn } from "@/i18n/mn";
-import { IMPORT_KIND_LIST } from "@/server/import/kinds";
+import { db } from "@/server/db";
+import { allKinds } from "@/server/import/kinds";
+import { loadProductDefs } from "@/server/products";
 import { ImportForm } from "./import-form";
 
 export const metadata: Metadata = { title: mn.admin.nav.import };
 
-export default function ImportPage() {
+export default async function ImportPage({ searchParams }: PageProps<"/admin/import">) {
+  const { kind } = await searchParams;
+  const kinds = allKinds(await loadProductDefs(db));
   return (
     <div className="flex max-w-4xl flex-col gap-5">
       <div>
@@ -14,7 +18,8 @@ export default function ImportPage() {
         <p className="mt-2 text-sm text-muted-foreground">{mn.admin.import.intro}</p>
       </div>
       <ImportForm
-        kinds={IMPORT_KIND_LIST.map((k) => ({
+        initialKind={typeof kind === "string" ? kind : undefined}
+        kinds={kinds.map((k) => ({
           kind: k.kind,
           label: k.label,
           file: k.file,

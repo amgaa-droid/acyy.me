@@ -1,16 +1,18 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, CircleDot } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ConstellationArt } from "@/components/app/constellation";
-import { ReadingBody, Teaser } from "@/components/readings/reading-body";
-import { PairPerson, ReadingHighlights } from "@/components/readings/reading-highlights";
+import { ArticleField, Teaser } from "@/components/readings/reading-body";
+import { PairPerson, SummaryFields } from "@/components/readings/reading-highlights";
 import { ScoreRing } from "@/components/readings/score-ring";
 import { ShareCardButton } from "@/components/readings/share-card-button";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { mn } from "@/i18n/mn";
-import { type Highlights, extractHighlights, hasHighlights, parseTraits } from "@/lib/body";
+import { formatBirthDate } from "@/lib/birth-date";
+import { sectionLabel } from "@/lib/content-keys-display";
+import { SUMMARY_FIELD_KINDS } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
@@ -34,6 +36,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
   });
   const refs = await loadAstroRefs(db);
   const signName = (code: string) => refs.signs.find((s) => s.code === code)?.nameMn ?? code;
+  const signNames = Object.fromEntries(refs.signs.map((s) => [s.code, s.nameMn]));
   const people = reading.snapshot.persons;
   const pair = people.length === 2;
   const t = mn.reading;
@@ -47,28 +50,14 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
     tint: live[i] ? relationTint(live[i].relation) : "bg-subtle",
   });
 
-  // Pair texts carry "Тохиромжтой харилцаа" etc. as sub-sections: lift them into cards up top.
-  const highlights: Highlights = { goodFor: [], cautionFor: [], strengths: [], weaknesses: [] };
-  const sections = reading.sections.map((s) => {
-    if (!pair || s.body === null) return s;
-    const { highlights: h, rest } = extractHighlights(s.body);
-    for (const k of Object.keys(highlights) as (keyof Highlights)[]) {
-      for (const item of h[k]) if (!highlights[k].includes(item)) highlights[k].push(item);
-    }
-    return { ...s, body: rest };
-  });
-  // Birthday teasers are "Давуу тал: a · b\nСул тал: …": show them as trait tiles, not a text box.
-  const traitSections = new Set<string>();
-  if (!pair) {
-    for (const s of sections) {
-      const traits = s.teaser ? parseTraits(s.teaser) : null;
-      if (!traits) continue;
-      traitSections.add(s.section);
-      for (const k of ["strengths", "weaknesses"] as const) {
-        for (const item of traits[k]) if (!highlights[k].includes(item)) highlights[k].push(item);
-      }
-    }
-  }
+  // Summary sub-sections (lists, chips, alerts) go next to the hero; the rest reads as an article.
+  const isSummary = (kind: string) => SUMMARY_FIELD_KINDS.some((k) => k === kind);
+  const summary = reading.sections.flatMap((s) =>
+    (s.fields ?? [])
+      .filter((f) => isSummary(f.kind))
+      .map((f) => ({ ...f, code: `${s.section}.${s.key}.${f.code}` })),
+  );
+  const multiPart = reading.sections.length > 1;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
@@ -118,20 +107,20 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                   {signName(people[1].sign)} · {t.period(people[1].period)}
                 </span>
               </p>
-              {sections.some((s) => s.score !== null) && (
+              {reading.sections.some((s) => s.score !== null) && (
                 <div className="relative grid grid-cols-2 gap-2">
-                  {sections.map((s) =>
+                  {reading.sections.map((s) =>
                     s.score !== null ? (
                       <div
-                        key={s.section}
+                        key={`${s.section}|${s.key}`}
                         className="flex items-center gap-3 rounded-3xl bg-surface p-3"
                       >
                         <ScoreRing
                           value={s.score}
-                          tone={s.section === "sign_pair" ? "primary" : "secondary"}
+                          tone={s === reading.sections[0] ? "primary" : "secondary"}
                         />
                         <span className="text-sm leading-tight font-semibold">
-                          {t.sections[s.section]}
+                          {sectionLabel(s, signNames)}
                         </span>
                       </div>
                     ) : null,
@@ -140,51 +129,65 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
               )}
             </section>
           ) : (
-            <section className="relative flex min-h-72 flex-col justify-end overflow-hidden rounded-[32px] bg-tint-1 p-6 lg:min-h-105">
+            <section className="relative min-h-[340px] overflow-hidden rounded-[32px] bg-tint-1 lg:min-h-[440px] lg:rounded-[36px]">
               <ConstellationArt
                 sign={people[0].sign}
-                className="absolute -top-6 -right-12 size-72"
+                className="absolute -top-8 -right-16 size-80 lg:-top-12 lg:-right-20 lg:size-[26rem]"
               />
-              <span className="relative text-xs font-semibold tracking-widest text-highlight uppercase">
-                {reading.productName}
-              </span>
-              <h1 className="relative text-[40px] leading-[0.95] font-semibold lg:text-5xl">
-                {people[0].name}
-              </h1>
-              <p className="relative mt-2 text-sm text-muted-foreground">
-                {signName(people[0].sign)} · {people[0].birthDate}
-              </p>
+              <div className="absolute inset-x-6 bottom-6.5 flex flex-col gap-2 lg:inset-x-9 lg:bottom-8.5 lg:gap-2.5">
+                <span className="text-[11px] font-semibold tracking-[0.16em] text-highlight uppercase lg:text-xs">
+                  {reading.productName}
+                </span>
+                <h1 className="text-[52px] leading-[0.95] font-semibold lg:text-[76px]">
+                  {people[0].name}
+                </h1>
+                <p className="mt-1.5 flex items-center gap-3.5 text-sm text-muted-foreground lg:text-[15px]">
+                  <span className="flex items-center gap-1.5">
+                    <CircleDot className="size-3.5" aria-hidden />
+                    {signName(people[0].sign)}
+                  </span>
+                  <span aria-hidden className="size-[3px] rounded-full bg-muted-foreground" />
+                  <span className="tabular-nums">{formatBirthDate(people[0].birthDate)}</span>
+                </p>
+              </div>
             </section>
           )}
-          {hasHighlights(highlights) && <ReadingHighlights highlights={highlights} />}
+          {summary.length > 0 && <SummaryFields fields={summary} />}
         </div>
 
-        <article className="flex flex-col gap-8 rounded-[32px] bg-surface p-6 lg:p-10">
-          {sections.map((s) => (
-            <section
-              key={s.section}
-              className="flex max-w-[680px] flex-col gap-3"
-              aria-label={t.sections[s.section] || reading.productName}
-            >
-              {s.section !== "main" && (
-                <span className="text-xs font-semibold tracking-widest text-highlight uppercase">
-                  {t.sections[s.section]}
-                </span>
-              )}
-              {s.body === null ? (
-                <p className="text-muted-foreground">{t.unavailable}</p>
-              ) : (
-                <>
-                  <h2 className="text-[32px] leading-tight font-semibold lg:text-[40px]">
-                    {s.title}
-                  </h2>
-                  {s.teaser && !traitSections.has(s.section) && <Teaser text={s.teaser} />}
-                  <ReadingBody body={s.body} />
-                </>
-              )}
-            </section>
-          ))}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+        <article className="flex flex-col gap-12 rounded-[32px] bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-[36px] lg:px-16 lg:pt-14 lg:pb-11">
+          {reading.sections.map((s) => {
+            const article = (s.fields ?? []).filter((f) => !isSummary(f.kind));
+            const lone = article.length === 1 && article[0].kind === "text";
+            return (
+              <section
+                key={`${s.section}|${s.key}`}
+                className="flex max-w-[640px] flex-col gap-8 lg:gap-10"
+                aria-label={multiPart ? sectionLabel(s, signNames) : reading.productName}
+              >
+                <header className="flex flex-col gap-3 lg:gap-3.5">
+                  {multiPart && (
+                    <span className="text-[11px] font-semibold tracking-[0.16em] text-highlight uppercase lg:text-xs">
+                      {sectionLabel(s, signNames)}
+                    </span>
+                  )}
+                  {s.fields === null ? (
+                    <p className="text-muted-foreground">{t.unavailable}</p>
+                  ) : (
+                    <>
+                      <h2 className="text-[42px] leading-none font-semibold lg:text-[60px]">
+                        {s.title}
+                      </h2>
+                      {s.teaser && <Teaser text={s.teaser} className="mt-1" />}
+                    </>
+                  )}
+                </header>
+                {s.fields !== null &&
+                  article.map((f) => <ArticleField key={f.code} field={f} showHeading={!lone} />)}
+              </section>
+            );
+          })}
+          <div className="flex max-w-[640px] flex-wrap items-center justify-between gap-3 border-t border-border pt-4.5 lg:pt-5">
             <p className="text-xs text-muted-foreground">
               {mn.common.entertainmentOnly} · {t.bought(dateFmt.format(reading.createdAt))}
             </p>

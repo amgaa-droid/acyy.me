@@ -3,13 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { mn } from "@/i18n/mn";
-import { CONTENT_SECTIONS, PRODUCT_CODES } from "@/lib/domain";
 import { displayKey } from "@/lib/content-keys-display";
 import { cn } from "@/lib/utils";
 import { PAGE_SIZE, listContent, listQuerySchema, missingKeys } from "@/server/admin/content";
 import { loadAstroRefs } from "@/server/astro/refs";
-import { expectedKeys } from "@/server/content/keys";
 import { db } from "@/server/db";
+import { activeParts, loadProductDefs } from "@/server/products";
 
 export const metadata: Metadata = { title: mn.admin.nav.content };
 
@@ -22,16 +21,16 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/adm
   );
   const query = parsed.success ? parsed.data : listQuerySchema.parse({});
 
-  const refs = await loadAstroRefs(db);
-  const sections = expectedKeys(query.product, { signCodes: [], periodCount: 0 }).map(
-    (s) => s.section,
-  );
-  const section = sections.includes(query.section) ? query.section : sections[0];
-  const q = { ...query, section };
+  const [refs, defs] = await Promise.all([loadAstroRefs(db), loadProductDefs(db)]);
+  const product = defs.find((p) => p.code === query.product) ?? defs[0];
+  if (!product) return <p className="text-muted-foreground">{t.content.noProducts}</p>;
+  const parts = activeParts(product);
+  const part = parts.find((p) => p.code === query.section) ?? parts[0];
+  const q = { ...query, product: product.code, section: part?.code ?? "" };
 
   const [{ items, total }, missing] = await Promise.all([
     listContent(db, q),
-    missingKeys(db, q.product, q.section),
+    part ? missingKeys(db, part) : [],
   ]);
   const names = Object.fromEntries(refs.signs.map((s) => [s.code, s.nameMn]));
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -49,23 +48,27 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/adm
       <h1 className="text-[40px] leading-none font-semibold">{t.nav.content}</h1>
 
       <div className="scrollbar-none flex gap-2 overflow-x-auto">
-        {PRODUCT_CODES.map((p) => (
+        {defs.map((p) => (
           <Chip
-            key={p}
-            href={href({ product: p, section: "main", page: 1, q: "" })}
-            active={p === q.product}
+            key={p.code}
+            href={href({ product: p.code, section: activeParts(p)[0]?.code ?? "", page: 1, q: "" })}
+            active={p.code === q.product}
           >
-            {t.products[p]}
+            {p.nameMn}
           </Chip>
         ))}
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        {sections.length > 1 && (
+        {parts.length > 1 && (
           <div className="flex gap-2">
-            {CONTENT_SECTIONS.filter((s) => sections.includes(s)).map((s) => (
-              <Chip key={s} href={href({ section: s, page: 1 })} active={s === q.section}>
-                {t.sections[s]}
+            {parts.map((s) => (
+              <Chip
+                key={s.code}
+                href={href({ section: s.code, page: 1 })}
+                active={s.code === q.section}
+              >
+                {s.nameMn}
               </Chip>
             ))}
           </div>
@@ -115,7 +118,7 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/adm
                     href={`/admin/content/edit?id=${i.id}`}
                     className="underline-offset-2 hover:underline"
                   >
-                    {displayKey(i.key, names)}
+                    {displayKey(i.key, names, part?.keyType)}
                   </Link>
                 </td>
                 <td className="max-w-0 truncate px-4 py-3 text-muted-foreground lg:max-w-md">
@@ -169,7 +172,7 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/adm
                 className="flex h-9 items-center gap-1 rounded-full bg-subtle px-3 text-xs font-medium hover:ring-2 hover:ring-border"
               >
                 <Plus className="size-3.5" aria-hidden />
-                {displayKey(k, names)}
+                {displayKey(k, names, part?.keyType)}
               </Link>
             ))}
           </div>

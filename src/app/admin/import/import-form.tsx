@@ -28,8 +28,10 @@ function errorLine(e: ImportError): string {
   return parts.filter(Boolean).join(" ");
 }
 
-export function ImportForm({ kinds }: { kinds: KindOption[] }) {
-  const [kind, setKind] = useState(kinds[0].kind);
+export function ImportForm({ kinds, initialKind }: { kinds: KindOption[]; initialKind?: string }) {
+  const [kind, setKind] = useState(
+    kinds.some((k) => k.kind === initialKind) ? initialKind! : kinds[0].kind,
+  );
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportActionResult | null>(null);
   const [pending, startTransition] = useTransition();

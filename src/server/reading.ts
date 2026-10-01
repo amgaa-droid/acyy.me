@@ -1,8 +1,11 @@
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 
-import type { ContentSection, Relation } from "@/lib/domain";
+import { KEY_TYPE_ARITY, type FieldKind, type KeyType, type Relation } from "@/lib/domain";
+import { fieldValue } from "@/lib/fields";
 import { firstSentences } from "@/lib/preview";
+import { monthDayOf } from "@/server/astro/zodiac";
+import { GenderRequiredError, partKeyFor, shownKeys, type KeyPerson } from "@/server/content/keys";
 import type { AppDb } from "@/server/db/types";
 import {
   contentEntries,
@@ -11,6 +14,7 @@ import {
   purchases,
   type PurchaseSnapshot,
 } from "@/server/db/schema";
+import { activeFields, loadProductDef, type PartDef, type ProductDef } from "@/server/products";
 
 /**
  * Reading access (SPEC §3, §7) and the paywall preview (§3.1, CLAUDE.md rule 3).
@@ -23,11 +27,25 @@ export class ReadingNotFoundError extends Error {
   }
 }
 
+/** One sub-section of a text with its value (only non-empty, non-archived ones). */
+export type ReadingField = {
+  code: string;
+  name: string;
+  kind: FieldKind;
+  isFree: boolean;
+  value: string;
+};
+
 export type ReadingSection = {
-  section: ContentSection;
+  /** Part code. */
+  section: string;
+  /** Part name — shown only when the product has several parts. */
+  name: string;
+  keyType: KeyType;
   key: string;
   title: string | null;
-  body: string | null; // null = text currently unpublished
+  /** null = text currently unpublished */
+  fields: ReadingField[] | null;
   teaser: string | null;
   score: number | null;
 };
@@ -45,33 +63,94 @@ export type Reading = {
   sections: ReadingSection[];
 };
 
-const SECTION_ORDER: ContentSection[] = ["main", "sign_pair", "period_pair"];
+type Loaded = { part: PartDef; key: string; row: typeof contentEntries.$inferSelect | undefined };
 
-async function loadSections(db: AppDb, productCode: string, keys: PurchaseSnapshot["keys"]) {
-  const wanted = SECTION_ORDER.filter((s) => keys[s]).map((s) => [s, keys[s]!] as const);
+/**
+ * Which part texts a purchase shows (SPEC §3): every part in its snapshot — archived ones too,
+ * it was bought with them — plus active parts added later, keyed from the snapshot's people
+ * (free for earlier buyers). A later gender-split part needs a known gender, else it's skipped.
+ */
+export function readingKeys(
+  product: Pick<ProductDef, "parts">,
+  snapshot: PurchaseSnapshot,
+): Record<string, string> {
+  const people: KeyPerson[] = snapshot.persons.map((p) => ({
+    monthDay: monthDayOf(p.birthDate),
+    sign: p.sign,
+    period: p.period,
+    gender: p.gender,
+  }));
+  const keys: Record<string, string> = {};
+  for (const part of product.parts) {
+    const bought = snapshot.keys[part.code];
+    if (bought) keys[part.code] = bought;
+    else if (part.archivedAt === null && people.length === KEY_TYPE_ARITY[part.keyType]) {
+      try {
+        keys[part.code] = partKeyFor(part, people);
+      } catch (err) {
+        if (!(err instanceof GenderRequiredError)) throw err;
+      }
+    }
+  }
+  return keys;
+}
+
+/** The published texts of a product's parts for these keys, in part order. */
+async function loadSections(
+  db: AppDb,
+  product: ProductDef,
+  keys: PurchaseSnapshot["keys"],
+): Promise<Loaded[]> {
+  const wanted = product.parts.flatMap((part) =>
+    keys[part.code] ? shownKeys(part.keyType, keys[part.code]).map((key) => ({ part, key })) : [],
+  );
   if (wanted.length === 0) return [];
   const rows = await db
     .select()
     .from(contentEntries)
     .where(
       and(
-        eq(contentEntries.productCode, productCode),
+        eq(contentEntries.productCode, product.code),
         eq(contentEntries.status, "published"),
         inArray(
           contentEntries.key,
-          wanted.map(([, k]) => k),
+          wanted.map((w) => w.key),
         ),
       ),
     );
-  return wanted.map(([section, key]) => {
-    const row = rows.find((r) => r.section === section && r.key === key);
-    return { section, key, row };
+  return wanted.map(({ part, key }) => ({
+    part,
+    key,
+    row: rows.find((r) => r.section === part.code && r.key === key),
+  }));
+}
+
+function readingFields(part: PartDef, stored: Record<string, string>): ReadingField[] {
+  return activeFields(part).flatMap((f) => {
+    const value = fieldValue(stored, f.code);
+    return value ? [{ code: f.code, name: f.nameMn, kind: f.kind, isFree: f.isFree, value }] : [];
   });
 }
 
+/** Two-person readings can be viewed free by a user linked to one of the two (SPEC §7). */
+async function linkedViewerPerson(
+  db: AppDb,
+  viewerId: string,
+  p: typeof purchases.$inferSelect,
+): Promise<string | null> {
+  if (p.snapshot.persons.length !== 2) return null;
+  const ids = [p.personAId, p.personBId].filter((x): x is string => Boolean(x));
+  if (ids.length === 0) return null;
+  const linked = await db
+    .select({ id: persons.id })
+    .from(persons)
+    .where(and(inArray(persons.id, ids), eq(persons.linkedUserId, viewerId)));
+  return linked[0]?.id ?? null;
+}
+
 /**
- * The purchase's full text for its owner — or, for synastry only, for a user linked to one of
- * its two people (free view, SPEC §7). Anyone else: ReadingNotFoundError (→ 404).
+ * The purchase's full text for its owner — or, for two-person products, for a user linked to
+ * one of its two people (free view, SPEC §7). Anyone else: ReadingNotFoundError (→ 404).
  */
 export async function getReading(
   db: AppDb,
@@ -85,24 +164,13 @@ export async function getReading(
   let viaLink = false;
   let linkedPersonId: string | null = null;
   if (p.userId !== viewerId) {
-    if (p.productCode !== "synastry") throw new ReadingNotFoundError();
-    const ids = [p.personAId, p.personBId].filter((x): x is string => Boolean(x));
-    const linked = ids.length
-      ? await db
-          .select({ id: persons.id })
-          .from(persons)
-          .where(and(inArray(persons.id, ids), eq(persons.linkedUserId, viewerId)))
-      : [];
-    if (linked.length === 0) throw new ReadingNotFoundError();
+    linkedPersonId = await linkedViewerPerson(db, viewerId, p);
+    if (!linkedPersonId) throw new ReadingNotFoundError();
     viaLink = true;
-    linkedPersonId = linked[0].id;
   }
 
-  const [product] = await db
-    .select({ nameMn: products.nameMn })
-    .from(products)
-    .where(eq(products.code, p.productCode));
-  const sections = await loadSections(db, p.productCode, p.snapshot.keys);
+  const product = await loadProductDef(db, p.productCode);
+  const sections = product ? await loadSections(db, product, readingKeys(product, p.snapshot)) : [];
   return {
     id: p.id,
     productCode: p.productCode,
@@ -112,49 +180,75 @@ export async function getReading(
     personIds: [p.personAId, p.personBId],
     viaLink,
     linkedPersonId,
-    sections: sections.map(({ section, key, row }) => ({
-      section,
+    sections: sections.map(({ part, key, row }) => ({
+      section: part.code,
+      name: part.nameMn,
+      keyType: part.keyType,
       key,
       title: row?.title ?? null,
-      body: row?.body ?? null,
+      fields: row ? readingFields(part, row.fields) : null,
       teaser: row?.teaser ?? null,
       score: row?.score ?? null,
     })),
   };
 }
 
-export type Preview = {
-  sections: {
-    section: ContentSection;
-    title: string;
-    /** Free by design (SPEC §3.1) — sent for every section. */
-    teaser: string | null;
-    excerpt: string | null;
-  }[];
+export type PreviewSection = {
+  section: string;
+  keyType: KeyType;
+  key: string;
+  name: string;
+  title: string;
+  /** Free by design (SPEC §3.1) — sent for every section. */
+  teaser: string | null;
+  /** Fields marked free, in full. */
+  free: ReadingField[];
+  excerpt: string | null;
 };
 
+export type Preview = { sections: PreviewSection[] };
+
+/** The first 2 sentences of the first paid prose field — all of the paid text a preview shows. */
+function paidExcerpt(fields: ReadingField[]): string | null {
+  const first = fields.find((f) => !f.isFree && (f.kind === "text" || f.kind === "quote"));
+  return first ? firstSentences(first.value, 2) || null : null;
+}
+
 /**
- * Paywall preview: titles and teasers, plus the FIRST 2 SENTENCES of the first section only.
- * Nothing else of the body is returned — the client never receives the full text.
+ * Paywall preview: titles, teasers and free fields, plus the FIRST 2 SENTENCES of the first
+ * paid prose field of the first section only. No other paid text is returned — the client
+ * never receives the full text.
  */
 export async function getPreview(
   db: AppDb,
   productCode: string,
   keys: PurchaseSnapshot["keys"],
 ): Promise<Preview> {
-  const sections = await loadSections(db, productCode, keys);
+  const product = await loadProductDef(db, productCode);
+  if (!product) return { sections: [] };
+  const sections = await loadSections(db, product, keys);
   return {
-    sections: sections.map(({ section, row }, i) => ({
-      section,
-      title: row?.title ?? "",
-      teaser: row?.teaser ?? null,
-      excerpt: i === 0 && row ? firstSentences(row.body, 2) : null,
-    })),
+    sections: sections.map(({ part, key, row }, i) => {
+      const fields = row ? readingFields(part, row.fields) : [];
+      return {
+        section: part.code,
+        keyType: part.keyType,
+        key,
+        name: part.nameMn,
+        title: row?.title ?? "",
+        teaser: row?.teaser ?? null,
+        free: fields.filter((f) => f.isFree),
+        excerpt: i === 0 ? paidExcerpt(fields) : null,
+      };
+    }),
   };
 }
 
-/** Synastry purchases where the viewer is one of the linked people ("Надтай хийсэн нийцлүүд", C7). */
-export async function linkedSynastryIds(db: AppDb, viewerId: string): Promise<string[]> {
+/** Two-person purchases where the viewer is one of the linked people ("Надтай хийсэн нийцлүүд", C7). */
+export async function linkedPairReadings(
+  db: AppDb,
+  viewerId: string,
+): Promise<{ id: string; productCode: string }[]> {
   const mine = await db
     .select({ id: persons.id })
     .from(persons)
@@ -162,15 +256,16 @@ export async function linkedSynastryIds(db: AppDb, viewerId: string): Promise<st
   if (mine.length === 0) return [];
   const ids = mine.map((m) => m.id);
   const rows = await db
-    .select({ id: purchases.id })
+    .select({ id: purchases.id, productCode: purchases.productCode })
     .from(purchases)
+    .innerJoin(products, eq(products.code, purchases.productCode))
     .where(
       and(
-        eq(purchases.productCode, "synastry"),
+        eq(products.personCount, 2),
         or(inArray(purchases.personAId, ids), inArray(purchases.personBId, ids)),
       ),
     );
-  return rows.map((r) => r.id);
+  return rows;
 }
 
 export type ReadingPerson = {

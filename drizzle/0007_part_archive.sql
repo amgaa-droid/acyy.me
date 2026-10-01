@@ -1,0 +1,1 @@
+ALTER TABLE "product_parts" ADD COLUMN "archived_at" timestamp with time zone;

@@ -4,15 +4,15 @@
  *   pnpm tsx scripts/legacy-to-xlsx.ts [exportDir]   (default: OldDB/export)
  *
  * Reads birthdays.json + compatibility.json (extracted from the legacy MSSQL dump, kept out of
- * git) and writes birthday.xlsx, synastry_periods.xlsx and periods48.xlsx to <exportDir>/import.
+ * git) and writes birthday.xlsx, synastry.period_pair.xlsx and periods48.xlsx to <exportDir>/import.
  * Every file is parsed back and dry-run validated with the real import code before it's kept.
  */
 import ExcelJS from "exceljs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ZODIAC_SIGNS } from "@/server/db/seed-data";
-import { IMPORT_KINDS, type ImportKind } from "@/server/import/kinds";
+import { ZODIAC_SIGNS, seedProductDefs } from "@/server/db/seed-data";
+import { findKind, type ImportKindSpec } from "@/server/import/kinds";
 import { parseWorkbook } from "@/server/import/parse";
 import { validateImport } from "@/server/import/validate";
 import {
@@ -24,14 +24,20 @@ import {
   type LegacyPeriod,
 } from "@/server/legacy/transform";
 
-async function build(kind: ImportKind, rows: Record<string, string>[]): Promise<Buffer> {
-  const spec = IMPORT_KINDS[kind];
+const defs = seedProductDefs();
+const specOf = (kind: string): ImportKindSpec => {
+  const spec = findKind(defs, kind);
+  if (!spec) throw new Error(`unknown import kind ${kind}`);
+  return spec;
+};
+
+async function build(spec: ImportKindSpec, rows: Record<string, string>[]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet(kind, { views: [{ state: "frozen", ySplit: 1 }] });
+  const ws = wb.addWorksheet(spec.kind, { views: [{ state: "frozen", ySplit: 1 }] });
   ws.columns = spec.columns.map((c) => ({
     header: c.name,
     key: c.name,
-    width: c.name === "body" ? 80 : c.name === "title" || c.name === "teaser" ? 36 : 10,
+    width: c.name === "general" ? 80 : c.name === "title" ? 36 : 24,
     style: { numFmt: "@", alignment: { wrapText: true, vertical: "top" } },
   }));
   ws.getRow(1).font = { bold: true };
@@ -49,21 +55,21 @@ async function main() {
     await readFile(path.join(dir, "compatibility.json"), "utf8"),
   );
 
-  const files: [ImportKind, Record<string, string>[]][] = [
+  const files: [string, Record<string, string>[]][] = [
     ["periods48", compat.periods.map(periodRow)],
     ["birthday", birthdays.map(birthdayRow)],
-    ["synastry_periods", compat.pairs.map(periodPairRow)],
+    ["synastry.period_pair", compat.pairs.map(periodPairRow)],
   ];
   const refs = { signs: ZODIAC_SIGNS.map((s) => ({ ...s })), periodCount: compat.periods.length };
 
   await mkdir(outDir, { recursive: true });
   let failed = false;
   for (const [kind, rows] of files) {
-    const buffer = await build(kind, rows);
-    const spec = IMPORT_KINDS[kind];
+    const spec = specOf(kind);
+    const buffer = await build(spec, rows);
     const parsed = await parseWorkbook(buffer, spec);
     const report = validateImport(spec, parsed.rows, refs);
-    const count = kind === "periods48" ? report.ranges.length : report.entries.length;
+    const count = spec.target ? report.entries.length : report.ranges.length;
     console.log(
       `${spec.file}: ${count} rows, ${report.errors.length} errors, ${report.missing.length} missing keys`,
     );

@@ -10,7 +10,7 @@ import postgres from "postgres";
 import { todayYmd } from "@/lib/birth-date";
 import { buildPlaceholderPeriods } from "@/server/astro/calendar";
 import * as schema from "./schema";
-import { PRODUCTS, ZODIAC_SIGNS, placeholderContentRows } from "./seed-data";
+import { PRODUCTS, ZODIAC_SIGNS, catalogRows, placeholderContentRows } from "./seed-data";
 import { seedTestUsers } from "./seed-users";
 import type { AppDb } from "./types";
 
@@ -49,11 +49,11 @@ async function main() {
       .from(schema.periods48);
     if (periodCount === 0) await tx.insert(schema.periods48).values(buildPlaceholderPeriods());
 
-    // Products: insert new ones, keep admin-edited price/flags on re-seed.
-    await tx
-      .insert(schema.products)
-      .values(PRODUCTS.map((p, i) => ({ ...p, sort: i + 1 })))
-      .onConflictDoNothing({ target: schema.products.code });
+    // Products, parts, fields: insert missing ones, keep admin edits on re-seed.
+    const catalog = catalogRows();
+    await tx.insert(schema.products).values(catalog.products).onConflictDoNothing();
+    await tx.insert(schema.productParts).values(catalog.parts).onConflictDoNothing();
+    await tx.insert(schema.productFields).values(catalog.fields).onConflictDoNothing();
 
     const rows = placeholderContentRows();
     let inserted = 0;

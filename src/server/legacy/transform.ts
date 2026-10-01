@@ -4,6 +4,7 @@
  *
  * Legacy shape: a birthday text has 8 HTML sections (2 of them used to be free), a period-pair
  * text has a short paragraph plus keyword lists and "good for / bad for" relation types.
+ * Each becomes its own sub-section column.
  */
 
 export type LegacySection = { key: number; name: string; isFree: boolean; html: string };
@@ -25,14 +26,27 @@ export type LegacyPair = {
   weakness: string | null;
 };
 
-export type BirthdayRow = { month_day: string; title: string; body: string; teaser: string };
-export type PeriodPairRow = { period_a: string; period_b: string; title: string; body: string };
+/** Column = sub-section code (src/server/db/seed-data.ts, birthday / synastry.period_pair). */
+export type BirthdayRow = { month_day: string; title: string } & Record<string, string>;
+export type PeriodPairRow = { period_a: string; period_b: string; title: string } & Record<
+  string,
+  string
+>;
 export type PeriodRow = { no: string; start: string; end: string };
 
-/** Legacy section ids (acyyTitle). 1/8 become the free teaser, the rest the body in this order. */
-const STRENGTHS = 1;
-const WEAKNESSES = 8;
-const BODY_ORDER = [4, 2, 3, 5, 6, 7]; // Ерөнхий шинж, Бясалгах үг, Зөвлөгөө, Эрүүл мэнд, Тоон хэлээр, Таро хөзөр
+/** Legacy section ids (acyyTitle) → birthday sub-sections. 1/8 are keyword lists (free). */
+const KEYWORD_FIELDS: [number, string][] = [
+  [1, "strengths"],
+  [8, "weaknesses"],
+];
+const TEXT_FIELDS: [number, string][] = [
+  [4, "general"],
+  [2, "meditation"],
+  [3, "advice"],
+  [5, "health"],
+  [6, "numerology"],
+  [7, "tarot"],
+];
 
 const ENTITIES: Record<string, string> = {
   nbsp: " ",
@@ -126,14 +140,10 @@ export function birthdayRow(b: LegacyBirthday): BirthdayRow {
     return s;
   };
 
-  const teaser = [STRENGTHS, WEAKNESSES]
-    .map((key) => `${section(key).name}: ${keywords(section(key).html).join(" · ")}`)
-    .join("\n");
-  const body = BODY_ORDER.map(
-    (key) => `## ${section(key).name}\n\n${htmlToText(section(key).html)}`,
-  ).join("\n\n");
-
-  return { month_day: `${pad2(b.month)}-${pad2(b.day)}`, title: b.title.trim(), body, teaser };
+  const row: BirthdayRow = { month_day: `${pad2(b.month)}-${pad2(b.day)}`, title: b.title.trim() };
+  for (const [key, code] of KEYWORD_FIELDS) row[code] = keywords(section(key).html).join("\n");
+  for (const [key, code] of TEXT_FIELDS) row[code] = htmlToText(section(key).html);
+  return row;
 }
 
 /** "Эцэг,эх-Хүүхэд", "гэрлэлт", "Гэрлэт" → consistent relation labels. */
@@ -149,21 +159,15 @@ export function normalizeRelation(s: string | null): string | null {
 
 export function periodPairRow(p: LegacyPair): PeriodPairRow {
   const [a, b] = p.period1 <= p.period2 ? [p.period1, p.period2] : [p.period2, p.period1];
-  const blocks = [htmlToText(p.text ?? "")];
-  const list = (heading: string, items: string[]) => {
-    if (items.length) blocks.push(`## ${heading}\n\n${items.map((i) => `• ${i}`).join("\n")}`);
-  };
-  list("Давуу тал", keywords(p.strength));
-  list("Сул тал", keywords(p.weakness));
-  const good = normalizeRelation(p.goodFor);
-  const bad = normalizeRelation(p.badFor);
-  if (good) blocks.push(`## Тохиромжтой харилцаа\n\n${good}`);
-  if (bad) blocks.push(`## Анхаарах харилцаа\n\n${bad}`);
   return {
     period_a: String(a),
     period_b: String(b),
     title: p.title.trim(),
-    body: blocks.filter(Boolean).join("\n\n"),
+    general: htmlToText(p.text ?? ""),
+    strengths: keywords(p.strength).join("\n"),
+    weaknesses: keywords(p.weakness).join("\n"),
+    good_for: normalizeRelation(p.goodFor) ?? "",
+    caution_for: normalizeRelation(p.badFor) ?? "",
   };
 }
 

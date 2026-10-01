@@ -1,19 +1,62 @@
-import { Blend, CalendarDays, Coffee, Flame, Heart, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  Baby,
+  Blend,
+  Briefcase,
+  CalendarDays,
+  Coffee,
+  Flame,
+  Gem,
+  Heart,
+  Leaf,
+  Moon,
+  Sparkles,
+  Star,
+  Sun,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
+import type { ProductIconName, ProductTint } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
-const ICONS: Record<string, { Icon: LucideIcon; tile: string }> = {
-  birthday: { Icon: CalendarDays, tile: "bg-highlight text-highlight-fg" },
-  sign: { Icon: Sparkles, tile: "bg-tint-1 text-highlight" },
-  love: { Icon: Heart, tile: "bg-tint-2 text-fg" },
-  sex: { Icon: Flame, tile: "bg-fg text-bg" },
-  dating: { Icon: Coffee, tile: "bg-tint-3 text-fg" },
-  synastry: { Icon: Blend, tile: "bg-nav text-nav-active" },
+export const PRODUCT_ICON_COMPONENTS: Record<ProductIconName, LucideIcon> = {
+  calendar: CalendarDays,
+  sparkles: Sparkles,
+  heart: Heart,
+  flame: Flame,
+  coffee: Coffee,
+  blend: Blend,
+  moon: Moon,
+  sun: Sun,
+  star: Star,
+  gem: Gem,
+  baby: Baby,
+  briefcase: Briefcase,
+  leaf: Leaf,
+  users: Users,
 };
 
-/** Pastel icon tile per product (cosmic-soft design). */
-export function ProductIcon({ code, className }: { code: string; className?: string }) {
-  const { Icon, tile } = ICONS[code] ?? ICONS.sign;
+export const PRODUCT_TINT_CLASSES: Record<ProductTint, string> = {
+  highlight: "bg-highlight text-highlight-fg",
+  "tint-1": "bg-tint-1 text-highlight",
+  "tint-2": "bg-tint-2 text-fg",
+  "tint-3": "bg-tint-3 text-fg",
+  dark: "bg-fg text-bg",
+  nav: "bg-nav text-nav-active",
+};
+
+export type ProductLook = { icon: string; tint: string };
+
+/** Pastel icon tile per product (cosmic-soft design); icon and colour are set in /admin/products. */
+export function ProductIcon({
+  product,
+  className,
+}: {
+  product: ProductLook | null | undefined;
+  className?: string;
+}) {
+  const Icon = PRODUCT_ICON_COMPONENTS[product?.icon as ProductIconName] ?? Sparkles;
+  const tile = PRODUCT_TINT_CLASSES[product?.tint as ProductTint] ?? PRODUCT_TINT_CLASSES["tint-1"];
   return (
     <span
       className={cn(

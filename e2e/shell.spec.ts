@@ -6,8 +6,9 @@ const isDesktop = (name: string) => name.startsWith("desktop");
 
 test("landing shows the app name and leads to login", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Зурхай");
-  await page.getByRole("button", { name: "Нэвтрэх" }).click();
+  await expect(page).toHaveTitle(/^Зурхай — /);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.getByRole("link", { name: "Нэвтрэх" }).first().click();
   await expect(page).toHaveURL(/\/login$/);
 });
 

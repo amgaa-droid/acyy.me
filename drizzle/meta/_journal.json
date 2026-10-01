@@ -29,6 +29,41 @@
       "when": 1790755862268,
       "tag": "0003_content_teaser",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790784565895,
+      "tag": "0004_products_builder",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790784609221,
+      "tag": "0005_drop_content_body",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790785381965,
+      "tag": "0006_topup_packages_analytics",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790789270663,
+      "tag": "0007_part_archive",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790790427863,
+      "tag": "0008_synastry_ordered_signs",
+      "breakpoints": true
     }
   ]
 }

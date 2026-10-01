@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { ageOn, parseIsoDate, todayYmd, type Ymd } from "@/lib/birth-date";
-import { RELATION_GROUP, type ProductCode, type Relation } from "@/lib/domain";
+import { RELATION_GROUP, type Relation } from "@/lib/domain";
 import type { AppDb } from "@/server/db/types";
 import { products, purchases, user } from "@/server/db/schema";
 import { getSelf, type Person } from "@/server/persons";
@@ -67,6 +67,12 @@ export async function listActiveProducts(db: AppDb): Promise<Product[]> {
   return db.select().from(products).where(eq(products.isActive, true)).orderBy(asc(products.sort));
 }
 
+/** Every product (incl. inactive), by code — names and icons of already-bought readings. */
+export async function productsByCode(db: AppDb): Promise<Map<string, Product>> {
+  const rows = await db.select().from(products);
+  return new Map(rows.map((p) => [p.code, p]));
+}
+
 export async function getProduct(db: AppDb, code: string): Promise<Product | null> {
   const [p] = await db.select().from(products).where(eq(products.code, code));
   return p ?? null;
@@ -109,7 +115,6 @@ export async function offersForPerson(
   const byCode = new Map(owned.map((o) => [o.productCode, o.id]));
   return offered.map((product) => ({
     product,
-    purchaseId:
-      product.personCount === 1 ? (byCode.get(product.code as ProductCode) ?? null) : null,
+    purchaseId: product.personCount === 1 ? (byCode.get(product.code) ?? null) : null,
   }));
 }

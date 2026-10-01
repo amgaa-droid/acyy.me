@@ -5,19 +5,20 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import { mn } from "@/i18n/mn";
-import { CONTENT_SECTIONS, PRODUCT_CODES } from "@/lib/domain";
 import { displayKey } from "@/lib/content-keys-display";
+import { KEY_TYPE_ARITY } from "@/lib/domain";
 import { getContentEntry } from "@/server/admin/content";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { db } from "@/server/db";
+import { activeFields, loadProductDef } from "@/server/products";
 import { ContentForm } from "./content-form";
 
 export const metadata: Metadata = { title: mn.admin.content.editTitle };
 
 const newSchema = z.object({
-  product: z.enum(PRODUCT_CODES),
-  section: z.enum(CONTENT_SECTIONS),
-  key: z.string().min(1).max(20),
+  product: z.string().min(1).max(32),
+  section: z.string().min(1).max(32),
+  key: z.string().min(1).max(40),
 });
 
 export default async function EditContentPage({ searchParams }: PageProps<"/admin/content/edit">) {
@@ -31,6 +32,9 @@ export default async function EditContentPage({ searchParams }: PageProps<"/admi
     : newSchema.safeParse({ product: one(sp.product), section: one(sp.section), key: one(sp.key) })
         .data;
   if (!target) notFound();
+  const product = await loadProductDef(db, target.product);
+  const part = product?.parts.find((p) => p.code === target.section && p.archivedAt === null);
+  if (!product || !part) notFound();
 
   const refs = await loadAstroRefs(db);
   const names = Object.fromEntries(refs.signs.map((s) => [s.code, s.nameMn]));
@@ -46,25 +50,34 @@ export default async function EditContentPage({ searchParams }: PageProps<"/admi
       </Link>
       <div>
         <p className="text-sm text-muted-foreground">
-          {t.products[target.product]}
-          {target.section !== "main" && ` · ${t.sections[target.section]}`}
+          {product.nameMn}
+          {product.parts.length > 1 && ` · ${part.nameMn}`}
         </p>
-        <h1 className="text-[40px] leading-none font-semibold">{displayKey(target.key, names)}</h1>
+        <h1 className="text-[40px] leading-none font-semibold">
+          {displayKey(target.key, names, part.keyType)}
+        </h1>
       </div>
       <ContentForm
-        target={target as { product: string; section: string; key: string }}
+        target={target}
+        fields={activeFields(part).map((f) => ({
+          code: f.code,
+          name: f.nameMn,
+          kind: f.kind,
+          isFree: f.isFree,
+          required: f.required,
+        }))}
         initial={
           entry
             ? {
                 title: entry.title,
-                body: entry.body,
+                fields: entry.fields,
                 teaser: entry.teaser ?? "",
                 score: entry.score,
                 status: entry.status,
               }
-            : { title: "", body: "", teaser: "", score: null, status: "published" }
+            : { title: "", fields: {}, teaser: "", score: null, status: "published" }
         }
-        showScore={target.section !== "main"}
+        showScore={KEY_TYPE_ARITY[part.keyType] === 2 || entry?.score != null}
       />
     </div>
   );

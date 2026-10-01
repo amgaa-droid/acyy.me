@@ -2,13 +2,13 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { todayYmd } from "@/lib/birth-date";
-import type { ContentSection, ProductCode } from "@/lib/domain";
 import { describeBirthDate, loadAstroRefs, type AstroRefs } from "@/server/astro/refs";
 import { monthDayOf } from "@/server/astro/zodiac";
-import { getProduct, isEligible, loadViewer } from "@/server/catalog";
-import { periodPairKey, signPairKey } from "@/server/content/keys";
+import { isEligible, loadViewer } from "@/server/catalog";
+import { partKeyFor, shownKeys, type KeyPerson, type PartKeySpec } from "@/server/content/keys";
 import type { AppDb } from "@/server/db/types";
 import { contentEntries, persons, purchases, type PurchaseSnapshot } from "@/server/db/schema";
+import { activeParts, loadProductDef } from "@/server/products";
 import { debit } from "@/server/wallet";
 
 /**
@@ -43,33 +43,36 @@ export class ContentUnavailableError extends Error {
 
 type SubjectPerson = typeof persons.$inferSelect;
 
-/** "{id}" or "{minId}|{maxId}" — A×B and B×A share one subject. */
+/**
+ * "{id}" or "{minId}|{maxId}" — A×B and B×A share one subject (also for ordered sign pairs,
+ * whose reading shows both directions).
+ */
 export function subjectKey(personIds: string[]): string {
   return [...personIds].sort().join("|");
 }
 
-/** Content keys for a product and its people (what the reading will show). */
+type PartSpec = PartKeySpec & { code: string };
+
+/** Content keys per part for a product's people (what the reading will show). */
 export function contentKeysFor(
-  product: ProductCode,
-  people: Pick<SubjectPerson, "birthDate">[],
+  parts: readonly PartSpec[],
+  people: Pick<SubjectPerson, "birthDate" | "gender">[],
   refs: AstroRefs,
-): Partial<Record<ContentSection, string>> {
-  const d = people.map((p) => describeBirthDate(p.birthDate, refs));
-  switch (product) {
-    case "birthday":
-      return { main: monthDayOf(people[0].birthDate) };
-    case "synastry":
-      return {
-        sign_pair: signPairKey(d[0].sign.code, d[1].sign.code),
-        period_pair: periodPairKey(d[0].period.no, d[1].period.no),
-      };
-    default:
-      return { main: d[0].sign.code };
-  }
+): Record<string, string> {
+  const keyPeople: KeyPerson[] = people.map((p) => {
+    const d = describeBirthDate(p.birthDate, refs);
+    return {
+      monthDay: monthDayOf(p.birthDate),
+      sign: d.sign.code,
+      period: d.period.no,
+      gender: p.gender,
+    };
+  });
+  return Object.fromEntries(parts.map((part) => [part.code, partKeyFor(part, keyPeople)]));
 }
 
 export function buildSnapshot(
-  product: ProductCode,
+  parts: readonly PartSpec[],
   people: SubjectPerson[],
   refs: AstroRefs,
 ): PurchaseSnapshot {
@@ -84,7 +87,7 @@ export function buildSnapshot(
         period: period.no,
       };
     }),
-    keys: contentKeysFor(product, people, refs),
+    keys: contentKeysFor(parts, people, refs),
   };
 }
 
@@ -124,15 +127,22 @@ export async function findPurchase(db: AppDb, userId: string, product: string, s
   return p ?? null;
 }
 
-/** Checks everything a purchase needs, without charging. Used by the buy screen and purchase(). */
+/**
+ * Checks everything a purchase needs, without charging. Used by the buy screen and purchase().
+ * Throws GenderRequiredError (src/server/content/keys.ts) when a gender-split text is wanted
+ * for someone whose gender isn't set — the buy screen asks for it first.
+ */
 export async function preparePurchase(
   db: AppDb,
   userId: string,
   productCode: string,
   personIds: string[],
 ) {
-  const product = await getProduct(db, productCode);
-  if (!product || !product.isActive) throw new ProductUnavailableError();
+  const product = await loadProductDef(db, productCode);
+  const parts = product ? activeParts(product) : [];
+  if (!product || !product.isActive || parts.length === 0) {
+    throw new ProductUnavailableError();
+  }
   if (new Set(personIds).size !== personIds.length || personIds.length !== product.personCount) {
     throw new PersonsInvalidError();
   }
@@ -141,12 +151,25 @@ export async function preparePurchase(
   if (!isEligible(product, people, viewer, todayYmd())) throw new NotEligibleError();
 
   const refs = await loadAstroRefs(db);
-  const snapshot = buildSnapshot(product.code as ProductCode, people, refs);
-  return { product, people, snapshot, subject: subjectKey(personIds) };
+  const snapshot = buildSnapshot(parts, people, refs);
+  return {
+    product,
+    people,
+    snapshot,
+    subject: subjectKey(personIds),
+    parts,
+  };
 }
 
-async function assertContentPublished(db: AppDb, product: string, keys: PurchaseSnapshot["keys"]) {
-  const wanted = Object.entries(keys) as [ContentSection, string][];
+async function assertContentPublished(
+  db: AppDb,
+  product: string,
+  parts: readonly PartSpec[],
+  keys: PurchaseSnapshot["keys"],
+) {
+  const wanted = parts.flatMap((p) =>
+    keys[p.code] ? shownKeys(p.keyType, keys[p.code]).map((k) => [p.code, k] as const) : [],
+  );
   const rows = await db
     .select({ section: contentEntries.section, key: contentEntries.key })
     .from(contentEntries)
@@ -177,7 +200,7 @@ export async function purchase(
   db: AppDb,
   input: { userId: string; productCode: string; personIds: string[] },
 ): Promise<{ purchase: Purchase; alreadyOwned: boolean }> {
-  const { product, people, snapshot, subject } = await preparePurchase(
+  const { product, people, snapshot, subject, parts } = await preparePurchase(
     db,
     input.userId,
     input.productCode,
@@ -188,7 +211,7 @@ export async function purchase(
   if (owned) return { purchase: owned, alreadyOwned: true };
 
   // Never take money for a text that isn't there.
-  await assertContentPublished(db, product.code, snapshot.keys);
+  await assertContentPublished(db, product.code, parts, snapshot.keys);
 
   try {
     const created = await db.transaction(async (tx) => {

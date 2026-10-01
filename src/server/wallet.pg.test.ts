@@ -1,10 +1,11 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { products, user, walletEntries } from "@/server/db/schema";
-import { PRODUCTS } from "@/server/db/seed-data";
+import { productFields, productParts, products, user, walletEntries } from "@/server/db/schema";
+import { catalogRows } from "@/server/db/seed-data";
 import { MockQPayProvider } from "@/server/qpay/mock";
 import { createTopup, settleTopup } from "@/server/topups";
+import { offerFor } from "@/test/db";
 import { contentEntries, purchases } from "@/server/db/schema";
 import { placeholderContentRows } from "@/server/db/seed-data";
 import { createPerson, createSelf } from "@/server/persons";
@@ -90,15 +91,15 @@ describe.skipIf(process.env.SKIP_PG_TESTS === "1")("wallet on real Postgres", ()
   }, 60_000);
 
   it("10 concurrent callbacks for one paid top-up credit exactly once", async () => {
-    await db
-      .insert(products)
-      .values(PRODUCTS.map((p, i) => ({ ...p, sort: i })))
-      .onConflictDoNothing();
+    const catalog = catalogRows();
+    await db.insert(products).values(catalog.products).onConflictDoNothing();
+    await db.insert(productParts).values(catalog.parts).onConflictDoNothing();
+    await db.insert(productFields).values(catalog.fields).onConflictDoNothing();
     const u = await newUser("cb@test.local");
     const qpay = new MockQPayProvider("http://localhost:3000");
     const t = await createTopup(db, qpay, {
       userId: u,
-      amount: 10_000,
+      offer: await offerFor(db, 10_000),
       appUrl: "http://localhost:3000",
       callbackSecret: "s".repeat(64),
       description: "test",
@@ -114,10 +115,10 @@ describe.skipIf(process.env.SKIP_PG_TESTS === "1")("wallet on real Postgres", ()
   }, 60_000);
 
   it("10 concurrent purchases of the same reading (incl. B×A) charge once", async () => {
-    await db
-      .insert(products)
-      .values(PRODUCTS.map((p, i) => ({ ...p, sort: i })))
-      .onConflictDoNothing();
+    const catalog = catalogRows();
+    await db.insert(products).values(catalog.products).onConflictDoNothing();
+    await db.insert(productParts).values(catalog.parts).onConflictDoNothing();
+    await db.insert(productFields).values(catalog.fields).onConflictDoNothing();
     await db.insert(zodiacSigns).values(ZODIAC_SIGNS).onConflictDoNothing();
     await db.insert(periods48).values(buildPlaceholderPeriods()).onConflictDoNothing();
     const rows = placeholderContentRows();

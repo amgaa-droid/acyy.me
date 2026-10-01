@@ -10,7 +10,7 @@ import { RELATION_GROUP } from "@/lib/domain";
 import { relationText } from "@/lib/people";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
-import { listActiveProducts, loadViewer, offersForPerson } from "@/server/catalog";
+import { loadViewer, offersForPerson, productsByCode } from "@/server/catalog";
 import { db } from "@/server/db";
 import { listPeopleWithSigns } from "@/server/people-view";
 import { listPurchases, subjectKey } from "@/server/purchase";
@@ -24,14 +24,14 @@ export default async function HomePage() {
     listPeopleWithSigns(user.id),
     loadViewer(db, user.id),
     listPurchases(db, user.id, 50),
-    listActiveProducts(db),
+    productsByCode(db),
   ]);
   const { sign, period } = describeBirthDate(self.birthDate, refs);
   const others = people.filter((p) => p.relation !== "self");
   const offers = (await offersForPerson(db, viewer, self)).filter(
     (o) => o.product.personCount === 1,
   );
-  const productName = Object.fromEntries(allProducts.map((p) => [p.code, p.nameMn]));
+  const catalog = allProducts;
 
   // Suggest a synastry with the closest person we don't have one with yet (family/romantic first).
   const owned = new Set(
@@ -80,12 +80,15 @@ export default async function HomePage() {
         </section>
       </div>
 
-      {suggestion && (
+      {suggestion && catalog.get("synastry")?.isActive && (
         <Link
           href={`/buy/synastry?a=${self.id}&b=${suggestion.id}`}
           className="flex items-center gap-4 rounded-[28px] bg-nav p-5 text-nav-active"
         >
-          <ProductIcon code="synastry" className="bg-nav-active/15 text-nav-active" />
+          <ProductIcon
+            product={catalog.get("synastry")}
+            className="bg-nav-active/15 text-nav-active"
+          />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-lg font-semibold">
               {mn.home.suggestion(relationText(suggestion))}
@@ -107,7 +110,7 @@ export default async function HomePage() {
                 href={o.purchaseId ? `/r/${o.purchaseId}` : `/buy/${o.product.code}?a=${self.id}`}
                 className="flex h-full flex-col gap-3 rounded-3xl bg-surface p-4 lg:p-5"
               >
-                <ProductIcon code={o.product.code} />
+                <ProductIcon product={o.product} />
                 <span className="text-sm leading-tight font-semibold lg:text-base">
                   {o.product.nameMn}
                 </span>
@@ -131,10 +134,10 @@ export default async function HomePage() {
             {purchases.slice(0, 3).map((p) => (
               <li key={p.id}>
                 <Link href={`/r/${p.id}`} className="flex items-center gap-3 px-4 py-3.5">
-                  <ProductIcon code={p.productCode} className="size-10" />
+                  <ProductIcon product={catalog.get(p.productCode)} className="size-10" />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-semibold">
-                      {productName[p.productCode] ?? p.productCode}
+                      {catalog.get(p.productCode)?.nameMn ?? p.productCode}
                     </span>
                     <span className="truncate text-sm text-muted-foreground">
                       {p.snapshot.persons.map((x) => x.name).join(" × ")}

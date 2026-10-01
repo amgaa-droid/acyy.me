@@ -7,6 +7,8 @@ import { formatMnt, mn } from "@/i18n/mn";
 export type Offer = {
   code: string;
   name: string;
+  icon: string;
+  tint: string;
   price: number;
   personCount: number;
   purchaseId: string | null;
@@ -24,10 +26,10 @@ export function OfferList({ personId, offers }: { personId: string; offers: Offe
               href={href}
               className="flex items-center gap-3 rounded-3xl bg-surface p-3.5 hover:ring-2 hover:ring-border"
             >
-              <ProductIcon code={o.code} />
+              <ProductIcon product={o} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-semibold">
-                  {o.personCount === 2 ? mn.people.compare : o.name}
+                  {o.code === "synastry" ? mn.people.compare : o.name}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {o.purchaseId ? (

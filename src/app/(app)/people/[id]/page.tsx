@@ -101,6 +101,8 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
               offers={offers.map((o) => ({
                 code: o.product.code,
                 name: o.product.nameMn,
+                icon: o.product.icon,
+                tint: o.product.tint,
                 price: o.product.price,
                 personCount: o.product.personCount,
                 purchaseId: o.purchaseId,

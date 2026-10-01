@@ -6,7 +6,12 @@ import { loadAstroRefs } from "@/server/astro/refs";
 import { auditLogs, contentEntries, periods48 } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import { createTestDb, insertUser } from "@/test/db";
-import { IMPORT_KINDS } from "./kinds";
+import { seedProductDefs } from "@/server/db/seed-data";
+import { allKinds, type ImportKindSpec } from "./kinds";
+
+const IMPORT_KINDS: Record<string, ImportKindSpec> = Object.fromEntries(
+  allKinds(seedProductDefs()).map((k) => [k.kind, k]),
+);
 import { runImport } from "./run";
 import { buildTemplate } from "./template";
 
@@ -21,10 +26,7 @@ beforeAll(async () => {
 afterAll(() => close());
 
 /** Loads a generated template and fills title/body (and optional score) for every row. */
-async function filledTemplate(
-  kind: keyof typeof IMPORT_KINDS,
-  fill: (row: ExcelJS.Row, i: number) => void,
-) {
+async function filledTemplate(kind: string, fill: (row: ExcelJS.Row, i: number) => void) {
   const spec = IMPORT_KINDS[kind];
   const refs = await loadAstroRefs(db);
   const buf = await buildTemplate(spec, refs);
@@ -53,8 +55,8 @@ describe("templates", () => {
       love: 12,
       sex: 12,
       dating: 12,
-      synastry_signs: 78,
-      synastry_periods: 1176,
+      "synastry.sign_pair": 144,
+      "synastry.period_pair": 1176,
       periods48: 48,
     });
   });
@@ -62,14 +64,14 @@ describe("templates", () => {
 
 describe("runImport", () => {
   it("dry-run reports without writing; commit upserts + audits", async () => {
-    const file = await filledTemplate("synastry_signs", (row, i) => {
+    const file = await filledTemplate("synastry.sign_pair", (row, i) => {
       row.getCell(3).value = `Гарчиг ${i}`;
       row.getCell(4).value = `Текст ${i}.`;
-      row.getCell(5).value = 50 + (i % 50);
+      row.getCell(6).value = 50 + (i % 50);
     });
 
     const dry = await runImport(db, {
-      spec: IMPORT_KINDS.synastry_signs,
+      spec: IMPORT_KINDS["synastry.sign_pair"],
       file,
       fileName: "s.xlsx",
       actorId,
@@ -78,14 +80,14 @@ describe("runImport", () => {
     expect(dry).toMatchObject({
       ok: true,
       committed: false,
-      toInsert: 78,
+      toInsert: 144,
       toUpdate: 0,
       missing: [],
     });
     expect(await db.select().from(contentEntries)).toHaveLength(0);
 
     const done = await runImport(db, {
-      spec: IMPORT_KINDS.synastry_signs,
+      spec: IMPORT_KINDS["synastry.sign_pair"],
       file,
       fileName: "s.xlsx",
       actorId,
@@ -98,21 +100,21 @@ describe("runImport", () => {
       .where(
         and(eq(contentEntries.productCode, "synastry"), eq(contentEntries.section, "sign_pair")),
       );
-    expect(rows).toHaveLength(78);
+    expect(rows).toHaveLength(144);
     expect(rows.every((r) => r.status === "published" && r.updatedBy === actorId)).toBe(true);
 
     const again = await runImport(db, {
-      spec: IMPORT_KINDS.synastry_signs,
+      spec: IMPORT_KINDS["synastry.sign_pair"],
       file,
       fileName: "s.xlsx",
       actorId,
       commit: false,
     });
-    expect(again).toMatchObject({ toInsert: 0, toUpdate: 78 });
+    expect(again).toMatchObject({ toInsert: 0, toUpdate: 144 });
 
     const audit = await db.select().from(auditLogs).where(eq(auditLogs.action, "content.import"));
     expect(audit).toHaveLength(1);
-    expect(audit[0].data).toMatchObject({ file: "s.xlsx", inserted: 78 });
+    expect(audit[0].data).toMatchObject({ file: "s.xlsx", inserted: 144 });
   });
 
   it("a file with any bad row imports nothing", async () => {
@@ -128,7 +130,7 @@ describe("runImport", () => {
       commit: true,
     });
     expect(res.committed).toBe(false);
-    expect(res.errors).toEqual([{ code: "required", row: 5, column: "body" }]);
+    expect(res.errors).toEqual([{ code: "required", row: 5, column: "general" }]);
     expect(
       await db.select().from(contentEntries).where(eq(contentEntries.productCode, "love")),
     ).toHaveLength(0);
@@ -145,7 +147,7 @@ describe("runImport", () => {
       actorId,
       commit: false,
     });
-    expect(res.missingColumns).toEqual(["body"]);
+    expect(res.missingColumns).toEqual(["general"]);
     expect(res.ok).toBe(false);
   });
 

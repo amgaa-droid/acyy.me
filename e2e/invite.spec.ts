@@ -1,13 +1,12 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
-import { readOtpFromDevMail, signUpFresh } from "./helpers";
+import { payTopup, readOtpFromDevMail, signUpFresh } from "./helpers";
 
 async function topUp10k(page: Page) {
   await page.goto("/wallet");
   await page.getByRole("button", { name: "Цэнэглэх", exact: true }).last().click();
   const sheet = page.getByRole("dialog", { name: "Хэтэвч цэнэглэх" });
-  await sheet.getByRole("radio", { name: /10,000₮/ }).click();
-  await sheet.getByRole("button", { name: "QPay-ээр 10,000₮ төлөх" }).click();
+  await payTopup(sheet, 10_000);
   await page.getByRole("link", { name: "Mock төлбөрийн хуудас" }).click();
   await expect(page).toHaveURL(/\/dev\/qpay\/mock_/);
   await page.getByRole("button", { name: "Төлсөн", exact: true }).click();
@@ -66,19 +65,19 @@ test("A invites B by email and buys a synastry → B signs up from the link and 
     return new URL(page.url()).searchParams.get("a")!;
   })();
   await page.goto(`/buy/synastry?a=${selfId}&b=${friendId}`);
-  await page.getByRole("button", { name: "Нээх · 1,000₮" }).click();
+  await page.getByRole("button", { name: /^Нээх · / }).click();
   await page
     .getByRole("dialog", { name: "Баталгаажуулах" })
-    .getByRole("button", { name: "Нээх · 1,000₮" })
+    .getByRole("button", { name: /^Нээх · / })
     .click();
   await expect(page).toHaveURL(/\/r\/[0-9a-f-]{36}$/, { timeout: 15_000 });
   const synUrl = new URL(page.url()).pathname;
   // …and a sign reading for Бат, which B must NOT get for free.
   await page.goto(`/buy/sign?a=${friendId}`);
-  await page.getByRole("button", { name: "Нээх · 1,000₮" }).click();
+  await page.getByRole("button", { name: /^Нээх · / }).click();
   await page
     .getByRole("dialog", { name: "Баталгаажуулах" })
-    .getByRole("button", { name: "Нээх · 1,000₮" })
+    .getByRole("button", { name: /^Нээх · / })
     .click();
   await expect(page).toHaveURL(/\/r\/[0-9a-f-]{36}$/, { timeout: 15_000 });
   const signUrl = new URL(page.url()).pathname;
@@ -118,7 +117,7 @@ test("A invites B by email and buys a synastry → B signs up from the link and 
   await expect(b.getByRole("heading", { name: "Надтай хийсэн нийцлүүд" })).toBeVisible();
   await b.goto(synUrl);
   await expect(b.getByText("Танд хуваалцсан нийцэл")).toBeVisible();
-  await expect(b.getByRole("region", { name: "Ордны нийцэл" })).toBeVisible();
+  await expect(b.getByRole("region", { name: /^Ордны нийцэл · / }).first()).toBeVisible();
   expect((await b.goto(signUrl))?.status()).toBe(404);
 
   // B may also render the share card; the link can't be reused.
@@ -154,10 +153,10 @@ test("share cards: owner gets a PNG in both formats; strangers and signed-out ge
   await topUp10k(page);
   await page.goto("/buy/sign");
   await page.getByRole("link", { name: /Туршилт/ }).click();
-  await page.getByRole("button", { name: "Нээх · 1,000₮" }).click();
+  await page.getByRole("button", { name: /^Нээх · / }).click();
   await page
     .getByRole("dialog", { name: "Баталгаажуулах" })
-    .getByRole("button", { name: "Нээх · 1,000₮" })
+    .getByRole("button", { name: /^Нээх · / })
     .click();
   await expect(page).toHaveURL(/\/r\/[0-9a-f-]{36}$/, { timeout: 15_000 });
   const id = page.url().split("/").pop()!;

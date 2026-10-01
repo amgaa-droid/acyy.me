@@ -2,9 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import { buildPlaceholderPeriods } from "@/server/astro/calendar";
 import { ZODIAC_SIGNS } from "@/server/db/seed-data";
-import { IMPORT_KINDS } from "./kinds";
+import { seedProductDefs } from "@/server/db/seed-data";
+import { allKinds, type ImportKindSpec } from "./kinds";
+
+const IMPORT_KINDS: Record<string, ImportKindSpec> = Object.fromEntries(
+  allKinds(seedProductDefs()).map((k) => [k.kind, k]),
+);
 import type { ParsedRow } from "./parse";
-import { normalizeMonthDay, resolveSign, validateImport } from "./validate";
+import {
+  normalizeMonthDay,
+  resolveGender,
+  resolveSign,
+  splitBodyToFields,
+  validateImport,
+} from "./validate";
 
 const refs = { signs: ZODIAC_SIGNS, periodCount: 48 };
 let n = 1;
@@ -28,6 +39,133 @@ describe("helpers", () => {
   });
 });
 
+/** A made-up gender-split, ordered-pair and period catalogue for the new key types. */
+const custom: Record<string, ImportKindSpec> = Object.fromEntries(
+  allKinds(
+    seedProductDefs([
+      {
+        code: "career",
+        nameMn: "Ажил",
+        description: "",
+        price: 1000,
+        personCount: 1,
+        allowedGroups: ["self"],
+        adultOnly: false,
+        icon: "briefcase",
+        tint: "tint-1",
+        parts: [
+          {
+            code: "main",
+            nameMn: "Орд",
+            keyType: "sign",
+            byGender: true,
+            fields: [
+              { code: "general", nameMn: "Ерөнхий", kind: "text", required: true },
+              { code: "strengths", nameMn: "Давуу тал", kind: "list" },
+            ],
+          },
+        ],
+      },
+      {
+        code: "crush",
+        nameMn: "Сэтгэл",
+        description: "",
+        price: 1000,
+        personCount: 2,
+        allowedGroups: ["self"],
+        adultOnly: false,
+        icon: "heart",
+        tint: "tint-2",
+        parts: [
+          {
+            code: "main",
+            nameMn: "Хос",
+            keyType: "sign_pair_ordered",
+            fields: [{ code: "general", nameMn: "Ерөнхий", kind: "text", required: true }],
+          },
+        ],
+      },
+    ]),
+  ).map((k) => [k.kind, k]),
+);
+
+describe("validateImport — key types", () => {
+  it("gender-split keys need a valid gender column", () => {
+    expect(custom.career.columns.map((c) => c.name)).toEqual([
+      "sign",
+      "gender",
+      "title",
+      "general",
+      "strengths",
+      "teaser",
+      "score",
+    ]);
+    const report = validateImport(
+      custom.career,
+      [
+        r({ sign: "Хуц", gender: "Эр", title: "А", general: "Текст." }),
+        r({ sign: "Хуц", gender: "female", title: "Б", general: "Текст." }),
+        r({ sign: "Хуц", gender: "?", title: "В", general: "Текст." }),
+      ],
+      refs,
+    );
+    expect(report.errors.map((e) => e.code)).toEqual(["invalid_gender"]);
+    expect(report.entries.map((e) => e.key)).toEqual(["aries|male", "aries|female"]);
+    expect(report.missing).toHaveLength(22);
+    expect(resolveGender("Эмэгтэй")).toBe("female");
+  });
+
+  it("ordered pairs keep A×B and B×A apart", () => {
+    const report = validateImport(
+      custom.crush,
+      [
+        r({ sign_a: "Хуц", sign_b: "Арслан", title: "А", general: "Текст." }),
+        r({ sign_a: "Арслан", sign_b: "Хуц", title: "Б", general: "Текст." }),
+      ],
+      refs,
+    );
+    expect(report.ok).toBe(true);
+    expect(report.entries.map((e) => e.key)).toEqual(["aries|leo", "leo|aries"]);
+    expect(report.missing).toHaveLength(142);
+  });
+
+  it("stores each sub-section column as its field", () => {
+    const report = validateImport(
+      custom.career,
+      [r({ sign: "Хуц", gender: "Эр", title: "А", general: " Текст. ", strengths: "• а\n• б" })],
+      refs,
+    );
+    expect(report.entries[0].fields).toEqual({ general: "Текст.", strengths: "• а\n• б" });
+  });
+});
+
+describe("splitBodyToFields (legacy body column)", () => {
+  const fields = IMPORT_KINDS.birthday.target!.fields;
+
+  it("maps '## ' sections to sub-sections by name; the rest goes to general", () => {
+    expect(
+      splitBodyToFields(
+        "Оршил.\n\n## Бясалгах үг\n\nАмгалан.\n\n## зөвлөгөө\n\n• Нэг\n\n## Бусад\n\nНэмэлт.",
+        fields,
+      ),
+    ).toEqual({
+      general: "Оршил.\n\n## Бусад\n\nНэмэлт.",
+      meditation: "Амгалан.",
+      advice: "• Нэг",
+    });
+  });
+
+  it("a body-only file still imports (sub-section columns optional)", () => {
+    const report = validateImport(
+      IMPORT_KINDS.birthday,
+      [r({ month_day: "03-21", title: "А", body: "## Ерөнхий шинж\n\nТекст." })],
+      refs,
+    );
+    expect(report.ok).toBe(true);
+    expect(report.entries[0].fields).toEqual({ general: "Текст." });
+  });
+});
+
 describe("validateImport — content", () => {
   it("accepts a full sign file and reports insert vs update", () => {
     const rows = ZODIAC_SIGNS.map((s) => r({ sign: s.nameMn, ...text }));
@@ -47,7 +185,7 @@ describe("validateImport — content", () => {
 
   it("rejects unknown keys, empty body/title and bad scores", () => {
     const report = validateImport(
-      IMPORT_KINDS.synastry_signs,
+      IMPORT_KINDS["synastry.sign_pair"],
       [
         r({ sign_a: "Хуц", sign_b: "Могой", ...text }),
         r({ sign_a: "Хуц", sign_b: "Үхэр", title: "", body: "" }),
@@ -60,30 +198,38 @@ describe("validateImport — content", () => {
     expect(report.errors.map((e) => [e.code, e.column])).toEqual([
       ["unknown_sign", "sign_b"],
       ["required", "title"],
-      ["required", "body"],
+      ["required", "general"],
       ["invalid_score", "score"],
     ]);
-    expect(report.entries).toEqual([{ key: "aries|cancer", ...text, teaser: null, score: 75 }]);
+    expect(report.entries).toEqual([
+      {
+        key: "aries|cancer",
+        title: "Гарчиг",
+        fields: { general: "Текст." },
+        teaser: null,
+        score: 75,
+      },
+    ]);
   });
 
-  it("treats A|B and B|A as the same key (duplicate)", () => {
+  it("treats A|B and B|A as the same key (duplicate) for unordered pairs", () => {
     const report = validateImport(
-      IMPORT_KINDS.synastry_signs,
+      IMPORT_KINDS["synastry.period_pair"],
       [
-        r({ sign_a: "Арслан", sign_b: "Хуц", ...text }),
-        r({ sign_a: "aries", sign_b: "leo", ...text }),
+        r({ period_a: "12", period_b: "3", ...text }),
+        r({ period_a: "3", period_b: "12", ...text }),
       ],
       refs,
     );
     const first = n - 1;
     expect(report.errors).toEqual([
-      { code: "duplicate", row: n, value: "aries|leo", detail: String(first) },
+      { code: "duplicate", row: n, value: "3|12", detail: String(first) },
     ]);
   });
 
   it("period pairs: canonical numeric keys, range-checked", () => {
     const report = validateImport(
-      IMPORT_KINDS.synastry_periods,
+      IMPORT_KINDS["synastry.period_pair"],
       [
         r({ period_a: "12", period_b: "3", ...text }),
         r({ period_a: "49", period_b: "1", ...text }),

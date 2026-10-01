@@ -1,22 +1,30 @@
 import { and, asc, count, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import {
-  CONTENT_SECTIONS,
-  PRODUCT_CODES,
-  type ContentSection,
-  type ProductCode,
-} from "@/lib/domain";
+import type { KeyType } from "@/lib/domain";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { logAudit } from "@/server/audit";
-import { expectedKeys } from "@/server/content/keys";
+import { expectedPartKeys, type KeyRefs } from "@/server/content/keys";
 import type { AppDb } from "@/server/db/types";
 import { contentEntries } from "@/server/db/schema";
-import { MAX_BODY, MAX_TEASER, MAX_TITLE } from "@/server/import/validate";
+import { MAX_FIELD, MAX_TEASER, MAX_TITLE } from "@/server/import/validate";
+import {
+  activeFields,
+  activeParts,
+  loadProductDef,
+  loadProductDefs,
+  type PartDef,
+  type ProductDef,
+} from "@/server/products";
 
 export type CoverageRow = {
-  product: ProductCode;
-  section: ContentSection;
+  product: string;
+  productName: string;
+  /** Part code and name; the name is shown only for multi-part products. */
+  section: string;
+  sectionName: string | null;
+  keyType: KeyType;
+  isActive: boolean;
   expected: number;
   published: number;
   draft: number;
@@ -27,10 +35,14 @@ export type CoverageRow = {
 
 export const PLACEHOLDER_PREFIX = "[Placeholder]";
 
-/** "366/366", "1176/1176"… per product and section (admin dashboard, SPEC §6.2). */
-export async function contentCoverage(db: AppDb): Promise<CoverageRow[]> {
+async function keyRefs(db: AppDb): Promise<KeyRefs> {
   const refs = await loadAstroRefs(db);
-  const ref = { signCodes: refs.signs.map((s) => s.code), periodCount: refs.periods.length };
+  return { signCodes: refs.signs.map((s) => s.code), periodCount: refs.periods.length };
+}
+
+async function coverageOf(db: AppDb, defs: ProductDef[]): Promise<CoverageRow[]> {
+  if (defs.length === 0) return [];
+  const ref = await keyRefs(db);
   const rows = await db
     .select({
       product: contentEntries.productCode,
@@ -41,49 +53,61 @@ export async function contentCoverage(db: AppDb): Promise<CoverageRow[]> {
     })
     .from(contentEntries);
 
-  const out: CoverageRow[] = [];
-  for (const product of PRODUCT_CODES) {
-    for (const { section, keys } of expectedKeys(product, ref)) {
-      const expected = new Set(keys);
+  return defs.flatMap((product) =>
+    activeParts(product).map((part) => {
+      const expected = new Set(expectedPartKeys(part, ref));
       const here = rows.filter(
-        (r) => r.product === product && r.section === section && expected.has(r.key),
+        (r) => r.product === product.code && r.section === part.code && expected.has(r.key),
       );
       const published = here.filter((r) => r.status === "published").length;
-      out.push({
-        product,
-        section,
+      return {
+        product: product.code,
+        productName: product.nameMn,
+        section: part.code,
+        sectionName: activeParts(product).length > 1 ? part.nameMn : null,
+        keyType: part.keyType,
+        isActive: product.isActive,
         expected: expected.size,
         published,
         draft: here.length - published,
         missing: expected.size - here.length,
         placeholder: here.filter((r) => r.title.startsWith(PLACEHOLDER_PREFIX)).length,
-      });
-    }
-  }
-  return out;
+      };
+    }),
+  );
 }
 
-export async function missingKeys(db: AppDb, product: ProductCode, section: ContentSection) {
-  const refs = await loadAstroRefs(db);
-  const keys =
-    expectedKeys(product, {
-      signCodes: refs.signs.map((s) => s.code),
-      periodCount: refs.periods.length,
-    }).find((s) => s.section === section)?.keys ?? [];
+/** "366/366", "1176/1176"… per product and part (admin dashboard, SPEC §6.2). */
+export async function contentCoverage(db: AppDb): Promise<CoverageRow[]> {
+  return coverageOf(db, await loadProductDefs(db));
+}
+
+export async function productCoverage(db: AppDb, code: string): Promise<CoverageRow[]> {
+  const def = await loadProductDef(db, code);
+  return def ? coverageOf(db, [def]) : [];
+}
+
+export async function missingKeys(db: AppDb, part: PartDef) {
+  const keys = expectedPartKeys(part, await keyRefs(db));
   const present = new Set(
     (
       await db
         .select({ key: contentEntries.key })
         .from(contentEntries)
-        .where(and(eq(contentEntries.productCode, product), eq(contentEntries.section, section)))
+        .where(
+          and(
+            eq(contentEntries.productCode, part.productCode),
+            eq(contentEntries.section, part.code),
+          ),
+        )
     ).map((r) => r.key),
   );
   return keys.filter((k) => !present.has(k));
 }
 
 export const listQuerySchema = z.object({
-  product: z.enum(PRODUCT_CODES).default("birthday"),
-  section: z.enum(CONTENT_SECTIONS).default("main"),
+  product: z.string().trim().max(32).default(""),
+  section: z.string().trim().max(32).default(""),
   q: z.string().trim().max(100).default(""),
   status: z.enum(["all", "draft", "published"]).default("all"),
   page: z.coerce.number().int().min(1).default(1),
@@ -104,7 +128,7 @@ export async function listContent(db: AppDb, query: ListQuery) {
       or(
         ilike(contentEntries.key, like),
         ilike(contentEntries.title, like),
-        ilike(contentEntries.body, like),
+        sql`${contentEntries.fields}::text ILIKE ${like}`,
       )!,
     );
   }
@@ -136,11 +160,11 @@ export async function getContentEntry(db: AppDb, id: string) {
 }
 
 export const entryInputSchema = z.object({
-  product: z.enum(PRODUCT_CODES),
-  section: z.enum(CONTENT_SECTIONS),
-  key: z.string().trim().min(1).max(20),
+  product: z.string().trim().min(1).max(32),
+  section: z.string().trim().min(1).max(32),
+  key: z.string().trim().min(1).max(40),
   title: z.string().trim().min(1).max(MAX_TITLE),
-  body: z.string().trim().min(1).max(MAX_BODY),
+  fields: z.record(z.string(), z.string().max(MAX_FIELD)),
   teaser: z
     .string()
     .trim()
@@ -160,17 +184,57 @@ export class UnknownContentKeyError extends Error {
   }
 }
 
-/** Creates or updates one text by (product, section, key); the key must be an expected one. */
+/** A required sub-section is empty, or nothing at all was filled in. */
+export class MissingFieldsError extends Error {
+  constructor(readonly fields: string[]) {
+    super("missing_fields");
+  }
+}
+
+/**
+ * Keeps only the part's active fields (trimmed, non-empty) and checks required ones.
+ * Values of archived fields are carried over from `previous` so restoring a field brings them back.
+ */
+export function cleanFields(
+  part: PartDef,
+  input: Record<string, string>,
+  previous: Record<string, string> = {},
+): Record<string, string> {
+  const active = activeFields(part);
+  const out: Record<string, string> = {};
+  for (const f of part.fields) {
+    if (f.archivedAt !== null && previous[f.code]) out[f.code] = previous[f.code];
+  }
+  for (const f of active) {
+    const v = input[f.code]?.replace(/\r\n?/g, "\n").trim();
+    if (v) out[f.code] = v;
+  }
+  const missing = active.filter((f) => f.required && !out[f.code]).map((f) => f.code);
+  if (missing.length || !active.some((f) => out[f.code])) throw new MissingFieldsError(missing);
+  return out;
+}
+
+/** Creates or updates one text by (product, part, key); the key must be an expected one. */
 export async function saveContentEntry(db: AppDb, actorId: string, input: EntryInput) {
   const data = entryInputSchema.parse(input);
-  const refs = await loadAstroRefs(db);
-  const valid = expectedKeys(data.product, {
-    signCodes: refs.signs.map((s) => s.code),
-    periodCount: refs.periods.length,
-  }).find((s) => s.section === data.section);
-  if (!valid?.keys.includes(data.key)) throw new UnknownContentKeyError();
+  const def = await loadProductDef(db, data.product);
+  const part = def?.parts.find((p) => p.code === data.section && p.archivedAt === null);
+  if (!part || !expectedPartKeys(part, await keyRefs(db)).includes(data.key)) {
+    throw new UnknownContentKeyError();
+  }
 
   return db.transaction(async (tx) => {
+    const [prev] = await tx
+      .select({ fields: contentEntries.fields })
+      .from(contentEntries)
+      .where(
+        and(
+          eq(contentEntries.productCode, data.product),
+          eq(contentEntries.section, data.section),
+          eq(contentEntries.key, data.key),
+        ),
+      );
+    const fields = cleanFields(part, data.fields, prev?.fields);
     const [row] = await tx
       .insert(contentEntries)
       .values({
@@ -178,7 +242,7 @@ export async function saveContentEntry(db: AppDb, actorId: string, input: EntryI
         section: data.section,
         key: data.key,
         title: data.title,
-        body: data.body,
+        fields,
         teaser: data.teaser,
         score: data.score,
         status: data.status,
@@ -188,7 +252,7 @@ export async function saveContentEntry(db: AppDb, actorId: string, input: EntryI
         target: [contentEntries.productCode, contentEntries.section, contentEntries.key],
         set: {
           title: data.title,
-          body: data.body,
+          fields,
           teaser: data.teaser,
           score: data.score,
           status: data.status,

@@ -1,5 +1,6 @@
-import type { ProductCode, RelationGroup } from "@/lib/domain";
-import { expectedKeys } from "@/server/content/keys";
+import type { FieldKind, KeyType, ProductIconName, ProductTint, RelationGroup } from "@/lib/domain";
+import { expectedPartKeys } from "@/server/content/keys";
+import type { ProductDef } from "@/server/products";
 
 /** Initial reference data (SPEC §2.4, §3). Editable later from the admin panel. */
 
@@ -20,15 +21,48 @@ export const ZODIAC_SIGNS = [
 
 const ALL_GROUPS: RelationGroup[] = ["self", "family", "romantic", "friend", "other"];
 
-export const PRODUCTS: {
-  code: ProductCode;
+export type SeedField = {
+  code: string;
+  nameMn: string;
+  kind: FieldKind;
+  isFree?: boolean;
+  required?: boolean;
+};
+export type SeedPart = {
+  code: string;
+  nameMn: string;
+  keyType: KeyType;
+  byGender?: boolean;
+  fields: SeedField[];
+};
+export type SeedProduct = {
+  code: string;
   nameMn: string;
   description: string;
   price: number;
   personCount: 1 | 2;
   allowedGroups: RelationGroup[];
   adultOnly: boolean;
-}[] = [
+  icon: ProductIconName;
+  tint: ProductTint;
+  parts: SeedPart[];
+};
+
+const GENERAL: SeedField = { code: "general", nameMn: "Ерөнхий", kind: "text", required: true };
+
+/** One sign-keyed part with a single prose field — the shape of sign/love/sex/dating. */
+const signPart = (nameMn: string): SeedPart => ({
+  code: "main",
+  nameMn,
+  keyType: "sign",
+  fields: [GENERAL],
+});
+
+/**
+ * The launch catalogue (SPEC §3). Parts and fields match migration 0004, which set them up for
+ * databases that already had these products; new products are created in /admin/products.
+ */
+export const PRODUCTS: SeedProduct[] = [
   {
     code: "birthday",
     nameMn: "Төрсөн өдрийн зурхай",
@@ -37,6 +71,25 @@ export const PRODUCTS: {
     personCount: 1,
     allowedGroups: ALL_GROUPS,
     adultOnly: false,
+    icon: "calendar",
+    tint: "highlight",
+    parts: [
+      {
+        code: "main",
+        nameMn: "Төрсөн өдөр",
+        keyType: "month_day",
+        fields: [
+          { code: "strengths", nameMn: "Давуу тал", kind: "list", isFree: true },
+          { code: "weaknesses", nameMn: "Сул тал", kind: "list", isFree: true },
+          { code: "general", nameMn: "Ерөнхий шинж", kind: "text", required: true },
+          { code: "meditation", nameMn: "Бясалгах үг", kind: "quote" },
+          { code: "advice", nameMn: "Зөвлөгөө", kind: "cards" },
+          { code: "health", nameMn: "Эрүүл мэнд", kind: "text" },
+          { code: "numerology", nameMn: "Тоон хэлээр", kind: "text" },
+          { code: "tarot", nameMn: "Таро хөзөр", kind: "text" },
+        ],
+      },
+    ],
   },
   {
     code: "sign",
@@ -46,6 +99,9 @@ export const PRODUCTS: {
     personCount: 1,
     allowedGroups: ALL_GROUPS,
     adultOnly: false,
+    icon: "sparkles",
+    tint: "tint-1",
+    parts: [signPart("Орд")],
   },
   {
     code: "love",
@@ -55,6 +111,11 @@ export const PRODUCTS: {
     personCount: 1,
     allowedGroups: ["self", "romantic", "friend", "other"],
     adultOnly: false,
+    icon: "heart",
+    tint: "tint-2",
+    parts: [signPart("Орд")],
+      },
+    ],
   },
   {
     code: "sex",
@@ -64,6 +125,9 @@ export const PRODUCTS: {
     personCount: 1,
     allowedGroups: ["self", "romantic"],
     adultOnly: true,
+    icon: "flame",
+    tint: "dark",
+    parts: [signPart("Орд")],
   },
   {
     code: "dating",
@@ -73,6 +137,9 @@ export const PRODUCTS: {
     personCount: 1,
     allowedGroups: ["self", "romantic", "other"],
     adultOnly: false,
+    icon: "coffee",
+    tint: "tint-3",
+    parts: [signPart("Орд")],
   },
   {
     code: "synastry",
@@ -82,34 +149,122 @@ export const PRODUCTS: {
     personCount: 2,
     allowedGroups: ALL_GROUPS,
     adultOnly: false,
+    icon: "blend",
+    tint: "nav",
+    parts: [
+      // 144 ordered texts (A→B); a reading shows both directions (migration 0008).
+      {
+        code: "sign_pair",
+        nameMn: "Ордны нийцэл",
+        keyType: "sign_pair_ordered",
+        fields: [GENERAL],
+      },
+      {
+        code: "period_pair",
+        nameMn: "Төрсөн үеийн нийцэл",
+        keyType: "period_pair",
+        fields: [
+          GENERAL,
+          { code: "strengths", nameMn: "Давуу тал", kind: "list" },
+          { code: "weaknesses", nameMn: "Сул тал", kind: "list" },
+          { code: "good_for", nameMn: "Тохиромжтой харилцаа", kind: "chips" },
+          { code: "caution_for", nameMn: "Анхаарах харилцаа", kind: "alert" },
+        ],
+      },
+    ],
   },
 ];
+
+/** Rows for products / product_parts / product_fields. */
+export function catalogRows(list: SeedProduct[] = PRODUCTS) {
+  return {
+    products: list.map((p, i) => ({
+      code: p.code,
+      nameMn: p.nameMn,
+      description: p.description,
+      price: p.price,
+      personCount: p.personCount,
+      allowedGroups: p.allowedGroups,
+      adultOnly: p.adultOnly,
+      icon: p.icon,
+      tint: p.tint,
+      sort: i + 1,
+    })),
+    parts: list.flatMap((p) =>
+      p.parts.map((part, i) => ({
+        productCode: p.code,
+        code: part.code,
+        nameMn: part.nameMn,
+        keyType: part.keyType,
+        byGender: part.byGender ?? false,
+        sort: i + 1,
+      })),
+    ),
+    fields: list.flatMap((p) =>
+      p.parts.flatMap((part) =>
+        part.fields.map((f, i) => ({
+          productCode: p.code,
+          partCode: part.code,
+          code: f.code,
+          nameMn: f.nameMn,
+          kind: f.kind,
+          isFree: f.isFree ?? false,
+          required: f.required ?? false,
+          sort: i + 1,
+        })),
+      ),
+    ),
+  };
+}
+
+/** The seed catalogue as loaded product definitions (no DB) — for scripts and tests. */
+export function seedProductDefs(list: SeedProduct[] = PRODUCTS): ProductDef[] {
+  const rows = catalogRows(list);
+  return rows.products.map((p) => ({
+    ...p,
+    isActive: true,
+    createdAt: new Date(0),
+    parts: rows.parts
+      .filter((part) => part.productCode === p.code)
+      .map((part) => ({
+        ...part,
+        archivedAt: null,
+        fields: rows.fields
+          .filter((f) => f.productCode === p.code && f.partCode === part.code)
+          .map((f) => ({ ...f, archivedAt: null })),
+      })),
+  }));
+}
 
 /** Multi-sentence placeholder so the 2-sentence preview can be exercised before real texts arrive. */
 export function placeholderEntry(productName: string, key: string) {
   return {
     title: `[Placeholder] ${productName} — ${key}`,
-    body: [
-      `[Placeholder] ${productName}, түлхүүр: ${key}.`,
-      "Энэ бол жинхэнэ текст ирэх хүртэлх түр бичвэр юм!",
-      "Гурав дахь өгүүлбэр нь зөвхөн худалдан авсны дараа харагдана.",
-      "Админ Excel-ээр жинхэнэ текстийг импортлоход энэ бичвэр солигдоно.",
-    ].join(" "),
+    fields: {
+      general: [
+        `[Placeholder] ${productName}, түлхүүр: ${key}.`,
+        "Энэ бол жинхэнэ текст ирэх хүртэлх түр бичвэр юм!",
+        "Гурав дахь өгүүлбэр нь зөвхөн худалдан авсны дараа харагдана.",
+        "Админ Excel-ээр жинхэнэ текстийг импортлоход энэ бичвэр солигдоно.",
+      ].join(" "),
+    },
   };
 }
 
 /** Every placeholder content row (1,668), published. */
 export function placeholderContentRows() {
-  const signCodes = ZODIAC_SIGNS.map((s) => s.code);
+  const ref = { signCodes: ZODIAC_SIGNS.map((s) => s.code), periodCount: 48 };
   return PRODUCTS.flatMap((product) =>
-    expectedKeys(product.code, { signCodes, periodCount: 48 }).flatMap(({ section, keys }) =>
-      keys.map((key) => ({
-        productCode: product.code,
-        section,
-        key,
-        status: "published" as const,
-        ...placeholderEntry(product.nameMn, key),
-      })),
+    product.parts.flatMap((part) =>
+      expectedPartKeys({ keyType: part.keyType, byGender: part.byGender ?? false }, ref).map(
+        (key) => ({
+          productCode: product.code,
+          section: part.code,
+          key,
+          status: "published" as const,
+          ...placeholderEntry(product.nameMn, key),
+        }),
+      ),
     ),
   );
 }

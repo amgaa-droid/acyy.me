@@ -36,7 +36,17 @@ test("owner sees products", async ({ page }) => {
   await loginWithPassword(page, "owner@test.local", "/me");
   await page.getByRole("link", { name: /Админ/ }).click();
   await page.getByRole("link", { name: "Бүтээгдэхүүн" }).click();
-  await expect(page.getByRole("region", { name: "Нийцлийн зурхай" })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/products$/);
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: /Нийцлийн зурхай/ })
+    .click();
+  await expect(page).toHaveURL(/\/admin\/products\/synastry$/);
+  await expect(page.getByRole("heading", { name: "Нийцлийн зурхай" })).toBeVisible();
+  // Two parts, each with its sub-sections.
+  await expect(page.getByRole("heading", { name: "Ордны нийцэл" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Төрсөн үеийн нийцэл" })).toBeVisible();
+  await expect(page.getByText("Тохиромжтой харилцаа")).toBeVisible();
 });
 
 test("import: template → fill → dry-run report → import", async ({ page }) => {
@@ -62,7 +72,7 @@ test("import: template → fill → dry-run report → import", async ({ page })
   });
   await page.getByRole("button", { name: "Шалгах" }).click();
   await expect(page.getByRole("status")).toContainText("Алдаатай мөртэй");
-  await expect(page.getByTestId("import-errors")).toContainText("5-р мөр [body] хоосон байна");
+  await expect(page.getByTestId("import-errors")).toContainText("5-р мөр [general] хоосон байна");
   await expect(page.getByRole("button", { name: "Импортлох" })).toBeDisabled();
 
   // Fix the row and re-check → import.

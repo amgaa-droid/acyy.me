@@ -3,9 +3,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { toIsoDate, todayYmd } from "@/lib/birth-date";
 import { offersForPerson, loadViewer } from "@/server/catalog";
+import { addPart, createProduct, setPartArchived } from "@/server/admin/catalog";
+import { GenderRequiredError } from "@/server/content/keys";
 import {
   contentEntries,
   persons,
+  productFields,
   products,
   purchases,
   user,
@@ -28,8 +31,11 @@ let db: AppDb;
 let close: () => Promise<void>;
 let seq = 0;
 
+let adminId: string;
+
 beforeAll(async () => {
   ({ db, close } = await createTestDb({ withContent: true }));
+  adminId = (await insertUser(db, "owner@test.local")).id;
 });
 afterAll(() => close());
 
@@ -249,14 +255,15 @@ describe("reading & preview", () => {
     });
     const r = await getReading(db, a.userId, p.id);
     expect(r.sections).toHaveLength(1);
-    expect(r.sections[0].body).toContain("Гурав дахь өгүүлбэр");
+    expect(r.sections[0].fields?.[0]).toMatchObject({ code: "general", kind: "text" });
+    expect(r.sections[0].fields?.[0].value).toContain("Гурав дахь өгүүлбэр");
     await expect(getReading(db, b.userId, p.id)).rejects.toBeInstanceOf(ReadingNotFoundError);
     await expect(getReading(db, b.userId, "not-a-uuid")).rejects.toBeInstanceOf(
       ReadingNotFoundError,
     );
   });
 
-  it("a user linked to one of the two people reads that synastry for free — only synastry", async () => {
+  it("a user linked to one of the two people reads a pair reading for free — not single ones", async () => {
     const a = await setup({ balance: 5_000 });
     const friend = await insertUser(db, `linked${++seq}@test.local`);
     await db.update(persons).set({ linkedUserId: friend.id }).where(eq(persons.id, a.mom.id));
@@ -283,20 +290,26 @@ describe("reading & preview", () => {
       sign_pair: "aries|leo",
       period_pair: "1|2",
     });
-    expect(preview.sections).toHaveLength(2);
+    // Ordered sign pair: both directions, then the period pair.
+    expect(preview.sections.map((s) => s.key)).toEqual(["aries|leo", "leo|aries", "1|2"]);
     const first = preview.sections[0];
     expect(first.excerpt).toContain("Энэ бол жинхэнэ текст ирэх хүртэлх түр бичвэр юм!");
     expect(first.excerpt).not.toContain("Гурав дахь");
-    expect(preview.sections[1].excerpt).toBeNull();
+    expect(preview.sections.slice(1).every((s) => s.excerpt === null)).toBe(true);
     expect(JSON.stringify(preview)).not.toContain("Гурав дахь");
   });
 
-  it("the preview adds the free teaser and skips sub-headings, but never later sections", async () => {
+  it("the preview adds the teaser and free sub-sections, never paid ones beyond 2 sentences", async () => {
     await db
       .update(contentEntries)
       .set({
-        body: "## Ерөнхий шинж\n\nНэг. Хоёр. Гурав.\n\n## Зөвлөгөө\n\nНууц зөвлөгөө.",
-        teaser: "Давуу тал: Тайван\nСул тал: Удаан",
+        fields: {
+          strengths: "Тайван\nБодлоготой",
+          general: "## Дэд\n\nНэг. Хоёр. Гурав.",
+          meditation: "Нууц ишлэл.",
+          advice: "Нууц зөвлөгөө.",
+        },
+        teaser: "Тизер",
       })
       .where(
         and(
@@ -306,13 +319,194 @@ describe("reading & preview", () => {
         ),
       );
     const preview = await getPreview(db, "birthday", { main: "02-29" });
-    expect(preview.sections[0]).toMatchObject({
-      teaser: "Давуу тал: Тайван\nСул тал: Удаан",
-      excerpt: "Нэг. Хоёр.",
-    });
+    expect(preview.sections[0]).toMatchObject({ teaser: "Тизер", excerpt: "Нэг. Хоёр." });
+    expect(preview.sections[0].free.map((f) => [f.code, f.value])).toEqual([
+      ["strengths", "Тайван\nБодлоготой"],
+    ]);
     const json = JSON.stringify(preview);
-    expect(json).not.toContain("Ерөнхий шинж");
+    expect(json).not.toContain("Дэд");
     expect(json).not.toContain("Гурав");
-    expect(json).not.toContain("Нууц зөвлөгөө");
+    expect(json).not.toContain("Нууц");
+  });
+
+  it("archived sub-sections are hidden from the reading", async () => {
+    const a = await setup({ balance: 5_000 });
+    const { purchase: p } = await purchase(db, {
+      userId: a.userId,
+      productCode: "birthday",
+      personIds: [a.mom.id],
+    });
+    await db
+      .update(contentEntries)
+      .set({ fields: { general: "Текст.", tarot: "Таро." } })
+      .where(and(eq(contentEntries.productCode, "birthday"), eq(contentEntries.key, "01-04")));
+    const codes = async () =>
+      (await getReading(db, a.userId, p.id)).sections[0].fields?.map((f) => f.code);
+    expect(await codes()).toEqual(["general", "tarot"]);
+    await db
+      .update(productFields)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(productFields.productCode, "birthday"), eq(productFields.code, "tarot")));
+    expect(await codes()).toEqual(["general"]);
+    await db
+      .update(productFields)
+      .set({ archivedAt: null })
+      .where(and(eq(productFields.productCode, "birthday"), eq(productFields.code, "tarot")));
+  });
+});
+
+describe("new key types", () => {
+  it("gender-split products need the person's gender, then key by it", async () => {
+    await createProduct(db, adminId, {
+      code: "career",
+      nameMn: "Ажил",
+      personCount: 1,
+      price: 500,
+      keyType: "sign",
+      byGender: true,
+    });
+    await db.update(products).set({ isActive: true }).where(eq(products.code, "career"));
+    await db.insert(contentEntries).values(
+      ["capricorn|female", "capricorn|male"].map((key) => ({
+        productCode: "career",
+        section: "main",
+        key,
+        title: key,
+        fields: { general: `Текст ${key}.` },
+        status: "published" as const,
+      })),
+    );
+    const a = await setup({ balance: 5_000 });
+    // Ээж (1968-01-04, Матар) has no gender yet.
+    await expect(
+      purchase(db, { userId: a.userId, productCode: "career", personIds: [a.mom.id] }),
+    ).rejects.toBeInstanceOf(GenderRequiredError);
+    expect(await getBalance(db, a.userId)).toBe(5_000);
+
+    await db.update(persons).set({ gender: "female" }).where(eq(persons.id, a.mom.id));
+    const { purchase: p } = await purchase(db, {
+      userId: a.userId,
+      productCode: "career",
+      personIds: [a.mom.id],
+    });
+    expect(p.snapshot.keys).toEqual({ main: "capricorn|female" });
+  });
+
+  it("ordered pairs: one purchase for the pair, the reading shows both directions", async () => {
+    await createProduct(db, adminId, {
+      code: "crush",
+      nameMn: "Сэтгэл",
+      personCount: 2,
+      price: 100,
+      keyType: "sign_pair_ordered",
+    });
+    await db.update(products).set({ isActive: true }).where(eq(products.code, "crush"));
+    const a = await setup({ balance: 5_000 });
+    const leo = await createPerson(db, a.userId, {
+      name: "Найз",
+      birthDate: "1990-08-01",
+      avatarSeed: "Sage",
+      relation: "friend",
+    });
+    const text = (key: string) =>
+      db.insert(contentEntries).values({
+        productCode: "crush",
+        section: "main",
+        key,
+        title: key,
+        fields: { general: `Текст ${key}.` },
+        status: "published" as const,
+      });
+    await text("leo|capricorn");
+    // Both directions must be there before anyone is charged.
+    await expect(
+      purchase(db, { userId: a.userId, productCode: "crush", personIds: [leo.id, a.mom.id] }),
+    ).rejects.toBeInstanceOf(ContentUnavailableError);
+    await text("capricorn|leo");
+    const ab = await purchase(db, {
+      userId: a.userId,
+      productCode: "crush",
+      personIds: [leo.id, a.mom.id],
+    });
+    const ba = await purchase(db, {
+      userId: a.userId,
+      productCode: "crush",
+      personIds: [a.mom.id, leo.id],
+    });
+    // B×A is the same purchase — charged once.
+    expect(ba.alreadyOwned).toBe(true);
+    expect(ba.purchase.id).toBe(ab.purchase.id);
+    expect(ab.purchase.snapshot.keys.main).toBe("leo|capricorn");
+    expect(await getBalance(db, a.userId)).toBe(4_900);
+    const r = await getReading(db, a.userId, ab.purchase.id);
+    expect(r.sections.map((s) => [s.section, s.key, s.title])).toEqual([
+      ["main", "leo|capricorn", "leo|capricorn"],
+      ["main", "capricorn|leo", "capricorn|leo"],
+    ]);
+  });
+});
+
+describe("parts added or archived after a sale", () => {
+  it("earlier buyers get new parts free and keep archived ones; new buyers get only active", async () => {
+    await createProduct(db, adminId, {
+      code: "later",
+      nameMn: "Хожим",
+      personCount: 1,
+      price: 100,
+      keyType: "sign",
+    });
+    await db.update(products).set({ isActive: true }).where(eq(products.code, "later"));
+    const text = (section: string, key: string) =>
+      db
+        .insert(contentEntries)
+        .values({
+          productCode: "later",
+          section,
+          key,
+          title: `${section} ${key}`,
+          fields: { general: "Текст." },
+          status: "published",
+        })
+        .onConflictDoNothing();
+    await text("main", "capricorn");
+
+    const a = await setup({ balance: 5_000 });
+    const { purchase: p } = await purchase(db, {
+      userId: a.userId,
+      productCode: "later",
+      personIds: [a.mom.id],
+    });
+    expect(Object.keys(p.snapshot.keys)).toEqual(["main"]);
+
+    // A part added after the sale: keyed from the snapshot's person, free for the buyer.
+    await addPart(db, adminId, {
+      productCode: "later",
+      code: "period",
+      nameMn: "Үе",
+      keyType: "period",
+    });
+    const period = String(p.snapshot.persons[0].period);
+    await text("period", period);
+    const sections = async (userId: string, id: string) =>
+      (await getReading(db, userId, id)).sections.map((s) => [s.section, s.key]);
+    expect(await sections(a.userId, p.id)).toEqual([
+      ["main", "capricorn"],
+      ["period", period],
+    ]);
+
+    // Archive the original part: the buyer still reads it, a new buyer doesn't get it.
+    await setPartArchived(db, adminId, { productCode: "later", partCode: "main", archived: true });
+    expect(await sections(a.userId, p.id)).toEqual([
+      ["main", "capricorn"],
+      ["period", period],
+    ]);
+    const b = await setup({ balance: 5_000 });
+    const { purchase: q } = await purchase(db, {
+      userId: b.userId,
+      productCode: "later",
+      personIds: [b.mom.id],
+    });
+    expect(Object.keys(q.snapshot.keys)).toEqual(["period"]);
+    expect(await sections(b.userId, q.id)).toEqual([["period", period]]);
   });
 });

@@ -2,30 +2,45 @@
 
 import { useState, useTransition } from "react";
 
+import {
+  PRODUCT_ICON_COMPONENTS,
+  PRODUCT_TINT_CLASSES,
+  ProductIcon,
+} from "@/components/readings/product-icon";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
-import { RELATION_GROUPS } from "@/lib/domain";
+import { PRODUCT_ICONS, PRODUCT_TINTS, RELATION_GROUPS } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { updateProductAction } from "../actions";
+import { Field, Status, Toggle, inputClass, resultMsg, type Msg } from "./ui";
 
 const t = mn.admin.productsPage;
 
-type Product = {
+export type ProductSettings = {
   code: string;
   nameMn: string;
+  description: string;
   price: number;
   isActive: boolean;
   adultOnly: boolean;
   allowedGroups: string[];
-  personCount: number;
+  sort: number;
+  icon: string;
+  tint: string;
 };
 
-export function ProductForm({ product }: { product: Product }) {
+/** Name, catalogue text, price, visibility (groups, 18+), active, order and tile look. */
+export function ProductForm({ product }: { product: ProductSettings }) {
+  const [nameMn, setName] = useState(product.nameMn);
+  const [description, setDescription] = useState(product.description);
   const [price, setPrice] = useState(String(product.price));
+  const [sort, setSort] = useState(String(product.sort));
   const [isActive, setActive] = useState(product.isActive);
   const [adultOnly, setAdult] = useState(product.adultOnly);
   const [groups, setGroups] = useState(new Set(product.allowedGroups));
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [icon, setIcon] = useState(product.icon);
+  const [tint, setTint] = useState(product.tint);
+  const [msg, setMsg] = useState<Msg>(null);
   const [pending, startTransition] = useTransition();
 
   const toggle = (g: string) =>
@@ -40,29 +55,64 @@ export function ProductForm({ product }: { product: Product }) {
     startTransition(async () => {
       const res = await updateProductAction({
         code: product.code,
+        nameMn,
+        description,
         price: Number(price),
+        sort: Number(sort || 0),
         isActive,
         adultOnly,
         allowedGroups: [...groups],
+        icon,
+        tint,
       });
-      setMsg(res.ok ? { ok: true, text: t.saved } : { ok: false, text: t.error });
+      const m = resultMsg(res, t.saved);
+      setMsg(
+        res.ok && res.missing
+          ? { ok: false, text: `${t.saved} ${t.activeWarning(res.missing)}` }
+          : m,
+      );
     });
 
   return (
-    <section className="flex flex-col gap-4 rounded-3xl bg-surface p-5" aria-label={product.nameMn}>
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-xl font-semibold">{product.nameMn}</h2>
-        <span className="font-mono text-xs text-muted-foreground">{product.code}</span>
+    <section className="flex flex-col gap-4 rounded-3xl bg-surface p-5" aria-label={t.settings}>
+      <div className="flex items-center gap-3">
+        <ProductIcon product={{ icon, tint }} />
+        <h2 className="text-xl font-semibold">{t.settings}</h2>
       </div>
-      <label className="flex flex-col gap-1.5 text-sm font-medium">
-        {t.price}
+      <Field label={t.name}>
         <input
-          inputMode="numeric"
-          value={price}
-          onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
-          className="h-11 rounded-2xl bg-subtle px-4 text-base tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={inputClass}
+          value={nameMn}
+          maxLength={80}
+          onChange={(e) => setName(e.target.value)}
         />
-      </label>
+      </Field>
+      <Field label={t.description}>
+        <textarea
+          className={cn(inputClass, "h-auto min-h-20 py-3")}
+          value={description}
+          maxLength={300}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t.price}>
+          <input
+            inputMode="numeric"
+            value={price}
+            onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
+            className={cn(inputClass, "tabular-nums")}
+          />
+        </Field>
+        <Field label={t.sort}>
+          <input
+            inputMode="numeric"
+            value={sort}
+            onChange={(e) => setSort(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            className={cn(inputClass, "tabular-nums")}
+          />
+        </Field>
+      </div>
       <div className="flex gap-2">
         <Toggle label={t.active} on={isActive} onChange={setActive} />
         <Toggle label={t.adult} on={adultOnly} onChange={setAdult} />
@@ -86,43 +136,52 @@ export function ProductForm({ product }: { product: Product }) {
           ))}
         </div>
       </fieldset>
-      {msg && (
-        <p role="status" className={cn("text-sm", msg.ok ? "text-highlight" : "text-destructive")}>
-          {msg.text}
-        </p>
-      )}
-      <Button className="rounded-full" disabled={pending} onClick={save}>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-sm font-medium">{t.icon}</legend>
+        <div className="flex flex-wrap gap-1.5">
+          {PRODUCT_ICONS.map((name) => {
+            const Icon = PRODUCT_ICON_COMPONENTS[name];
+            return (
+              <button
+                key={name}
+                type="button"
+                aria-label={name}
+                aria-pressed={icon === name}
+                onClick={() => setIcon(name)}
+                className={cn(
+                  "flex size-11 items-center justify-center rounded-2xl",
+                  icon === name ? "bg-primary text-primary-foreground" : "bg-subtle",
+                )}
+              >
+                <Icon className="size-5" aria-hidden />
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-sm font-medium">{t.tint}</legend>
+        <div className="flex flex-wrap gap-2">
+          {PRODUCT_TINTS.map((name) => (
+            <button
+              key={name}
+              type="button"
+              aria-label={name}
+              aria-pressed={tint === name}
+              onClick={() => setTint(name)}
+              className={cn(
+                "size-11 rounded-2xl ring-offset-2 ring-offset-surface",
+                PRODUCT_TINT_CLASSES[name],
+                tint === name && "ring-2 ring-ring",
+              )}
+            />
+          ))}
+        </div>
+      </fieldset>
+      <Status msg={msg} />
+      <Button className="rounded-full" disabled={pending || !nameMn.trim()} onClick={save}>
         {t.save}
       </Button>
     </section>
-  );
-}
-
-function Toggle({
-  label,
-  on,
-  onChange,
-}: {
-  label: string;
-  on: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => onChange(!on)}
-      className={cn(
-        "flex h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold",
-        on ? "bg-tint-1 text-highlight" : "bg-subtle text-muted-foreground",
-      )}
-    >
-      <span
-        className={cn("size-2.5 rounded-full", on ? "bg-highlight" : "bg-border")}
-        aria-hidden
-      />
-      {label}
-    </button>
   );
 }

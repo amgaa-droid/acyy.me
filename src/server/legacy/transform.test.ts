@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { parseBody } from "@/lib/body";
 import { firstSentences } from "@/lib/preview";
 import {
   birthdayRow,
@@ -87,28 +86,29 @@ const legacyDay: LegacyBirthday = {
 };
 
 describe("birthdayRow", () => {
-  it("maps strengths/weaknesses to the teaser and the rest to a headed body", () => {
+  it("maps each legacy section to its sub-section column", () => {
     const row = birthdayRow(legacyDay);
     expect(row.month_day).toBe("02-29");
     expect(row.title).toBe("Өөрийгөө эрэгч");
-    expect(row.teaser).toBe("Давуу тал: Тайван · Бодлоготой\nСул тал: Удаан · Ноомой");
-    expect(
-      parseBody(row.body)
-        .filter((b) => b.type === "heading")
-        .map((b) => b.text),
-    ).toEqual([
-      "Ерөнхий шинж",
-      "Бясалгах үг",
-      "Зөвлөгөө",
-      "Эрүүл мэнд",
-      "Тоон хэлээр",
-      "Таро хөзөр",
+    expect(row.strengths).toBe("Тайван\nБодлоготой");
+    expect(row.weaknesses).toBe("Удаан\nНоомой");
+    expect(Object.keys(row)).toEqual([
+      "month_day",
+      "title",
+      "strengths",
+      "weaknesses",
+      "general",
+      "meditation",
+      "advice",
+      "health",
+      "numerology",
+      "tarot",
     ]);
-    expect(row.body).not.toMatch(/Тайван|Удаан/);
+    expect(row.general).not.toMatch(/Тайван|Удаан|##/);
   });
 
-  it("previews from the general section, skipping its heading", () => {
-    expect(firstSentences(birthdayRow(legacyDay).body, 2)).toBe("Эхний өгүүлбэр. Хоёр дахь.");
+  it("previews from the general section", () => {
+    expect(firstSentences(birthdayRow(legacyDay).general, 2)).toBe("Эхний өгүүлбэр. Хоёр дахь.");
   });
 
   it("fails loudly when a section is missing", () => {
@@ -119,7 +119,7 @@ describe("birthdayRow", () => {
 });
 
 describe("periodPairRow", () => {
-  it("orders the pair and builds text + lists + relation types", () => {
+  it("orders the pair and fills text, lists and relation types", () => {
     const row = periodPairRow({
       period1: 7,
       period2: 3,
@@ -130,15 +130,16 @@ describe("periodPairRow", () => {
       goodFor: "гэрлэлт",
       badFor: "Эцэг,эх-Хүүхэд",
     });
-    expect(row).toMatchObject({ period_a: "3", period_b: "7", title: "Тэмцэх ээлж" });
-    expect(row.body).toBe(
-      [
-        "Уян хатан бай.",
-        "## Давуу тал\n\n• Түшигтэй\n• Тачаангуй",
-        "## Тохиромжтой харилцаа\n\nГэрлэлт",
-        "## Анхаарах харилцаа\n\nЭцэг, эх-Хүүхэд",
-      ].join("\n\n"),
-    );
+    expect(row).toEqual({
+      period_a: "3",
+      period_b: "7",
+      title: "Тэмцэх ээлж",
+      general: "Уян хатан бай.",
+      strengths: "Түшигтэй\nТачаангуй",
+      weaknesses: "",
+      good_for: "Гэрлэлт",
+      caution_for: "Эцэг, эх-Хүүхэд",
+    });
   });
 });
 

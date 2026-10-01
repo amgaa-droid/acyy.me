@@ -1,11 +1,11 @@
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { z } from "zod";
 
-import { findTier } from "@/config/topup";
 import { logAudit } from "@/server/audit";
 import type { AppDb } from "@/server/db/types";
 import { topups } from "@/server/db/schema";
 import { signTopup } from "@/server/qpay/signature";
+import { findActivePackage } from "@/server/topup-packages";
 import type { QPayProvider } from "@/server/qpay/types";
 import { credit } from "@/server/wallet";
 
@@ -22,6 +22,12 @@ export const TOPUP_TTL_MS = 24 * 60 * 60 * 1000;
 export class InvalidTierError extends Error {
   constructor() {
     super("invalid_tier");
+  }
+}
+/** The package changed (bonus/price) or was retired after the user saw it: show the new terms. */
+export class PackageChangedError extends Error {
+  constructor() {
+    super("package_changed");
   }
 }
 export class TopupNotFoundError extends Error {
@@ -42,19 +48,23 @@ export async function createTopup(
   provider: QPayProvider,
   opts: {
     userId: string;
-    amount: number;
+    /** The package as the user saw it in the sheet — charged only if it still matches. */
+    offer: { packageId: string; amount: number; bonus: number };
     appUrl: string;
     callbackSecret: string;
     description: string;
   },
 ): Promise<Topup> {
-  const tier = findTier(opts.amount);
+  const tier = await findActivePackage(db, opts.offer.packageId);
   if (!tier) throw new InvalidTierError();
+  if (tier.amount !== opts.offer.amount || tier.bonus !== opts.offer.bonus)
+    throw new PackageChangedError();
 
   const [topup] = await db
     .insert(topups)
     .values({
       userId: opts.userId,
+      packageId: tier.id,
       amount: tier.amount,
       bonus: tier.bonus,
       provider: provider.mode,
