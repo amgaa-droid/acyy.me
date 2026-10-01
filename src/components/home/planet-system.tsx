@@ -65,6 +65,12 @@ const STARS = [
 const SPRING = "ease-[cubic-bezier(.2,.9,.25,1.3)]";
 /** Planet faces: pastel by relation; light in dark mode so the line-art avatar reads. */
 const FACE = "dark:bg-nav";
+/**
+ * A bought pair's colours, also set inline (with fallbacks) so they show even if a cached
+ * stylesheet predates the `--pair` tokens.
+ */
+const PAIR = "var(--pair, #f06a2a)";
+const PAIR_FG = "var(--pair-fg, #ffffff)";
 /** Smallest gap between planets in the "+N" dock before it shows a "see all" link instead. */
 const DOCK_MIN_STEP = 60;
 /** Widest a reading button's name gets (Tailwind max-w-28). */
@@ -644,7 +650,15 @@ export function PlanetSystem({
                   ? "planet-line-ghost motion-safe:animate-line-flow"
                   : e.on && "planet-line-on motion-safe:animate-line-flow",
               )}
-              style={{ left: l.x, top: l.y - 1, width: l.length, transform: `rotate(${l.angle}deg)` }}
+              style={{
+                left: l.x,
+                top: l.y - 1,
+                width: l.length,
+                transform: `rotate(${l.angle}deg)`,
+                ...(e.on && e.key !== "ghost"
+                  ? { height: 2.5, background: `repeating-linear-gradient(90deg, ${PAIR} 0 5px, transparent 5px 10px)` }
+                  : null),
+              }}
             />
           );
         })}
@@ -657,7 +671,13 @@ export function PlanetSystem({
               ? "scale-110 border-pair bg-pair text-pair-fg shadow-[0_0_0_4px_color-mix(in_oklab,var(--pair)_30%,transparent)] motion-safe:animate-ping-soft"
               : "border-muted-foreground/50 bg-surface text-muted-foreground",
           );
-          const style = { left: p.x, top: p.y, width: chainSize, height: chainSize };
+          const style = {
+            left: p.x,
+            top: p.y,
+            width: chainSize,
+            height: chainSize,
+            ...(e.on ? { backgroundColor: PAIR, borderColor: PAIR, color: PAIR_FG } : null),
+          };
           const body = (
             <>
               {e.on ? (
