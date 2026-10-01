@@ -6,11 +6,9 @@ import { avatarBase64Uri } from "@/lib/avatars";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
-import { persons } from "@/server/db/schema";
-import { ReadingNotFoundError, getReading } from "@/server/reading";
+import { ReadingNotFoundError, getReading, readingPeople } from "@/server/reading";
 import { renderCard } from "@/server/share/card";
 import { cardName, cardQuote } from "@/server/share/text";
-import { inArray } from "drizzle-orm";
 
 export const runtime = "nodejs";
 
@@ -37,24 +35,13 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/share/[purch
   const refs = await loadAstroRefs(db);
   const signName = (code: string) => refs.signs.find((s) => s.code === code)?.nameMn ?? code;
 
-  // Avatars from the (possibly since-edited) people; fall back to the name as seed.
-  const ids = reading.personIds.filter((x): x is string => Boolean(x));
-  const seeds = ids.length
-    ? new Map(
-        (
-          await db
-            .select({ id: persons.id, seed: persons.avatarSeed })
-            .from(persons)
-            .where(inArray(persons.id, ids))
-        ).map((r) => [r.id, r.seed]),
-      )
-    : new Map<string, string>();
-
+  // Name and avatar of the (possibly since-edited) people the viewer owns; else the snapshot.
+  const live = await readingPeople(db, session.user.id, reading.personIds);
   const people = reading.snapshot.persons.map((p, i) => ({
-    name: cardName(p.name, hide),
+    name: cardName(live[i]?.name ?? p.name, hide),
     sign: p.sign,
     signName: signName(p.sign),
-    avatarUri: avatarBase64Uri(seeds.get(reading.personIds[i] ?? "") ?? p.name),
+    avatarUri: avatarBase64Uri(live[i]?.avatarSeed ?? p.name),
   }));
   const pair = people.length === 2;
   // A quote sub-section reads best on a card; otherwise the first prose text.

@@ -270,25 +270,28 @@ export async function linkedPairReadings(
 
 export type ReadingPerson = {
   id: string;
+  name: string;
   relation: Relation;
   relationLabel: string | null;
   avatarSeed: string;
 };
 
 /**
- * Live details (relation, avatar) of a reading's people — only those the viewer owns
+ * Live details (name, relation, avatar) of a reading's people — only those the viewer owns
  * (CLAUDE.md rule 4). A linked viewer or a deleted person gets null; the snapshot still has the rest.
+ * The bought text itself never follows edits: it is keyed from the snapshot (birth date, gender).
  */
 export async function readingPeople(
   db: AppDb,
   viewerId: string,
   personIds: (string | null)[],
 ): Promise<(ReadingPerson | null)[]> {
-  const ids = personIds.filter((x): x is string => Boolean(x));
+  const ids = [...new Set(personIds.filter((x): x is string => Boolean(x)))];
   if (ids.length === 0) return personIds.map(() => null);
   const rows = await db
     .select({
       id: persons.id,
+      name: persons.name,
       relation: persons.relation,
       relationLabel: persons.relationLabel,
       avatarSeed: persons.avatarSeed,
@@ -298,4 +301,26 @@ export async function readingPeople(
       and(inArray(persons.id, ids), eq(persons.ownerUserId, viewerId), isNull(persons.deletedAt)),
     );
   return personIds.map((id) => rows.find((r) => r.id === id) ?? null);
+}
+
+/**
+ * Names to show for each purchase's people: the current name of a person the viewer still owns
+ * (a fixed typo shows everywhere), else the name at purchase time.
+ */
+export async function readingNames(
+  db: AppDb,
+  viewerId: string,
+  list: Pick<typeof purchases.$inferSelect, "id" | "personAId" | "personBId" | "snapshot">[],
+): Promise<Map<string, string[]>> {
+  const live = await readingPeople(
+    db,
+    viewerId,
+    list.flatMap((p) => [p.personAId, p.personBId]),
+  );
+  return new Map(
+    list.map((p, i) => [
+      p.id,
+      p.snapshot.persons.map((x, j) => live[i * 2 + j]?.name ?? x.name),
+    ]),
+  );
 }

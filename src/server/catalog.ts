@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { ageOn, parseIsoDate, todayYmd, type Ymd } from "@/lib/birth-date";
 import { RELATION_GROUP, type Relation } from "@/lib/domain";
@@ -84,37 +84,36 @@ export type PersonOffer = {
   purchaseId: string | null;
 };
 
-/** Products to show on a person's page. Synastry is offered if the person could be one half of a pair. */
+/**
+ * Products to show on a person's page. Synastry is offered if the person could be one half of a pair.
+ * A product already bought for the person always stays — even after an edit (e.g. the relation)
+ * makes it ineligible, or the product is deactivated — so a paid reading never loses its entry.
+ */
 export async function offersForPerson(
   db: AppDb,
   viewer: Viewer,
   person: Person,
 ): Promise<PersonOffer[]> {
-  const all = await listActiveProducts(db);
-  const today = todayYmd();
-  const offered = all.filter((p) =>
-    p.personCount === 1
-      ? isEligible(p, [person], viewer, today)
-      : isEligible({ ...p, personCount: 1 }, [person], viewer, today),
-  );
-  const owned = offered.length
-    ? await db
-        .select({ id: purchases.id, productCode: purchases.productCode })
-        .from(purchases)
-        .where(
-          and(
-            eq(purchases.userId, viewer.userId),
-            eq(purchases.subjectKey, person.id),
-            inArray(
-              purchases.productCode,
-              offered.map((p) => p.code),
-            ),
-          ),
-        )
-    : [];
+  const [all, owned] = await Promise.all([
+    db.select().from(products).orderBy(asc(products.sort)),
+    // Single-person purchases are keyed by the person id (pairs use "a|b").
+    db
+      .select({ id: purchases.id, productCode: purchases.productCode })
+      .from(purchases)
+      .where(and(eq(purchases.userId, viewer.userId), eq(purchases.subjectKey, person.id))),
+  ]);
   const byCode = new Map(owned.map((o) => [o.productCode, o.id]));
-  return offered.map((product) => ({
-    product,
-    purchaseId: product.personCount === 1 ? (byCode.get(product.code) ?? null) : null,
-  }));
+  const today = todayYmd();
+  return all
+    .filter(
+      (p) =>
+        byCode.has(p.code) ||
+        (p.personCount === 1
+          ? isEligible(p, [person], viewer, today)
+          : isEligible({ ...p, personCount: 1 }, [person], viewer, today)),
+    )
+    .map((product) => ({
+      product,
+      purchaseId: product.personCount === 1 ? (byCode.get(product.code) ?? null) : null,
+    }));
 }

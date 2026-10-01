@@ -16,7 +16,7 @@ import {
 } from "@/server/catalog";
 import { db } from "@/server/db";
 import { listPurchases } from "@/server/purchase";
-import { linkedPairReadings } from "@/server/reading";
+import { linkedPairReadings, readingNames } from "@/server/reading";
 
 export const metadata: Metadata = { title: mn.readings.title };
 
@@ -114,6 +114,7 @@ async function MyReadings({
     linkedPairReadings(db, userId),
   ]);
   const list = product ? all.filter((p) => p.productCode === product) : all;
+  const names = await readingNames(db, userId, list);
   const codes = [...new Set(all.map((p) => p.productCode))];
 
   if (all.length === 0 && linked.length === 0) {
@@ -149,7 +150,7 @@ async function MyReadings({
                   {catalog.get(p.productCode)?.nameMn ?? p.productCode}
                 </span>
                 <span className="truncate text-sm text-muted-foreground">
-                  {p.snapshot.persons.map((x) => x.name).join(" × ")} ·{" "}
+                  {names.get(p.id)?.join(" × ")} ·{" "}
                   {dateFmt.format(p.createdAt)}
                 </span>
               </span>

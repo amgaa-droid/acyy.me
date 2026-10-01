@@ -37,10 +37,11 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
   const refs = await loadAstroRefs(db);
   const signName = (code: string) => refs.signs.find((s) => s.code === code)?.nameMn ?? code;
   const signNames = Object.fromEntries(refs.signs.map((s) => [s.code, s.nameMn]));
-  const people = reading.snapshot.persons;
+  const live = await readingPeople(db, user.id, reading.personIds);
+  // Bought text stays as the snapshot; the name follows later edits (the person is the same).
+  const people = reading.snapshot.persons.map((p, i) => ({ ...p, name: live[i]?.name ?? p.name }));
   const pair = people.length === 2;
   const t = mn.reading;
-  const live = pair ? await readingPeople(db, user.id, reading.personIds) : [];
 
   const personProps = (i: number) => ({
     name: people[i].name,

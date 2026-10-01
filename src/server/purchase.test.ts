@@ -16,7 +16,7 @@ import {
 } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import { createTestDb, insertUser } from "@/test/db";
-import { createPerson, createSelf } from "./persons";
+import { createPerson, createSelf, deletePerson, updatePerson } from "./persons";
 import {
   ContentUnavailableError,
   NotEligibleError,
@@ -24,7 +24,7 @@ import {
   ProductUnavailableError,
   purchase,
 } from "./purchase";
-import { ReadingNotFoundError, getPreview, getReading } from "./reading";
+import { ReadingNotFoundError, getPreview, getReading, readingNames } from "./reading";
 import { InsufficientFundsError, credit, getBalance } from "./wallet";
 
 let db: AppDb;
@@ -352,6 +352,62 @@ describe("reading & preview", () => {
       .update(productFields)
       .set({ archivedAt: null })
       .where(and(eq(productFields.productCode, "birthday"), eq(productFields.code, "tarot")));
+  });
+});
+
+describe("editing a person after a purchase", () => {
+  it("a bought reading stays on the person's page after a relation change makes it ineligible", async () => {
+    const { userId, partner } = await setup({ balance: 5_000 });
+    const viewer = await loadViewer(db, userId);
+    const { purchase: p } = await purchase(db, {
+      userId,
+      productCode: "love",
+      personIds: [partner.id],
+    });
+    const asMother = await updatePerson(db, userId, partner.id, { relation: "mother" });
+    const offers = await offersForPerson(db, viewer, asMother);
+    expect(offers.find((o) => o.product.code === "love")?.purchaseId).toBe(p.id);
+    // Unbought romantic products are still hidden for family.
+    expect(codes(offers)).not.toContain("dating");
+  });
+
+  it("a bought reading stays on the person's page after its product is deactivated", async () => {
+    const { userId, mom } = await setup({ balance: 5_000 });
+    const { purchase: p } = await purchase(db, {
+      userId,
+      productCode: "birthday",
+      personIds: [mom.id],
+    });
+    await db.update(products).set({ isActive: false }).where(eq(products.code, "birthday"));
+    try {
+      const offers = await offersForPerson(db, await loadViewer(db, userId), mom);
+      expect(offers.find((o) => o.product.code === "birthday")?.purchaseId).toBe(p.id);
+    } finally {
+      await db.update(products).set({ isActive: true }).where(eq(products.code, "birthday"));
+    }
+  });
+
+  it("a rename shows on bought readings; the text and snapshot stay as bought", async () => {
+    const a = await setup({ balance: 5_000 });
+    const { purchase: p } = await purchase(db, {
+      userId: a.userId,
+      productCode: "synastry",
+      personIds: [a.self.id, a.mom.id],
+    });
+    const before = await getReading(db, a.userId, p.id);
+    await updatePerson(db, a.userId, a.mom.id, { name: "Ээжээ", gender: "female" });
+    const after = await getReading(db, a.userId, p.id);
+    expect(after.sections).toEqual(before.sections);
+    expect(after.snapshot.persons[1]).toMatchObject({ name: "Ээж", gender: "unspecified" });
+    expect((await readingNames(db, a.userId, [p])).get(p.id)).toEqual(["Би", "Ээжээ"]);
+
+    // A linked viewer doesn't own the people: they see the names as bought.
+    const friend = await insertUser(db, `linked${++seq}@test.local`);
+    expect((await readingNames(db, friend.id, [p])).get(p.id)).toEqual(["Би", "Ээж"]);
+
+    // A deleted person falls back to the snapshot name.
+    await deletePerson(db, a.userId, a.mom.id);
+    expect((await readingNames(db, a.userId, [p])).get(p.id)).toEqual(["Би", "Ээж"]);
   });
 });
 
