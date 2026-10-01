@@ -64,6 +64,13 @@
       "when": 1790790427863,
       "tag": "0008_synastry_ordered_signs",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790816511328,
+      "tag": "0009_love_fields",
+      "breakpoints": true
     }
   ]
 }
