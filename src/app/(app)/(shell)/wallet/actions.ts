@@ -7,7 +7,8 @@ import { APP_NAME, env } from "@/env";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
 import { topups } from "@/server/db/schema";
-import { qpay } from "@/server/qpay";
+import type { InvoiceData } from "@/server/db/schema";
+import { mockQPay, qpay } from "@/server/qpay";
 import {
   InvalidTierError,
   PackageChangedError,
@@ -16,6 +17,7 @@ import {
   getTopupForUser,
   settleTopup,
 } from "@/server/topups";
+import { getBalance } from "@/server/wallet";
 
 const INVOICES_PER_HOUR = 10; // SPEC §12
 
@@ -28,7 +30,12 @@ const offerSchema = z.object({
 export async function createTopupAction(
   input: unknown,
 ): Promise<
-  | { ok: true; id: string }
+  | {
+      ok: true;
+      topup: { id: string; amount: number; bonus: number; status: string; invoice: InvoiceData | null };
+      balance: number;
+      mockPayUrl: string | null;
+    }
   | { ok: false; error: "invalid_tier" | "package_changed" | "rate" | "generic" }
 > {
   const { user } = await requireOnboardedUser();
@@ -51,7 +58,12 @@ export async function createTopupAction(
       callbackSecret: env().QPAY_CALLBACK_SECRET,
       description: `${APP_NAME}: хэтэвч цэнэглэх`,
     });
-    return { ok: true, id: t.id };
+    return {
+      ok: true,
+      topup: { id: t.id, amount: t.amount, bonus: t.bonus, status: t.status, invoice: t.invoiceData },
+      balance: await getBalance(db, user.id),
+      mockPayUrl: mockQPay() && t.invoiceId ? `/dev/qpay/${t.invoiceId}` : null,
+    };
   } catch (err) {
     if (err instanceof InvalidTierError) return { ok: false, error: "package_changed" };
     if (err instanceof PackageChangedError) return { ok: false, error: "package_changed" };

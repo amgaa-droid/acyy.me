@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useTransition, type ReactElement } from "react";
+import { useCallback, useState, useTransition, type ReactElement } from "react";
 
 import { createTopupAction } from "@/app/(app)/(shell)/wallet/actions";
 import { BottomSheet } from "@/components/app/bottom-sheet";
+import { InvoicePanel } from "@/components/app/invoice-panel";
 import { Button } from "@/components/ui/button";
 import { useTopupPackages } from "@/components/app/topup-packages";
 import { formatMnt, mn } from "@/i18n/mn";
@@ -12,19 +13,39 @@ import { cn } from "@/lib/utils";
 
 const t = mn.wallet;
 
+type Created = Extract<Awaited<ReturnType<typeof createTopupAction>>, { ok: true }>;
+
 /**
- * Top-up picker (SPEC §4.1). `returnTo` is where the invoice screen sends the user after a
- * successful payment (defaults to the current page, e.g. back to a purchase confirmation).
+ * Top-up as one popup (SPEC §4.1, §4.3): pick a package → the QPay invoice → paid, without
+ * leaving the page underneath (after payment it refreshes and closes). `returnTo` is where a
+ * payment finished outside the popup lands (the mock bank page; defaults to the current page);
+ * `afterPaid` navigates there on success instead of just closing.
  */
-export function TopUpSheet({ trigger, returnTo }: { trigger: ReactElement; returnTo?: string }) {
+export function TopUpSheet({
+  trigger,
+  returnTo,
+  afterPaid,
+}: {
+  trigger: ReactElement;
+  returnTo?: string;
+  afterPaid?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const [created, setCreated] = useState<Created | null>(null);
   const packages = useTopupPackages();
   const fallback = packages[Math.min(2, packages.length - 1)];
   const [picked, setPicked] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const setOpen = (next: boolean) => {
+    if (next) {
+      setCreated(null);
+      setError(null);
+    }
+    setOpenState(next);
+  };
   const tier = packages.find((x) => x.id === picked) ?? fallback;
   const amount = tier?.amount ?? 0;
 
@@ -43,10 +64,40 @@ export function TopUpSheet({ trigger, returnTo }: { trigger: ReactElement; retur
         if (res.error === "package_changed") router.refresh();
         return;
       }
-      setOpen(false);
-      const next = returnTo ?? pathname;
-      router.push(`/wallet/topup/${res.id}?next=${encodeURIComponent(next)}`);
+      setCreated(res);
     });
+
+  const onContinue = useCallback(() => {
+    setOpenState(false);
+    if (afterPaid) router.push(afterPaid);
+  }, [afterPaid, router]);
+
+  if (created) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={t.invoice.title}
+        trigger={trigger}
+      >
+        <InvoicePanel
+          key={created.topup.id}
+          topup={created.topup}
+          balance={created.balance}
+          mockPayUrl={
+            created.mockPayUrl &&
+            `${created.mockPayUrl}?next=${encodeURIComponent(returnTo ?? pathname)}`
+          }
+          onContinue={onContinue}
+          retry={
+            <Button size="lg" className="w-full rounded-full" onClick={() => setCreated(null)}>
+              {t.invoice.again}
+            </Button>
+          }
+        />
+      </BottomSheet>
+    );
+  }
 
   return (
     <BottomSheet

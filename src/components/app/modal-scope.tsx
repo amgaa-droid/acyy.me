@@ -1,37 +1,57 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 
 const CloseAllContext = createContext<(() => void) | null>(null);
 
+type PushListener = (url: string | URL | null | undefined) => void;
+const pushListeners = new Set<PushListener>();
+let pushPatched = false;
+
 /**
- * Counts how many popups were opened on top of `home` (one per history entry), so closing a
- * popup closes all of them at once: reading → person → reading still closes straight to home.
- * A replace (redirect) adds no history entry and isn't counted; back/forward steps down.
+ * Wraps `history.pushState` once per page. Next.js wraps it too and React may mount effects
+ * twice (StrictMode), so per-effect wrapping would stack and count each push more than once;
+ * scopes subscribe to the single wrapper instead.
+ */
+function onPush(listener: PushListener): () => void {
+  if (!pushPatched) {
+    pushPatched = true;
+    const push = window.history.pushState;
+    window.history.pushState = function (this: History, data, unused, url) {
+      pushListeners.forEach((l) => l(url));
+      return push.call(this, data, unused, url);
+    };
+  }
+  pushListeners.add(listener);
+  return () => pushListeners.delete(listener);
+}
+
+/**
+ * Counts how many history entries were pushed on top of `home`, so closing a popup closes all
+ * of them at once: reading → person → reading still closes straight to home. Every push counts —
+ * a query-only step too (buy: "Солих" → choose another person) — while a replace (redirect)
+ * doesn't. Counting pushes directly also holds once the browser caps `history.length` (50).
+ * Back/forward steps down one.
  */
 export function ModalScope({ home, children }: { home: string; children: ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
   const depth = useRef(0);
-  const popped = useRef(false);
-  const length = useRef(0);
 
   useEffect(() => {
+    const off = onPush((url) => {
+      const path = url == null ? null : new URL(url, window.location.href).pathname;
+      depth.current = path === home ? 0 : depth.current + 1;
+    });
     const onPop = () => {
-      popped.current = true;
+      depth.current = window.location.pathname === home ? 0 : Math.max(0, depth.current - 1);
     };
     window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
-  useEffect(() => {
-    if (pathname === home) depth.current = 0;
-    else if (popped.current) depth.current = Math.max(0, depth.current - 1);
-    else if (window.history.length > length.current) depth.current += 1;
-    popped.current = false;
-    length.current = window.history.length;
-  }, [pathname, home]);
+    return () => {
+      off();
+      window.removeEventListener("popstate", onPop);
+    };
+  }, [home]);
 
   const closeAll = useCallback(() => {
     if (depth.current > 0) window.history.go(-depth.current);
