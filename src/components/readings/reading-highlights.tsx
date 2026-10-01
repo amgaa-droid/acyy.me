@@ -1,7 +1,6 @@
 import { CalendarDays, Sparkle, TriangleAlert } from "lucide-react";
 
 import { Avatar } from "@/components/app/avatar";
-import { FeaturedCard } from "@/components/readings/featured-card";
 import { mn } from "@/i18n/mn";
 import { formatBirthDate } from "@/lib/birth-date";
 import { fieldItems } from "@/lib/fields";
@@ -45,18 +44,19 @@ export function PairPerson({
 }
 
 /**
- * The summary sub-sections next to the hero, in field order. Each chips/alert field gets its own
- * card — chips ("Тохиромжтой харилцаа") as the featured one; two list fields in a row share one
- * row as a pair of tiles (e.g. "Давуу тал" / "Сул тал").
+ * The summary sub-sections next to the hero, in field order. Consecutive chips/alert fields share
+ * one card as rows; two list fields in a row share one row as a pair of tiles
+ * (e.g. "Давуу тал" / "Сул тал").
  */
 export function SummaryFields({ fields }: { fields: ReadingField[] }) {
+  const isRow = (f: ReadingField) => f.kind === "chips" || f.kind === "alert";
   const groups: ReadingField[][] = [];
   for (const f of fields) {
     const last = groups.at(-1);
     if (f.kind === "list" && last?.length === 1 && last[0].kind === "list") last.push(f);
+    else if (isRow(f) && last && isRow(last[0])) last.push(f);
     else groups.push([f]);
   }
-  const firstChips = fields.find((f) => f.kind === "chips");
   return (
     <div className="flex flex-col gap-3">
       {groups.map((group) =>
@@ -82,18 +82,14 @@ export function SummaryFields({ fields }: { fields: ReadingField[] }) {
               </section>
             ))}
           </div>
-        ) : group[0].kind === "chips" ? (
-          <FeaturedRow
-            key={group[0].code}
-            field={group[0]}
-            revealTarget={group[0] === firstChips}
-          />
         ) : (
           <section
             key={group[0].code}
-            className="rounded-3xl bg-surface px-5 py-0.5 lg:rounded-[28px] lg:px-6 lg:py-1"
+            className="flex flex-col divide-y divide-border rounded-3xl bg-surface px-5 py-0.5 lg:rounded-[28px] lg:px-6 lg:py-1"
           >
-            <SummaryRow field={group[0]} />
+            {group.map((f) => (
+              <SummaryRow key={f.code} field={f} />
+            ))}
           </section>
         ),
       )}
@@ -112,31 +108,6 @@ const SummaryLabel = ({ children, className }: { children: React.ReactNode; clas
   </h3>
 );
 
-/** Items of a chips/alert field as one serif line, separated by dots. */
-function ItemLine({ field, dotClassName }: { field: ReadingField; dotClassName?: string }) {
-  return fieldItems(field.value, field.kind).map((item, i) => (
-    <span key={item}>
-      {i > 0 && (
-        <span aria-hidden className={cn("px-2 text-muted-foreground", dotClassName)}>
-          ·
-        </span>
-      )}
-      {item}
-    </span>
-  ));
-}
-
-/** The chips field ("Тохиромжтой харилцаа"); the first one is where CompatReveal lands on /r. */
-function FeaturedRow({ field, revealTarget }: { field: ReadingField; revealTarget: boolean }) {
-  return (
-    <FeaturedCard
-      data-reveal-target={revealTarget ? "compat" : undefined}
-      label={field.name}
-      value={<ItemLine field={field} dotClassName="text-highlight-fg/50" />}
-    />
-  );
-}
-
 /** A chips or alert field: icon, label and its items as one serif value. */
 function SummaryRow({ field }: { field: ReadingField }) {
   const alert = field.kind === "alert";
@@ -154,7 +125,16 @@ function SummaryRow({ field }: { field: ReadingField }) {
       <div className="flex min-w-0 flex-col gap-0.5">
         <SummaryLabel>{field.name}</SummaryLabel>
         <p className="font-serif text-[28px] leading-[1.1] font-semibold lg:text-[30px]">
-          <ItemLine field={field} />
+          {fieldItems(field.value, field.kind).map((item, i) => (
+            <span key={item}>
+              {i > 0 && (
+                <span aria-hidden className="px-2 text-muted-foreground">
+                  ·
+                </span>
+              )}
+              {item}
+            </span>
+          ))}
         </p>
       </div>
     </div>

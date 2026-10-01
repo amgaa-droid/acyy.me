@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ConstellationArt } from "@/components/app/constellation";
-import { CompatReveal } from "@/components/readings/compat-reveal";
 import { ArticleField, Teaser } from "@/components/readings/reading-body";
 import { PairPerson, SummaryFields } from "@/components/readings/reading-highlights";
 import { ScoreRing } from "@/components/readings/score-ring";
@@ -12,7 +11,6 @@ import { ShareCardButton } from "@/components/readings/share-card-button";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { mn } from "@/i18n/mn";
 import { formatBirthDate } from "@/lib/birth-date";
-import { fieldItems } from "@/lib/fields";
 import { sectionLabel } from "@/lib/content-keys-display";
 import { SUMMARY_FIELD_KINDS } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
@@ -61,7 +59,6 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
       .map((f) => ({ ...f, code: `${s.section}.${s.key}.${f.code}` })),
   );
   const multiPart = reading.sections.length > 1;
-  const compat = pair ? summary.find((f) => f.kind === "chips") : undefined;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
@@ -157,14 +154,6 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
             </section>
           )}
           {summary.length > 0 && <SummaryFields fields={summary} />}
-          {compat && (
-            <CompatReveal
-              purchaseId={reading.id}
-              names={[people[0].name, people[1].name]}
-              label={compat.name}
-              items={fieldItems(compat.value, compat.kind)}
-            />
-          )}
         </div>
 
         <article className="flex flex-col gap-12 rounded-[32px] bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-[36px] lg:px-16 lg:pt-14 lg:pb-11">

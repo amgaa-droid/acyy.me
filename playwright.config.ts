@@ -12,12 +12,7 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
-  // Reduced motion skips the purchase unlock / compatibility reveal animations.
-  use: {
-    baseURL: `http://localhost:${PORT}`,
-    trace: "on-first-retry",
-    contextOptions: { reducedMotion: "reduce" },
-  },
+  use: { baseURL: `http://localhost:${PORT}`, trace: "on-first-retry" },
   projects: [
     { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
     {

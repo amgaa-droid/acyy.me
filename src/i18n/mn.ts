@@ -324,8 +324,6 @@ export const mn = {
     balanceChange: (from: string, to: string) => `Үлдэгдэл ${from} → ${to}`,
     confirm: (price: string) => `Нээх · ${price}`,
     forever: "Нэг удаа авбал үүрд хадгалагдана.",
-    unlocking: "Нээж байна…",
-    unlocked: "Нээгдлээ!",
     insufficient: "Үлдэгдэл хүрэлцэхгүй байна.",
     topUpFirst: "Цэнэглээд үргэлжлүүлэх",
     errors: {
@@ -346,8 +344,6 @@ export const mn = {
     back: "Миний зурхайнууд",
     birthDate: "Төрсөн огноо",
     period: (n: number) => `${n}-р үе`,
-    revealEyebrow: "Та хоёрын",
-    revealSkip: "Дарж үргэлжлүүлэх",
   },
   me: {
     title: "Би",

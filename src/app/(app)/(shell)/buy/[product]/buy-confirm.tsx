@@ -5,14 +5,11 @@ import { useState, useTransition } from "react";
 
 import { BottomSheet } from "@/components/app/bottom-sheet";
 import { TopUpSheet } from "@/components/app/top-up-sheet";
-import { UnlockOverlay, type UnlockState } from "@/components/readings/unlock-overlay";
 import { Button } from "@/components/ui/button";
 import { formatMnt, mn } from "@/i18n/mn";
-import { playUnlock, primeAudio } from "@/lib/sound";
 import { purchaseAction } from "../../readings/actions";
 
 const t = mn.buy;
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type Props = {
   productCode: string;
@@ -45,39 +42,19 @@ export function BuyConfirm({
   const [open, setOpen] = useState(autoOpen);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  const [unlock, setUnlock] = useState<UnlockState>(null);
   const enough = balance >= price;
 
-  // Unlock moment: the lock wobbles while the purchase runs (at least briefly, for anticipation),
-  // then springs open with a chime before the reading opens. Reduced motion goes straight there.
-  const confirm = () => {
-    primeAudio();
-    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!calm) setUnlock("pending");
+  const confirm = () =>
     startTransition(async () => {
       setError(null);
-      const res = await Promise.all([
-        purchaseAction(productCode, personIds),
-        wait(calm ? 0 : 700),
-      ]).then(
-        ([r]) => r,
-        () => ({ ok: false as const, error: "generic" }),
-      );
+      const res = await purchaseAction(productCode, personIds);
       if (res.ok) {
-        playUnlock();
-        if (!calm) {
-          setUnlock("done");
-          await wait(1300);
-        }
         router.push(`/r/${res.id}`);
         return;
       }
-      setUnlock(null);
       setError(t.errors[res.error]);
       if (res.error === "insufficient") router.refresh();
     });
-  };
 
   const trigger = (
     <Button size="lg" className="rounded-full">
@@ -87,7 +64,6 @@ export function BuyConfirm({
 
   return (
     <div className="sticky bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+1.5rem)] z-30 flex flex-col gap-2 lg:bottom-6">
-      <UnlockOverlay state={unlock} />
       <BottomSheet
         open={open}
         onOpenChange={setOpen}
