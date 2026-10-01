@@ -150,8 +150,7 @@ async function MyReadings({
                   {catalog.get(p.productCode)?.nameMn ?? p.productCode}
                 </span>
                 <span className="truncate text-sm text-muted-foreground">
-                  {names.get(p.id)?.join(" × ")} ·{" "}
-                  {dateFmt.format(p.createdAt)}
+                  {names.get(p.id)?.join(" × ")} · {dateFmt.format(p.createdAt)}
                 </span>
               </span>
               <ChevronRight className="size-5 text-muted-foreground" aria-hidden />

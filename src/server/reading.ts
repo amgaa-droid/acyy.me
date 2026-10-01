@@ -318,9 +318,6 @@ export async function readingNames(
     list.flatMap((p) => [p.personAId, p.personBId]),
   );
   return new Map(
-    list.map((p, i) => [
-      p.id,
-      p.snapshot.persons.map((x, j) => live[i * 2 + j]?.name ?? x.name),
-    ]),
+    list.map((p, i) => [p.id, p.snapshot.persons.map((x, j) => live[i * 2 + j]?.name ?? x.name)]),
   );
 }

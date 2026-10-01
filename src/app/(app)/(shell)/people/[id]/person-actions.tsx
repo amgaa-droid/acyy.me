@@ -26,9 +26,14 @@ type EditablePerson = {
   avatarSeed: string;
   relation: Relation;
   relationLabel: string | null;
+  /** A bought text depends on the gender (SPEC §2.1). */
+  genderLocked: boolean;
 };
 
-/** Edit sheet: name, relation (not for "Би"), gender, avatar. The birth date is not editable. */
+/**
+ * Edit sheet: name, relation (not for "Би"), gender (until a bought text depends on it), avatar.
+ * The birth date is not editable.
+ */
 export function EditPersonButton({
   person,
   avatars,
@@ -51,7 +56,7 @@ export function EditPersonButton({
       setError(null);
       const res = await updatePersonAction(person.id, {
         name,
-        gender,
+        ...(!person.genderLocked && { gender }),
         avatarSeed,
         ...(!person.isSelf && {
           relation,
@@ -108,7 +113,17 @@ export function EditPersonButton({
         )}
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">{t.gender}</span>
-          <GenderPicker value={gender} onChange={setGender} compact />
+          {person.genderLocked ? (
+            <p className="flex items-start gap-2.5 rounded-2xl bg-subtle px-4 py-3 text-sm">
+              <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span>
+                <span className="font-semibold">{mn.onboarding.genders[person.gender]}</span>
+                <span className="block text-muted-foreground">{t.genderLocked}</span>
+              </span>
+            </p>
+          ) : (
+            <GenderPicker value={gender} onChange={setGender} compact />
+          )}
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">{t.avatarTitle}</span>

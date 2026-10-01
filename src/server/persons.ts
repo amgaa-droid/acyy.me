@@ -1,17 +1,18 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { isAvatarSeed } from "@/lib/avatar-seeds";
 import { birthDateSchema } from "@/lib/birth-date";
 import { GENDERS, RELATIONS } from "@/lib/domain";
 import type { AppDb } from "@/server/db/types";
-import { persons } from "@/server/db/schema";
+import { persons, productParts, purchases } from "@/server/db/schema";
 
 /**
  * People (SPEC §2.1). Every function takes the acting user's id and only ever touches rows
  * with `owner_user_id = userId` (CLAUDE.md rule 4). Someone else's person behaves exactly
  * like a missing one (PersonNotFoundError → 404), so ids can't be probed.
- * The birth date is set once at creation and can never be updated (rule 2).
+ * The birth date is set once at creation and can never be updated (rule 2). The gender locks
+ * once a bought text depends on it (isGenderLocked).
  */
 
 export type Person = typeof persons.$inferSelect;
@@ -87,6 +88,11 @@ export class CannotDeleteSelfError extends Error {
     super("cannot_delete_self");
   }
 }
+export class GenderLockedError extends Error {
+  constructor() {
+    super("gender_locked");
+  }
+}
 
 const uuid = z.uuid();
 
@@ -140,7 +146,36 @@ export async function createPerson(db: AppDb, userId: string, input: PersonInput
   return person;
 }
 
-/** Name, gender, avatar and (not for "Би") relation. Never the birth date. */
+/**
+ * The gender is locked once a bought text depends on it (SPEC §2.1): a single-person purchase for
+ * the person whose snapshot has a gender, of a product with a gender-split part (archived ones
+ * too — the buyer still reads them). Like the birth date, a wrong one means delete and re-add.
+ */
+export async function isGenderLocked(
+  db: AppDb,
+  userId: string,
+  personId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: purchases.id })
+    .from(purchases)
+    .innerJoin(
+      productParts,
+      and(eq(productParts.productCode, purchases.productCode), eq(productParts.byGender, true)),
+    )
+    .where(
+      and(
+        eq(purchases.userId, userId),
+        // Single-person purchases are keyed by the person id; gender-split parts are 1-person only.
+        eq(purchases.subjectKey, personId),
+        sql`${purchases.snapshot} -> 'persons' -> 0 ->> 'gender' <> 'unspecified'`,
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** Name, gender (until locked), avatar and (not for "Би") relation. Never the birth date. */
 export async function updatePerson(
   db: AppDb,
   userId: string,
@@ -151,6 +186,13 @@ export async function updatePerson(
   const current = await getPerson(db, userId, personId);
   if (current.isSelf && (data.relation !== undefined || data.relationLabel != null)) {
     throw new SelfRelationError();
+  }
+  if (
+    data.gender !== undefined &&
+    data.gender !== current.gender &&
+    (await isGenderLocked(db, userId, personId))
+  ) {
+    throw new GenderLockedError();
   }
 
   // Switching to "other" requires a label (schema); any other relation clears it.

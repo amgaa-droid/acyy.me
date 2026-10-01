@@ -14,7 +14,7 @@ import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { loadViewer, offersForPerson } from "@/server/catalog";
 import { db } from "@/server/db";
-import { PersonNotFoundError, getPerson } from "@/server/persons";
+import { PersonNotFoundError, getPerson, isGenderLocked } from "@/server/persons";
 import { DeletePersonButton, EditPersonButton } from "./person-actions";
 import { InviteSection } from "./invite-section";
 import { personLinkState } from "@/server/invitations";
@@ -37,7 +37,10 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
   const person = await loadPerson(user.id, id);
   const link = person.isSelf ? null : await personLinkState(db, user.id, person);
   const { sign, period } = describeBirthDate(person.birthDate, await loadAstroRefs(db));
-  const offers = await offersForPerson(db, await loadViewer(db, user.id), person);
+  const [offers, genderLocked] = await Promise.all([
+    loadViewer(db, user.id).then((viewer) => offersForPerson(db, viewer, person)),
+    isGenderLocked(db, user.id, person.id),
+  ]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -130,6 +133,7 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
                 isSelf: person.isSelf,
                 name: person.name,
                 gender: person.gender,
+                genderLocked,
                 avatarSeed: person.avatarSeed,
                 relation: person.relation,
                 relationLabel: person.relationLabel,

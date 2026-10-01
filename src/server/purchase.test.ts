@@ -16,7 +16,14 @@ import {
 } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import { createTestDb, insertUser } from "@/test/db";
-import { createPerson, createSelf, deletePerson, updatePerson } from "./persons";
+import {
+  GenderLockedError,
+  createPerson,
+  createSelf,
+  deletePerson,
+  isGenderLocked,
+  updatePerson,
+} from "./persons";
 import {
   ContentUnavailableError,
   NotEligibleError,
@@ -446,6 +453,20 @@ describe("new key types", () => {
       personIds: [a.mom.id],
     });
     expect(p.snapshot.keys).toEqual({ main: "capricorn|female" });
+
+    // The bought text depends on the gender now: it locks, the rest stays editable.
+    expect(await isGenderLocked(db, a.userId, a.mom.id)).toBe(true);
+    await expect(updatePerson(db, a.userId, a.mom.id, { gender: "male" })).rejects.toBeInstanceOf(
+      GenderLockedError,
+    );
+    const renamed = await updatePerson(db, a.userId, a.mom.id, { name: "Ээжээ", gender: "female" });
+    expect(renamed).toMatchObject({ name: "Ээжээ", gender: "female" });
+
+    // A text that doesn't depend on the gender doesn't lock it.
+    await updatePerson(db, a.userId, a.partner.id, { gender: "male" });
+    await purchase(db, { userId: a.userId, productCode: "birthday", personIds: [a.partner.id] });
+    expect(await isGenderLocked(db, a.userId, a.partner.id)).toBe(false);
+    await updatePerson(db, a.userId, a.partner.id, { gender: "female" });
   });
 
   it("ordered pairs: one purchase for the pair, the reading shows both directions", async () => {
