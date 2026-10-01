@@ -85,6 +85,13 @@
       "when": 1790826681679,
       "tag": "0011_sex_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790828007570,
+      "tag": "0012_sign_fields",
+      "breakpoints": true
     }
   ]
 }
