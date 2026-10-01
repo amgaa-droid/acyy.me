@@ -205,6 +205,14 @@ export const mn = {
     add: "Нэмэх",
     title: "Нүүр",
     empty: "Удахгүй энд таны зурхай, хүмүүс харагдана.",
+    allPeople: "Бүх хүмүүс",
+    orbit: {
+      label: "Миний орчлон",
+      meAria: (name: string, sign: string) => `${name} (та) — ${sign}`,
+      pair: (name: string) => `Нийцэл: та × ${name}`,
+      more: "Бусад",
+      moreAria: (n: number) => `Бусад ${n} хүн — бүх хүмүүсийг харах`,
+    },
   },
   people: {
     title: "Хүмүүс",

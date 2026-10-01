@@ -1,18 +1,20 @@
-import { ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronRight, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { SignHero } from "@/components/app/sign-hero";
-import { PersonTile } from "@/components/people/person-card";
+import { PeopleOrbit } from "@/components/home/people-orbit";
 import { ProductIcon } from "@/components/readings/product-icon";
 import { formatMnt, mn } from "@/i18n/mn";
+import { formatBirthDate } from "@/lib/birth-date";
 import { RELATION_GROUP } from "@/lib/domain";
 import { relationText } from "@/lib/people";
+import { cn } from "@/lib/utils";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { loadViewer, offersForPerson, productsByCode } from "@/server/catalog";
 import { db } from "@/server/db";
 import { listPeopleWithSigns } from "@/server/people-view";
+import { byCloseness, orbitReadings } from "@/server/orbit";
 import { listPurchases, subjectKey } from "@/server/purchase";
 
 export const metadata: Metadata = { title: mn.home.title };
@@ -23,15 +25,21 @@ export default async function HomePage() {
     loadAstroRefs(db),
     listPeopleWithSigns(user.id),
     loadViewer(db, user.id),
-    listPurchases(db, user.id, 50),
+    listPurchases(db, user.id, 200),
     productsByCode(db),
   ]);
-  const { sign, period } = describeBirthDate(self.birthDate, refs);
-  const others = people.filter((p) => p.relation !== "self");
+  const { sign } = describeBirthDate(self.birthDate, refs);
+  const others = byCloseness(people.filter((p) => p.relation !== "self"));
   const offers = (await offersForPerson(db, viewer, self)).filter(
     (o) => o.product.personCount === 1,
   );
   const catalog = allProducts;
+  const readings = orbitReadings(
+    self.id,
+    others.map((p) => p.id),
+    purchases,
+    (code) => catalog.get(code)?.personCount,
+  );
 
   // Suggest a synastry with the closest person we don't have one with yet (family/romantic first).
   const owned = new Set(
@@ -49,35 +57,35 @@ export default async function HomePage() {
         <h1 className="text-[34px] leading-tight font-semibold lg:text-[52px]">{self.name}</h1>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-        <SignHero
-          label={mn.hero.yourSign}
-          signCode={sign.code}
-          signName={sign.nameMn}
-          chips={[`${sign.startMd} – ${sign.endMd}`, `${period.no}-р үе`]}
+      <div className="flex flex-col gap-3">
+        <PeopleOrbit
+          self={{
+            id: self.id,
+            name: self.name,
+            avatarSeed: self.avatarSeed,
+            signName: sign.nameMn,
+            birthDate: formatBirthDate(self.birthDate),
+          }}
+          people={others}
+          readings={readings}
+          products={catalog}
+          aside={
+            <>
+              <span className="text-xs font-semibold tracking-widest text-highlight uppercase">
+                {mn.hero.yourSign}
+              </span>
+              <span className="font-heading text-[96px] leading-[0.9] font-semibold">
+                {sign.nameMn}
+              </span>
+              <span className="flex items-center gap-1.5 self-start rounded-full bg-surface px-3 py-1.5 text-sm font-semibold tabular-nums">
+                <CalendarDays className="size-4" aria-hidden />
+                {formatBirthDate(self.birthDate)}
+              </span>
+              <AllPeopleButton count={others.length} className="mt-3 self-start" />
+            </>
+          }
         />
-
-        <section className="flex flex-col gap-3 lg:rounded-[32px] lg:bg-surface lg:p-5">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-2xl font-semibold lg:text-[28px]">{mn.home.myPeople}</h2>
-            <Link href="/people" className="text-sm font-semibold text-highlight">
-              {mn.home.all}
-            </Link>
-          </div>
-          <div className="-mx-4 scrollbar-none flex gap-2.5 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
-            {others.map((p) => (
-              <PersonTile key={p.id} person={p} />
-            ))}
-            <Link
-              href="/people/new"
-              aria-label={mn.people.add}
-              className="flex w-22 shrink-0 flex-col items-center justify-center gap-1.5 rounded-3xl border-2 border-dashed border-border py-3 text-xs font-semibold text-highlight"
-            >
-              <Plus className="size-6" aria-hidden />
-              {mn.home.add}
-            </Link>
-          </div>
-        </section>
+        <AllPeopleButton count={others.length} className="lg:hidden" />
       </div>
 
       {suggestion && catalog.get("synastry")?.isActive && (
@@ -151,5 +159,25 @@ export default async function HomePage() {
         </section>
       )}
     </div>
+  );
+}
+
+/** Big tappable pill to the people list — the orbit shows only the closest few. */
+function AllPeopleButton({ count, className }: { count: number; className?: string }) {
+  return (
+    <Link
+      href="/people"
+      className={cn(
+        "flex h-13 items-center gap-3 rounded-full border border-border bg-surface py-1.5 pr-4 pl-1.5 transition-transform active:scale-[0.98]",
+        className,
+      )}
+    >
+      <span className="flex size-10 items-center justify-center rounded-full bg-fg text-bg">
+        <Users className="size-5" aria-hidden />
+      </span>
+      <span className="text-[15px] font-semibold">{mn.home.allPeople}</span>
+      <span className="text-sm text-muted-foreground">{mn.people.count(count)}</span>
+      <ChevronRight className="ml-auto size-5 lg:ml-2" aria-hidden />
+    </Link>
   );
 }

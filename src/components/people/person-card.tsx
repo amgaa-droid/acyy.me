@@ -44,25 +44,3 @@ export function PersonCard({ person }: { person: PersonSummary }) {
     </Link>
   );
 }
-
-/** Compact vertical tile for horizontal rows (home). */
-export function PersonTile({ person }: { person: PersonSummary }) {
-  return (
-    <Link
-      href={`/people/${person.id}`}
-      className="flex w-22 shrink-0 flex-col items-center gap-1.5 rounded-3xl bg-surface px-1 py-3"
-    >
-      <Avatar
-        seed={person.avatarSeed}
-        size={48}
-        className={cn("border-0", relationTint(person.relation))}
-      />
-      <span className="w-full truncate text-center text-xs font-semibold">
-        {relationText(person)}
-      </span>
-      <span className="-mt-1 w-full truncate text-center text-[11px] text-muted-foreground">
-        {person.signName}
-      </span>
-    </Link>
-  );
-}

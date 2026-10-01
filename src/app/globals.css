@@ -204,3 +204,84 @@
     display: none;
   }
 }
+
+/* Home orbit (src/components/home/people-orbit.tsx): planets drift, lines flow, stars twinkle. */
+@theme {
+  --animate-drift-a: drift-a 9s ease-in-out infinite;
+  --animate-drift-b: drift-b 11s ease-in-out infinite;
+  --animate-drift-c: drift-c 13s ease-in-out infinite;
+  --animate-breathe: breathe 6s ease-in-out infinite;
+  --animate-orbit-spin: orbit-spin 90s linear infinite;
+  --animate-orbit-flow: orbit-flow 1.8s linear infinite;
+  --animate-twinkle: twinkle 3.6s ease-in-out infinite;
+  --animate-ping-soft: ping-soft 2.6s ease-out infinite;
+
+  @keyframes drift-a {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 5px -9px;
+    }
+  }
+  @keyframes drift-b {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    33% {
+      translate: -7px 4px;
+    }
+    66% {
+      translate: 4px 8px;
+    }
+  }
+  @keyframes drift-c {
+    0%,
+    100% {
+      translate: 0 0;
+      rotate: 0deg;
+    }
+    50% {
+      translate: -5px -6px;
+      rotate: 4deg;
+    }
+  }
+  @keyframes breathe {
+    0%,
+    100% {
+      scale: 1;
+    }
+    50% {
+      scale: 1.03;
+    }
+  }
+  @keyframes orbit-spin {
+    to {
+      rotate: 360deg;
+    }
+  }
+  @keyframes orbit-flow {
+    to {
+      stroke-dashoffset: -20;
+    }
+  }
+  @keyframes twinkle {
+    0%,
+    100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+  @keyframes ping-soft {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--ring-2) 45%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 10px transparent;
+    }
+  }
+}
