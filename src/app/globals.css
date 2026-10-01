@@ -2,14 +2,21 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Dark mode follows the OS; dark = inverted palette. */
-@custom-variant dark (@media (prefers-color-scheme: dark));
+/* Dark mode follows the OS, except "cosmic-dark", which is always dark. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    @slot;
+  }
+  &:where([data-theme="cosmic-dark"], [data-theme="cosmic-dark"] *) {
+    @slot;
+  }
+}
 
 /*
- * Design tokens. Two colour modes, chosen by the user (cookie `theme`, see src/lib/theme.ts),
- * each with a light and a dark (OS) variant:
- *   cosmic — warm ivory ground, deep indigo ink, lavender/blush tints (default)
- *   white  — black & white, dark = inverted
+ * Design tokens. Three colour modes, chosen by the user (cookie `theme`, see src/lib/theme.ts):
+ *   cosmic      — warm ivory ground, deep indigo ink, lavender/blush tints (default); OS dark → night
+ *   cosmic-dark — the cosmic night palette, always (whatever the OS says)
+ *   white       — black & white, dark = inverted; follows the OS
  *
  *   --bg          page ground            --surface      cards, sheets
  *   --fg          ink / primary fills    --muted        secondary text
@@ -57,6 +64,28 @@
   --nav-active-bg: #ffffff;
   --nav-active-fg: #0a0a0a;
   --danger: #b42318;
+}
+
+/* Cosmic night: OS dark for "cosmic", always for "cosmic-dark". Keep both blocks in sync. */
+:root[data-theme="cosmic-dark"] {
+  color-scheme: dark;
+  --bg: #111027;
+  --surface: #1b1a3a;
+  --fg: #eeebfb;
+  --muted: #a7a2c9;
+  --border: #2b2957;
+  --subtle: #232149;
+  --highlight: #a39df5;
+  --highlight-fg: #111027;
+  --tint-1: #2b2862;
+  --tint-2: #3b2440;
+  --tint-3: #23332c;
+  --ring-2: #f0a192;
+  --nav-bg: #eeebfb;
+  --nav-fg: #6b6880;
+  --nav-active-bg: #111027;
+  --nav-active-fg: #eeebfb;
+  --danger: #f97066;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { APP_NAME } from "@/env";
 import { mn } from "@/i18n/mn";
-import { THEME_COOKIE, parseTheme } from "@/lib/theme";
+import { THEME_COOKIE, isAlwaysDark, parseTheme } from "@/lib/theme";
 import "./globals.css";
 
 // Mongolian Ө/ү live in the cyrillic-ext subset, not cyrillic — without it they fall back.
@@ -27,15 +27,21 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f1eb" },
-    { media: "(prefers-color-scheme: dark)", color: "#111027" },
-  ],
-};
+export async function generateViewport(): Promise<Viewport> {
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    // Browser chrome colour: follows the OS, except a theme that is always dark.
+    themeColor: isAlwaysDark(theme)
+      ? "#111027"
+      : [
+          { media: "(prefers-color-scheme: light)", color: "#f5f1eb" },
+          { media: "(prefers-color-scheme: dark)", color: "#111027" },
+        ],
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Read on the server so the first paint already has the right colours (no flash).

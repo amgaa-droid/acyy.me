@@ -320,10 +320,11 @@ export const mn = {
     admin: "Админ",
     roles: { owner: "Owner", editor: "Editor" },
     appearance: "Өнгөний горим",
-    appearanceHint: "Утасны dark mode-ыг автоматаар дагана.",
+    appearanceHint: "Cosmic, White нь утасны dark mode-ыг автоматаар дагана.",
   },
   themes: {
     cosmic: { name: "Cosmic", description: "Зааны яс, индиго, пастел" },
+    "cosmic-dark": { name: "Cosmic dark", description: "Үргэлж бараан" },
     white: { name: "White", description: "Цагаан хар, minimal" },
   },
   hero: {
