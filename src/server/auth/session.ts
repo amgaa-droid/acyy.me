@@ -6,7 +6,7 @@ import { cache } from "react";
 
 import { env } from "@/env";
 import { auth } from "./index";
-import { getAdminRole } from "./roles";
+import { getUserAdminRole } from "./roles";
 
 /** Current session (deduplicated per request). */
 export const getSession = cache(async () => auth.api.getSession({ headers: await headers() }));
@@ -18,7 +18,8 @@ export async function requireUser() {
   return session.user;
 }
 
-export function adminRoleOf(email: string) {
+/** Admin role of a signed-in user (verified email only, see getUserAdminRole). */
+export function adminRoleOf(user: { email: string; emailVerified: boolean }) {
   const { ADMIN_OWNER_EMAILS, ADMIN_EDITOR_EMAILS } = env();
-  return getAdminRole(email, { owners: ADMIN_OWNER_EMAILS, editors: ADMIN_EDITOR_EMAILS });
+  return getUserAdminRole(user, { owners: ADMIN_OWNER_EMAILS, editors: ADMIN_EDITOR_EMAILS });
 }

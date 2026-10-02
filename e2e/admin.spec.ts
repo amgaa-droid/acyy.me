@@ -25,6 +25,41 @@ test("regular users and signed-out visitors can't see the admin", async ({ page 
   expect((await page.request.get("/api/admin/templates/sign")).status()).toBe(404);
 });
 
+test("every admin page checks the role itself, not only the admin layout", async ({ page }) => {
+  await loginWithPassword(page, "user@test.local");
+  // What a client navigation inside /admin sends: "I already have the admin layout". The server
+  // then renders the page alone, so a check that lives only in the layout would be skipped.
+  const tree = encodeURIComponent(
+    JSON.stringify([
+      "",
+      { children: ["admin", { children: ["users", { children: ["__PAGE__", {}] }] }] },
+    ]),
+  );
+  for (const path of [
+    "/admin",
+    "/admin/business",
+    "/admin/content",
+    "/admin/content/edit?product=birthday&section=main&key=01-01",
+    "/admin/daily",
+    "/admin/import",
+    "/admin/landing",
+    "/admin/periods",
+    "/admin/zodiac",
+    "/admin/products",
+    "/admin/packages",
+    "/admin/topups",
+    "/admin/ai",
+  ]) {
+    const res = await page.request.get(path, {
+      headers: { RSC: "1", "Next-Router-State-Tree": tree },
+    });
+    const body = await res.text();
+    expect(body, path).toContain("NEXT_HTTP_ERROR_FALLBACK;404");
+    expect(body, path).not.toContain("startMd");
+    expect(body, path).not.toContain("/admin/content/edit?id=");
+  }
+});
+
 test("editor manages content but not products", async ({ page }) => {
   await loginWithPassword(page, "editor@test.local");
   expect((await page.goto("/admin"))?.status()).toBe(200);

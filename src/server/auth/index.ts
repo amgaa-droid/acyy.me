@@ -1,6 +1,7 @@
 import "server-only";
 
 import { betterAuth } from "better-auth";
+import { getSessionFromCtx } from "better-auth/api";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
@@ -12,6 +13,7 @@ import { account, session, user, verification } from "@/server/db/schema";
 import { sendEmail } from "@/server/email";
 import { otpEmail } from "@/server/email/templates";
 import { facebookPlaceholderEmail } from "@/server/legacy/users";
+import { mayAttachFacebook } from "./linking";
 
 const e = env();
 
@@ -73,6 +75,7 @@ export const auth = betterAuth({
   account: {
     // Facebook is trusted so a signed-in user can link it from /me (it rarely marks emails verified);
     // a link the user starts while signed in may carry another email (a phone-only Facebook).
+    // Joining an existing account by email alone is refused below (databaseHooks.account).
     accountLinking: {
       enabled: true,
       trustedProviders: ["google", "facebook", "email-otp"],
@@ -81,6 +84,20 @@ export const auth = betterAuth({
   },
   socialProviders,
   databaseHooks: {
+    account: {
+      create: {
+        before: async (acc, ctx) => {
+          if (acc.providerId !== "facebook") return;
+          const [owner] = await db
+            .select({ id: user.id, emailVerified: user.emailVerified, createdAt: user.createdAt })
+            .from(user)
+            .where(eq(user.id, acc.userId));
+          const current = ctx ? await getSessionFromCtx(ctx, { disableRefresh: true }) : null;
+          if (!mayAttachFacebook({ owner: owner ?? null, sessionUserId: current?.user.id ?? null }))
+            return false;
+        },
+      },
+    },
     session: {
       create: {
         after: async (s) => {

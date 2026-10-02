@@ -13,7 +13,7 @@ import { DAILY_TEMPLATE_MAX_DAYS, buildDailyTemplate } from "@/server/import/dai
  */
 export async function GET(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canManageContent(adminRoleOf(session.user.email))) {
+  if (!session || !canManageContent(adminRoleOf(session.user))) {
     return new Response("Not found", { status: 404 });
   }
   const params = new URL(req.url).searchParams;

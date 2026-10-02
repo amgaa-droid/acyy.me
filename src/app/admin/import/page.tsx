@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { mn } from "@/i18n/mn";
+import { requireAdmin } from "@/server/admin/guard";
 import { db } from "@/server/db";
 import { allKinds } from "@/server/import/kinds";
 import { loadProductDefs } from "@/server/products";
@@ -10,6 +11,7 @@ import { ImportForm } from "./import-form";
 export const metadata: Metadata = { title: mn.admin.nav.import };
 
 export default async function ImportPage({ searchParams }: PageProps<"/admin/import">) {
+  await requireAdmin();
   const { kind } = await searchParams;
   const kinds = allKinds(await loadProductDefs(db));
   return (

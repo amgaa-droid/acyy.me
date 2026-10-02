@@ -12,7 +12,7 @@ import { loadProductDefs } from "@/server/products";
 /** GET /api/admin/templates/:kind → pre-filled .xlsx template (Editor/Owner only). */
 export async function GET(_req: Request, ctx: RouteContext<"/api/admin/templates/[kind]">) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canManageContent(adminRoleOf(session.user.email))) {
+  if (!session || !canManageContent(adminRoleOf(session.user))) {
     return new Response("Not found", { status: 404 });
   }
   const { kind } = await ctx.params;

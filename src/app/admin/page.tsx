@@ -5,6 +5,7 @@ import { Section, Stat, StatsHeader, int, pct } from "@/components/admin/stats-u
 import { formatMnt, mn } from "@/i18n/mn";
 import { cn } from "@/lib/utils";
 import { contentCoverage } from "@/server/admin/content";
+import { requireAdmin } from "@/server/admin/guard";
 import { change, countedUser, dashboardStats, parseRange, ratio } from "@/server/admin/stats";
 import { db } from "@/server/db";
 import { persons, user } from "@/server/db/schema";
@@ -17,6 +18,7 @@ const d = mn.admin.dashboard;
  * live on /admin/business.
  */
 export default async function AdminDashboard({ searchParams }: PageProps<"/admin">) {
+  await requireAdmin();
   const range = parseRange((await searchParams).range);
   const [coverage, [{ users }], [{ people }], s] = await Promise.all([
     contentCoverage(db),

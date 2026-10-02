@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { mn } from "@/i18n/mn";
+import { requireAdmin } from "@/server/admin/guard";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { db } from "@/server/db";
 import { ZodiacEditor } from "./zodiac-editor";
@@ -8,6 +9,7 @@ import { ZodiacEditor } from "./zodiac-editor";
 export const metadata: Metadata = { title: mn.admin.nav.zodiac };
 
 export default async function ZodiacPage() {
+  await requireAdmin();
   const { signs } = await loadAstroRefs(db);
   return (
     <div className="flex max-w-3xl flex-col gap-5">

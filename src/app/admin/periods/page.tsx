@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { mn } from "@/i18n/mn";
+import { requireAdmin } from "@/server/admin/guard";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { db } from "@/server/db";
 import { PeriodsEditor } from "./periods-editor";
@@ -8,6 +9,7 @@ import { PeriodsEditor } from "./periods-editor";
 export const metadata: Metadata = { title: mn.admin.nav.periods };
 
 export default async function PeriodsPage() {
+  await requireAdmin();
   const { periods } = await loadAstroRefs(db);
   return (
     <div className="flex max-w-3xl flex-col gap-5">

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { canManageContent, canManageMoney, getAdminRole, parseEmailList } from "./roles";
+import {
+  canManageContent,
+  canManageMoney,
+  getAdminRole,
+  getUserAdminRole,
+  parseEmailList,
+} from "./roles";
 
 const lists = { owners: "Owner@Test.local, boss@x.mn", editors: "editor@test.local,," };
 
@@ -15,6 +21,13 @@ describe("admin roles", () => {
     expect(getAdminRole("EDITOR@test.local", lists)).toBe("editor");
     expect(getAdminRole("user@test.local", lists)).toBeNull();
     expect(getAdminRole(null, lists)).toBeNull();
+  });
+
+  it("gives a role only to a verified email", () => {
+    const owner = { email: "owner@test.local", emailVerified: true };
+    expect(getUserAdminRole(owner, lists)).toBe("owner");
+    expect(getUserAdminRole({ ...owner, emailVerified: false }, lists)).toBeNull();
+    expect(getUserAdminRole(null, lists)).toBeNull();
   });
 
   it("owner-only money, owner+editor content", () => {

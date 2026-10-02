@@ -8,6 +8,7 @@ import { mn } from "@/i18n/mn";
 import { displayKey } from "@/lib/content-keys-display";
 import { KEY_TYPE_ARITY } from "@/lib/domain";
 import { getContentEntry } from "@/server/admin/content";
+import { requireAdmin } from "@/server/admin/guard";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { db } from "@/server/db";
 import { activeFields, loadProductDef } from "@/server/products";
@@ -22,6 +23,7 @@ const newSchema = z.object({
 });
 
 export default async function EditContentPage({ searchParams }: PageProps<"/admin/content/edit">) {
+  await requireAdmin();
   const sp = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 

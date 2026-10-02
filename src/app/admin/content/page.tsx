@@ -6,6 +6,7 @@ import { mn } from "@/i18n/mn";
 import { displayKey } from "@/lib/content-keys-display";
 import { cn } from "@/lib/utils";
 import { PAGE_SIZE, listContent, listQuerySchema, missingKeys } from "@/server/admin/content";
+import { requireAdmin } from "@/server/admin/guard";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { db } from "@/server/db";
 import { activeParts, loadProductDefs } from "@/server/products";
@@ -15,6 +16,7 @@ export const metadata: Metadata = { title: mn.admin.nav.content };
 const t = mn.admin;
 
 export default async function AdminContentPage({ searchParams }: PageProps<"/admin/content">) {
+  await requireAdmin();
   const raw = await searchParams;
   const parsed = listQuerySchema.safeParse(
     Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])),

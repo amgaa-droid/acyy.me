@@ -21,6 +21,17 @@ export function getAdminRole(
   return null;
 }
 
+/**
+ * Role of a signed-in user. The email must be verified (OTP, Google, …): a password sign-up
+ * proves nothing about who owns the address, so it never grants a role by itself.
+ */
+export function getUserAdminRole(
+  user: { email: string; emailVerified: boolean } | null | undefined,
+  lists: { owners: string | undefined; editors: string | undefined },
+): AdminRole | null {
+  return user?.emailVerified ? getAdminRole(user.email, lists) : null;
+}
+
 export function canManageContent(role: AdminRole | null): boolean {
   return role === "owner" || role === "editor";
 }

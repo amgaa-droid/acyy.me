@@ -31,7 +31,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
   const linked = await linkedProviders(db, user.id);
   const { sign } = describeBirthDate(self.birthDate, await loadAstroRefs(db));
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
-  const role = adminRoleOf(user.email);
+  const role = adminRoleOf(user);
   const balance = await getBalance(db, user.id);
   const selfAge = ageOn(parseIsoDate(self.birthDate)!, todayYmd());
   const linkedTo = await Promise.all(
