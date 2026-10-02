@@ -71,7 +71,13 @@ export const auth = betterAuth({
     },
   },
   account: {
-    accountLinking: { enabled: true, trustedProviders: ["google", "email-otp"] },
+    // Facebook is trusted so a signed-in user can link it from /me (it rarely marks emails verified);
+    // a link the user starts while signed in may carry another email (a phone-only Facebook).
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "facebook", "email-otp"],
+      allowDifferentEmails: true,
+    },
   },
   socialProviders,
   databaseHooks: {

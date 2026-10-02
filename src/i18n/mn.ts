@@ -10,7 +10,6 @@ export const mn = {
     next: "Үргэлжлүүлэх",
     back: "Буцах",
     currency: "₮",
-    entertainmentOnly: "Зөвхөн зугаа цэнгэлийн зорилготой.",
   },
   tabs: {
     home: "Нүүр",
@@ -442,6 +441,18 @@ export const mn = {
     roles: { owner: "Owner", editor: "Editor" },
     appearance: "Өнгөний горим",
     appearanceHint: "Cosmic, White нь утасны dark mode-ыг автоматаар дагана.",
+    accounts: {
+      title: "Нэвтрэх данс",
+      hint: "Холбосон дансаараа ч нэвтэрч болно.",
+      providers: { google: "Google", facebook: "Facebook" } as Record<string, string>,
+      link: "Холбох",
+      linked: "Холбогдсон",
+      linkAria: (provider: string) => `${provider} данс холбох`,
+      errors: {
+        account_already_linked_to_different_user: "Энэ данс өөр хэрэглэгчид холбогдсон байна.",
+        generic: "Холбож чадсангүй. Дахин оролдоно уу.",
+      } as Record<string, string>,
+    },
   },
   themes: {
     cosmic: { name: "Cosmic", description: "Зааны яс, индиго, пастел" },

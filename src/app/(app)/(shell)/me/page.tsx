@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/app/avatar";
 import { PageTitle } from "@/components/app/empty-state";
 import { SignOutButton } from "@/components/app/sign-out-button";
+import { LinkedAccounts } from "@/components/app/linked-accounts";
 import { AdultConfirm } from "@/components/readings/adult-confirm";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { peopleLinkedTo } from "@/server/invitations";
@@ -14,15 +15,20 @@ import { ThemePicker } from "@/components/app/theme-picker";
 import { formatMnt, mn } from "@/i18n/mn";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
+import { linkedProviders } from "@/server/auth/accounts";
 import { requireOnboardedUser } from "@/server/auth/current";
+import { enabledSocialProviders } from "@/server/auth";
 import { adminRoleOf } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { getBalance } from "@/server/wallet";
 
 export const metadata: Metadata = { title: mn.me.title };
 
-export default async function MePage() {
+export default async function MePage({ searchParams }: PageProps<"/me">) {
   const { user, self } = await requireOnboardedUser();
+  // Back from linking Google/Facebook: Better Auth adds ?error=… when it failed.
+  const { error } = await searchParams;
+  const linked = await linkedProviders(db, user.id);
   const { sign } = describeBirthDate(self.birthDate, await loadAstroRefs(db));
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   const role = adminRoleOf(user.email);
@@ -89,7 +95,14 @@ export default async function MePage() {
             </ul>
           </section>
         )}
-        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-4 lg:row-start-1">
+        <div className="lg:col-start-1">
+          <LinkedAccounts
+            providers={enabledSocialProviders}
+            linked={linked}
+            error={typeof error === "string" ? error : undefined}
+          />
+        </div>
+        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-5 lg:row-start-1">
           <div>
             <h2 className="text-2xl font-semibold">{mn.me.appearance}</h2>
             <p className="text-sm text-muted-foreground">{mn.me.appearanceHint}</p>
@@ -100,7 +113,6 @@ export default async function MePage() {
       <div className="mt-8">
         <SignOutButton />
       </div>
-      <p className="mt-8 text-xs text-muted-foreground">{mn.common.entertainmentOnly}</p>
     </>
   );
 }
