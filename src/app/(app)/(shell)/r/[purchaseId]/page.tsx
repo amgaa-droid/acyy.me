@@ -79,15 +79,11 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
         >
           <ChevronLeft className="size-5" aria-hidden /> {t.back}
         </Link>
-        <div className="flex min-w-0 items-center gap-2">
-          {pair && (
-            <span className="min-w-0 truncate rounded-full bg-surface px-3 py-1.5 text-[11px] font-semibold tracking-wider text-highlight uppercase lg:px-3.5 lg:text-xs lg:tracking-widest">
-              {reading.viaLink ? t.freeView : reading.productName}
-            </span>
-          )}
-          {/* Only the birthday and pair readings make a card; any other reading shares selected text. */}
-          {SHARE_CARD.has(reading.productCode) && <ShareCardButton purchaseId={reading.id} />}
-        </div>
+        {pair && (
+          <span className="min-w-0 truncate rounded-full bg-surface px-3 py-1.5 text-[11px] font-semibold tracking-wider text-highlight uppercase lg:px-3.5 lg:text-xs lg:tracking-widest">
+            {reading.viaLink ? t.freeView : reading.productName}
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:items-start">
@@ -142,6 +138,9 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
               </div>
             </section>
           )}
+          {/* Under the name card: only the birthday and pair readings make a card; any other
+              reading shares selected text. */}
+          {SHARE_CARD.has(reading.productCode) && <ShareCardButton purchaseId={reading.id} />}
           {summary.length > 0 && <SummaryFields fields={summary} />}
         </div>
 

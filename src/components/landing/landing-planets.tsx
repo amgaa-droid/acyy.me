@@ -311,9 +311,12 @@ export function LandingPlanets({
         style={size ? { top: desktop ? (short ? 88 : 112) : short ? 72 : 80 } : undefined}
       >
         {/* Short screens keep only the headline, smaller: the stage needs the height. */}
-        <span className="flex items-center gap-1.5 rounded-full bg-surface/80 px-3 py-1.5 text-xs font-semibold text-highlight short:hidden">
-          <Sparkles className="size-3.5" aria-hidden /> {copy.eyebrow}
-        </span>
+        {/* Phones: two balanced lines of plain text (a pill wrapped to two lines looked boxed in). */}
+        <p className="max-w-[17rem] text-center text-[13px] leading-snug font-semibold tracking-wide text-balance text-highlight short:hidden lg:flex lg:max-w-none lg:items-center lg:gap-1.5 lg:rounded-full lg:bg-surface/80 lg:px-3 lg:py-1.5 lg:text-xs lg:tracking-normal">
+          <Sparkles className="mr-1 inline size-3.5 -translate-y-px align-middle lg:mr-0" aria-hidden />
+          {/* No line break after the hyphen of "Astrology-ийн". */}
+          {copy.eyebrow.replace(/-/g, "\u2011")}
+        </p>
         <h1 className="font-heading text-[34px] leading-[1.05] font-semibold text-balance short:text-[28px] lg:text-6xl lg:short:text-5xl">
           {copy.title}
         </h1>
