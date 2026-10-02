@@ -1,7 +1,25 @@
-import { and, count, countDistinct, eq, gte, isNull, lt, sql, sum } from "drizzle-orm";
+import {
+  and,
+  count,
+  countDistinct,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 
 import type { AppDb } from "@/server/db/types";
 import { previewViews, purchases, topupPackages, topups, user, wallets } from "@/server/db/schema";
+
+/**
+ * Migrated acyy.me accounts nobody has signed into yet (src/server/legacy) are kept out of
+ * the user and people counts until their first sign-in.
+ */
+export const countedUser = or(isNull(user.legacyUserId), isNotNull(user.legacyClaimedAt));
 
 /**
  * Admin dashboard numbers (/admin). All windows are rolling ("last 7 days" = now − 7×24 h) and
@@ -112,7 +130,12 @@ async function topupNumbers(db: AppDb, since: Date, until: Date) {
 }
 
 async function spendNumbers(db: AppDb, since: Date, until: Date) {
-  const inWindow = and(gte(purchases.createdAt, since), lt(purchases.createdAt, until));
+  // Readings bought on the old acyy.me site (migrated, legacy_ref set) aren't app spending.
+  const inWindow = and(
+    gte(purchases.createdAt, since),
+    lt(purchases.createdAt, until),
+    isNull(purchases.legacyRef),
+  );
   const [[total], byProduct, [repeat]] = await Promise.all([
     db
       .select({
@@ -212,7 +235,14 @@ async function newUsers(db: AppDb, since: Date, until: Date) {
   const [r] = await db
     .select({ n: count() })
     .from(user)
-    .where(and(isNull(user.deletedAt), gte(user.createdAt, since), lt(user.createdAt, until)));
+    .where(
+      and(
+        isNull(user.deletedAt),
+        isNull(user.legacyUserId), // migrated acyy.me accounts didn't sign up here
+        gte(user.createdAt, since),
+        lt(user.createdAt, until),
+      ),
+    );
   return r.n;
 }
 
@@ -232,7 +262,13 @@ async function series(db: AppDb, range: Range, until: Date) {
     db
       .select({ i: bucket(purchases.createdAt), v: sum(purchases.pricePaid) })
       .from(purchases)
-      .where(and(gte(purchases.createdAt, b.since), lt(purchases.createdAt, until)))
+      .where(
+        and(
+          gte(purchases.createdAt, b.since),
+          lt(purchases.createdAt, until),
+          isNull(purchases.legacyRef),
+        ),
+      )
       .groupBy(sql`1`),
   ]);
   const fill = (rows: { i: number; v: string | null }[]) => {

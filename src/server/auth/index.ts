@@ -1,6 +1,7 @@
 import "server-only";
 
 import { betterAuth } from "better-auth";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
@@ -10,6 +11,7 @@ import { db } from "@/server/db";
 import { account, session, user, verification } from "@/server/db/schema";
 import { sendEmail } from "@/server/email";
 import { otpEmail } from "@/server/email/templates";
+import { facebookPlaceholderEmail } from "@/server/legacy/users";
 
 const e = env();
 
@@ -18,7 +20,18 @@ const socialProviders = {
     ? { google: { clientId: e.GOOGLE_CLIENT_ID, clientSecret: e.GOOGLE_CLIENT_SECRET } }
     : {}),
   ...(e.FACEBOOK_CLIENT_ID && e.FACEBOOK_CLIENT_SECRET
-    ? { facebook: { clientId: e.FACEBOOK_CLIENT_ID, clientSecret: e.FACEBOOK_CLIENT_SECRET } }
+    ? {
+        facebook: {
+          clientId: e.FACEBOOK_CLIENT_ID,
+          clientSecret: e.FACEBOOK_CLIENT_SECRET,
+          // Facebook accounts made with a phone number have no email; Better Auth refuses those
+          // before it looks the account up by its Facebook id, which migrated acyy.me users need.
+          mapProfileToUser: (profile: { email?: string | null; id?: string; sub?: string }) =>
+            profile.email
+              ? {}
+              : { email: facebookPlaceholderEmail(profile.id ?? profile.sub ?? "") },
+        },
+      }
     : {}),
 };
 
@@ -28,7 +41,9 @@ export const enabledSocialProviders = Object.keys(socialProviders) as ("google" 
  * Better Auth (SPEC §5). The email address is the identity.
  * - email + password only when AUTH_PASSWORD_ENABLED (dev/staging), no reset flow
  * - email OTP: 6 digits, 10 min, 5 attempts; signs up new users
- * - Google/Facebook only when their env is set (C9)
+ * - Google/Facebook only when their env is set (C9); Facebook reuses the old acyy.me app, so
+ *   migrated users (src/server/legacy) sign straight into their account by Facebook id
+ * - a migrated account's first session marks it claimed (user.legacy_claimed_at)
  * - DB sessions, 30 days
  */
 export const auth = betterAuth({
@@ -59,6 +74,24 @@ export const auth = betterAuth({
     accountLinking: { enabled: true, trustedProviders: ["google", "email-otp"] },
   },
   socialProviders,
+  databaseHooks: {
+    session: {
+      create: {
+        after: async (s) => {
+          await db
+            .update(user)
+            .set({ legacyClaimedAt: new Date() })
+            .where(
+              and(
+                eq(user.id, s.userId),
+                isNotNull(user.legacyUserId),
+                isNull(user.legacyClaimedAt),
+              ),
+            );
+        },
+      },
+    },
+  },
   // SPEC §12: 5/min/IP for login & OTP. Off in dev/test so local E2E runs aren't throttled.
   rateLimit: {
     enabled: e.NODE_ENV === "production",

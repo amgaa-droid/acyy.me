@@ -75,6 +75,10 @@ export const user = pgTable("user", {
   /** First-run guide progress: step → when it was done (src/server/onboarding.ts). */
   onboarding: jsonb().$type<Record<string, string>>().notNull().default({}),
   deletedAt: timestamp({ withTimezone: true }),
+  /** Old acyy.me `Users.UserID` for accounts migrated from the legacy site (src/server/legacy). */
+  legacyUserId: integer().unique(),
+  /** First sign-in of a migrated account; until then it's left out of the admin numbers. */
+  legacyClaimedAt: timestamp({ withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: timestamp({ withTimezone: true })
     .notNull()
@@ -161,10 +165,13 @@ export const persons = pgTable(
     birthDate: date({ mode: "string" }).notNull(),
     avatarSeed: text().notNull(),
     linkedUserId: uuid().references(() => user.id, { onDelete: "set null" }),
+    /** Dedup key of a person migrated from the legacy site ("{birthDate}|{label}"). */
+    legacyKey: text(),
     createdAt: createdAt(),
     deletedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
+    uniqueIndex("persons_owner_legacy_key").on(t.ownerUserId, t.legacyKey),
     uniqueIndex("persons_one_self_per_owner")
       .on(t.ownerUserId)
       .where(sql`${t.isSelf} AND ${t.deletedAt} IS NULL`),
@@ -439,6 +446,8 @@ export const purchases = pgTable(
     personBId: uuid().references(() => persons.id, { onDelete: "set null" }),
     subjectKey: text().notNull(),
     snapshot: jsonb().$type<PurchaseSnapshot>().notNull(),
+    /** "action:{id}" / "relation:{id}" for purchases made on the legacy site (not revenue). */
+    legacyRef: text(),
     createdAt: createdAt(),
   },
   (t) => [

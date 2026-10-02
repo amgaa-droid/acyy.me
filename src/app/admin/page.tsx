@@ -1,11 +1,11 @@
-import { count, isNull } from "drizzle-orm";
+import { and, count, inArray, isNull } from "drizzle-orm";
 import Link from "next/link";
 
 import { Section, Stat, StatsHeader, int, pct } from "@/components/admin/stats-ui";
 import { formatMnt, mn } from "@/i18n/mn";
 import { cn } from "@/lib/utils";
 import { contentCoverage } from "@/server/admin/content";
-import { change, dashboardStats, parseRange, ratio } from "@/server/admin/stats";
+import { change, countedUser, dashboardStats, parseRange, ratio } from "@/server/admin/stats";
 import { db } from "@/server/db";
 import { persons, user } from "@/server/db/schema";
 
@@ -20,8 +20,19 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
   const range = parseRange((await searchParams).range);
   const [coverage, [{ users }], [{ people }], s] = await Promise.all([
     contentCoverage(db),
-    db.select({ users: count() }).from(user).where(isNull(user.deletedAt)),
-    db.select({ people: count() }).from(persons).where(isNull(persons.deletedAt)),
+    db
+      .select({ users: count() })
+      .from(user)
+      .where(and(isNull(user.deletedAt), countedUser)),
+    db
+      .select({ people: count() })
+      .from(persons)
+      .where(
+        and(
+          isNull(persons.deletedAt),
+          inArray(persons.ownerUserId, db.select({ id: user.id }).from(user).where(countedUser)),
+        ),
+      ),
     dashboardStats(db, range),
   ]);
   const { cur, prev } = s;

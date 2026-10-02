@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { isAvatarSeed } from "@/lib/avatar-seeds";
@@ -118,6 +118,62 @@ export async function createSelf(db: AppDb, userId: string, input: SelfInput): P
     .insert(persons)
     .values({ ownerUserId: userId, isSelf: true, relation: "self", ...data })
     .returning();
+  return self;
+}
+
+/**
+ * People migrated from the old acyy.me site (src/server/legacy) for an account without "Би":
+ * onboarding asks which one is the user. "Би"-labelled ones first, then by birth date.
+ */
+export async function listSelfCandidates(db: AppDb, userId: string): Promise<Person[]> {
+  return db
+    .select()
+    .from(persons)
+    .where(
+      and(
+        eq(persons.ownerUserId, userId),
+        isNull(persons.deletedAt),
+        eq(persons.isSelf, false),
+        isNotNull(persons.legacyKey),
+      ),
+    )
+    .orderBy(sql`${persons.relationLabel} = 'Би' DESC NULLS LAST`, asc(persons.birthDate));
+}
+
+export const promoteSelfSchema = z.object({
+  personId: z.uuid(),
+  name: personNameSchema,
+  gender: z.enum(GENDERS).default("unspecified"),
+  avatarSeed: avatarSeedSchema,
+});
+export type PromoteSelfInput = z.input<typeof promoteSelfSchema>;
+
+/**
+ * Makes an existing person the user's "Би" (onboarding of a migrated account). The birth date
+ * stays as it is (rule 2); the gender only changes while it isn't locked.
+ */
+export async function promoteToSelf(
+  db: AppDb,
+  userId: string,
+  input: PromoteSelfInput,
+): Promise<Person> {
+  const data = promoteSelfSchema.parse(input);
+  const person = await getPerson(db, userId, data.personId);
+  if (person.isSelf || (await getSelf(db, userId))) throw new SelfAlreadyExistsError();
+  const keepGender = data.gender !== person.gender && (await isGenderLocked(db, userId, person.id));
+  const [self] = await db
+    .update(persons)
+    .set({
+      isSelf: true,
+      relation: "self",
+      relationLabel: null,
+      name: data.name,
+      gender: keepGender ? person.gender : data.gender,
+      avatarSeed: data.avatarSeed,
+    })
+    .where(owned(userId, person.id))
+    .returning();
+  if (!self) throw new PersonNotFoundError();
   return self;
 }
 

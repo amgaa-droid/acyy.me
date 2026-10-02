@@ -141,6 +141,13 @@
       "when": 1790955597259,
       "tag": "0019_app_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790961512687,
+      "tag": "0020_legacy_migration",
+      "breakpoints": true
     }
   ]
 }

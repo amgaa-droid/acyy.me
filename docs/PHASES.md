@@ -156,6 +156,21 @@
 
 ---
 
+## C7.7 — Хуучин acyy.me хэрэглэгчид (SPEC §5.1)
+
+- [x] Migration 0020: `user.legacy_user_id`, `user.legacy_claimed_at`, `persons.legacy_key`, `purchases.legacy_ref`
+- [x] `src/server/legacy/mssql.ts` (SQL Server dump уншигч), `users.ts` (төлөвлөгөө), `apply.ts` (idempotent бичилт)
+- [x] Better Auth: Facebook имэйлгүй үед орлуулах имэйл, анхны session → `legacy_claimed_at`
+- [x] Onboarding "Та аль нь вэ?" → `promoteToSelf`; админы тооноос нэвтрээгүй данс, хуучин худалдан авалтыг хасна
+- [x] **Тест:** dump задлах, төлөвлөгөө (харилцаа, нэр, давхардал, огноо), бичилт (idempotent, зөрчил rollback), "Би" сонгох
+- [ ] Серверт: Facebook app-д `https://acyy.me/api/auth/callback/facebook` redirect URI, `FACEBOOK_CLIENT_SECRET`
+- [ ] Шилжүүлэх өдөр: шинэ dump → `scripts/legacy-users.ts --commit` production DB дээр; өөрийн хуучин FB-ээр нэвтэрч шалгах
+- [ ] Нууцлалын бодлогод хуучин сайтын мэдээлэл шилжсэнийг тусгах
+
+**Дууссаны шалгуур:** Хуучин Facebook бүртгэлээр нэвтрэхэд хуучин зурхай, үлдэгдэл харагдаж, "Та аль нь вэ?"-гээр "Би"-гээ сонгоно.
+
+---
+
 ## C7.6 — Бүтээгдэхүүн бүтээгч (~2 өдөр)
 
 - [x] `product_parts` (хэсэг: `key_type` + `by_gender`), `product_fields` (дэд хэсэг: хэлбэр, үнэгүй, заавал, архив); `content_entries.body` → `fields jsonb` (migration 0004 хуучин `## ` хэсэг, төрсөн өдрийн тизерийг хөрвүүлнэ; 0005 `body` устгана)
