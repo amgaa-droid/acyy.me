@@ -97,6 +97,16 @@ export const SECTION_SCHEMAS = {
           ctx.addIssue({ code: "custom", path: ["links", i, "b"], message: "bad_pair" });
       });
     }),
+  daily: z.object({
+    eyebrow: optStr(LIMITS.short * 2),
+    title: str(LIMITS.title),
+    body: optStr(LIMITS.text),
+    pickSign: str(LIMITS.short * 2),
+    empty: str(LIMITS.title),
+    more: str(LIMITS.short * 2),
+    cta: str(LIMITS.short * 2),
+    note: optStr(LIMITS.title),
+  }),
   stats: z.object({
     items: z.array(z.object({ value: str(LIMITS.short), label: str(LIMITS.title) })).max(4),
   }),
@@ -148,6 +158,7 @@ export const SECTION_SCHEMAS = {
 
 /** Sections below the first screen, in the order and visibility the admin chooses. */
 export const BODY_SECTIONS = [
+  "daily",
   "stats",
   "products",
   "synastry",
@@ -231,6 +242,7 @@ export const LANDING_DEFAULTS: LandingContent = {
     example: l.planets.example,
     cta: l.planets.checkYours,
   },
+  daily: { ...l.daily },
   stats: { items: l.stats.map((s) => ({ value: s.value, label: s.label })) },
   products: {
     title: l.productsTitle,
@@ -302,8 +314,17 @@ export function mergeLandingContent(raw: unknown): LandingContent {
       if (parsed.success && !layout.some((x) => x.key === parsed.data.key)) layout.push(parsed.data);
     }
   }
-  for (const key of BODY_SECTIONS)
-    if (!layout.some((x) => x.key === key)) layout.push({ key, visible: true });
+  // A section added since the content was saved goes in at its default place: right after the
+  // nearest section that precedes it in BODY_SECTIONS, else right before the nearest that
+  // follows it, else at the end.
+  const at = (k: BodySection) => layout.findIndex((x) => x.key === k);
+  BODY_SECTIONS.forEach((key, i) => {
+    if (at(key) >= 0) return;
+    const prev = BODY_SECTIONS.slice(0, i).reverse().map(at).find((j) => j >= 0);
+    const next = BODY_SECTIONS.slice(i + 1).map(at).find((j) => j >= 0);
+    const pos = prev !== undefined ? prev + 1 : next !== undefined ? next : layout.length;
+    layout.splice(pos, 0, { key, visible: true });
+  });
   out.layout = layout;
   return out as LandingContent;
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Avatar } from "@/components/app/avatar";
 import { ConstellationArt } from "@/components/app/constellation";
+import { DailyTeaser } from "@/components/landing/daily-teaser";
 import { LandingPlanets } from "@/components/landing/landing-planets";
 import { StickyCta } from "@/components/landing/sticky-cta";
 import { ProductIcon } from "@/components/readings/product-icon";
@@ -16,6 +17,7 @@ import { fillTokens, type BodySection, type LandingContent } from "@/lib/landing
 import { cn } from "@/lib/utils";
 import { describeBirthDate, type AstroRefs } from "@/server/astro/refs";
 import type { Product } from "@/server/catalog";
+import type { LandingDaily } from "@/server/landing-daily";
 import { bestValueIndex, type PackageOption } from "@/server/topup-packages";
 
 
@@ -31,11 +33,14 @@ export function LandingView({
   products,
   packages,
   refs,
+  daily,
 }: {
   content: LandingContent;
   products: Product[];
   packages: PackageOption[];
   refs: AstroRefs;
+  /** Today's free daily horoscope teaser; null hides the section (no active kinds). */
+  daily: LandingDaily | null;
 }) {
   const t = mn.landing;
   const birthdayPrice = products.find((p) => p.code === "birthday")?.price ?? 2000;
@@ -64,6 +69,19 @@ export function LandingView({
   };
 
   const sections: Record<BodySection, React.ReactNode> = {
+    daily: daily && (
+      <DailyTeaser
+        copy={{
+          ...c.daily,
+          eyebrow: f(c.daily.eyebrow),
+          title: f(c.daily.title),
+          body: f(c.daily.body),
+          cta: f(c.daily.cta),
+          note: f(c.daily.note),
+        }}
+        data={daily}
+      />
+    ),
     stats: c.stats.items.length > 0 && (
       <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
         {c.stats.items.map((s, i) => (

@@ -265,6 +265,7 @@ export function LandingEditor(props: Props) {
             <SeoCard />
             <HeroCard />
             <DemoCard suggestions={props.suggestions} />
+            <DailyCard />
             <StatsCard />
             <ProductsCard products={props.products} />
             <SynastryCard suggestions={props.suggestions} />
@@ -933,6 +934,22 @@ function DemoCard({ suggestions }: { suggestions: string[] }) {
         <Text path={["demo", "example"]} label={tf.example} max={LIMITS.short} />
         <Text path={["demo", "cta"]} label={tf.cta} max={LIMITS.short} />
       </div>
+    </Card>
+  );
+}
+
+function DailyCard() {
+  return (
+    <Card id="daily">
+      <p className="text-xs text-muted-foreground">{t.dailyHint}</p>
+      <Text path={["daily", "eyebrow"]} label={tf.eyebrow} max={LIMITS.short * 2} />
+      <Text path={["daily", "title"]} label={tf.title} max={LIMITS.title} />
+      <Text path={["daily", "body"]} label={tf.body} max={LIMITS.text} multiline />
+      <Text path={["daily", "pickSign"]} label={tf.pickSign} max={LIMITS.short * 2} />
+      <Text path={["daily", "empty"]} label={tf.empty} max={LIMITS.title} />
+      <Text path={["daily", "more"]} label={tf.more} max={LIMITS.short * 2} />
+      <Text path={["daily", "cta"]} label={tf.cta} max={LIMITS.short * 2} />
+      <Text path={["daily", "note"]} label={tf.note} max={LIMITS.title} multiline />
     </Card>
   );
 }

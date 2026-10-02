@@ -119,11 +119,35 @@ describe("mergeLandingContent", () => {
         { key: "stats", visible: true },
       ],
     });
-    expect(merged.layout.slice(0, 2)).toEqual([
-      { key: "faq", visible: false },
-      { key: "stats", visible: true },
-    ]);
+    // Stored order and visibility kept; missing sections sit next to their default neighbours
+    // ("final" after "faq", "daily" right before "stats").
+    const keys = merged.layout.map((l) => l.key);
+    expect(merged.layout[0]).toEqual({ key: "faq", visible: false });
+    expect(keys.indexOf("final")).toBe(keys.indexOf("faq") + 1);
+    expect(keys.indexOf("daily")).toBe(keys.indexOf("stats") - 1);
     expect(merged.layout.map((l) => l.key).sort()).toEqual([...BODY_SECTIONS].sort());
+  });
+
+  it("puts a section added later at its default place, keeping the admin's order and hiding", () => {
+    // Layout saved before "daily" existed: stats and wallet hidden, faq moved first.
+    const saved = BODY_SECTIONS.filter((k) => k !== "daily").map((key) => ({
+      key,
+      visible: key !== "stats" && key !== "wallet",
+    }));
+    const merged = mergeLandingContent({ layout: [saved[6], ...saved.filter((_, i) => i !== 6)] });
+    expect(merged.layout.map((l) => l.key)).toEqual([
+      "faq",
+      "daily",
+      "stats",
+      "products",
+      "synastry",
+      "people",
+      "how",
+      "wallet",
+      "final",
+    ]);
+    expect(merged.layout.find((l) => l.key === "daily")?.visible).toBe(true);
+    expect(merged.layout.find((l) => l.key === "stats")?.visible).toBe(false);
   });
 });
 
@@ -154,7 +178,7 @@ describe("legacy content (saved before avatars had a gender)", () => {
     expect(merged.people.relations.map((r) => r.label)).toEqual(["Ээж", "Аав"]);
     expect(merged.people.relations[0].gender).toBe("female");
     expect(merged.synastry.pair.map((p) => p.label)).toEqual(["Та", "Хайрт"]);
-    expect(merged.layout[0]).toEqual({ key: "stats", visible: false });
+    expect(merged.layout.find((l) => l.key === "stats")).toEqual({ key: "stats", visible: false });
     expect(landingContentSchema.safeParse(merged).success).toBe(true);
   });
 });

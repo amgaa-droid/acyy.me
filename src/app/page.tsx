@@ -8,6 +8,7 @@ import { getSession } from "@/server/auth/session";
 import { listActiveProducts } from "@/server/catalog";
 import { db } from "@/server/db";
 import { getPublishedLanding } from "@/server/landing-cms";
+import { landingDaily } from "@/server/landing-daily";
 import { listActivePackages } from "@/server/topup-packages";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,5 +30,11 @@ export default async function LandingPage() {
     loadAstroRefs(db),
   ]);
 
-  return <LandingView content={content} products={products} packages={packages} refs={refs} />;
+  return <LandingView
+      content={content}
+      products={products}
+      packages={packages}
+      refs={refs}
+      daily={await landingDaily(db, refs)}
+    />;
 }

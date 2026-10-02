@@ -9,6 +9,7 @@ import { loadAstroRefs } from "@/server/astro/refs";
 import { listActiveProducts } from "@/server/catalog";
 import { db } from "@/server/db";
 import { getLandingDraft, getLandingVersion, getPublishedLanding } from "@/server/landing-cms";
+import { landingDaily } from "@/server/landing-daily";
 import { listActivePackages } from "@/server/topup-packages";
 
 export const metadata: Metadata = {
@@ -43,7 +44,13 @@ export default async function LandingPreviewPage({ searchParams }: PageProps<"/p
 
   return (
     <>
-      <LandingView content={content} products={products} packages={packages} refs={refs} />
+      <LandingView
+      content={content}
+      products={products}
+      packages={packages}
+      refs={refs}
+      daily={await landingDaily(db, refs)}
+    />
       <span className="pointer-events-none fixed bottom-2 left-2 z-50 rounded-full bg-highlight px-3 py-1 text-[11px] font-semibold text-highlight-fg">
         {mn.admin.landing.preview} · {label}
       </span>
