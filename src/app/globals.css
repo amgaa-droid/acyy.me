@@ -30,12 +30,16 @@
  *   --pair        a bought pair reading: bright orange in every mode  --pair-fg on it
  *   --nav-*       floating tab bar / sidebar panel
  *
+ * The blocks select [data-theme] anywhere, not only on <html>: an element with its own
+ * data-theme shows that mode (the theme picker's swatches). They all have the same
+ * specificity as :root, so their order below is what decides — keep it.
+ *
  * Text pairs keep WCAG AA (4.5:1) in every mode — src/lib/theme-tokens.test.ts checks them. That
  * is why --pair-fg is dark ink (white on the orange is 3:1), and why the white mode's tints
  * step further from its ground than the cosmic ones (grey on grey has no hue to tell it apart).
  */
 :root,
-:root[data-theme="cosmic"] {
+[data-theme="cosmic"] {
   --bg: #f5f1eb;
   --surface: #ffffff;
   --fg: #1d1b3f;
@@ -58,7 +62,7 @@
   --danger: #b3261e;
 }
 
-:root[data-theme="white"] {
+[data-theme="white"] {
   --bg: #f5f5f5;
   --surface: #ffffff;
   --fg: #0a0a0a;
@@ -82,7 +86,7 @@
 }
 
 /* Cosmic night: OS dark for "cosmic", always for "cosmic-dark". Keep both blocks in sync. */
-:root[data-theme="cosmic-dark"] {
+[data-theme="cosmic-dark"] {
   color-scheme: dark;
   --bg: #111027;
   --surface: #1b1a3a;
@@ -108,7 +112,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root,
-  :root[data-theme="cosmic"] {
+  [data-theme="cosmic"] {
     --bg: #111027;
     --surface: #1b1a3a;
     --fg: #eeebfb;
@@ -131,7 +135,7 @@
     --danger: #f97066;
   }
 
-  :root[data-theme="white"] {
+  [data-theme="white"] {
     --bg: #0a0a0a;
     --surface: #171717;
     --fg: #f5f5f5;
@@ -224,6 +228,7 @@
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.6);
   --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.5);
 }
 
 @layer base {

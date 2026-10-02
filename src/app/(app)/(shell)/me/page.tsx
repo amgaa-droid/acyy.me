@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -9,7 +10,7 @@ import { AdultConfirm } from "@/components/readings/adult-confirm";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { peopleLinkedTo } from "@/server/invitations";
 import { getSelf } from "@/server/persons";
-import { ageOn, parseIsoDate, todayYmd } from "@/lib/birth-date";
+import { ageOn, formatBirthDate, parseIsoDate, todayYmd } from "@/lib/birth-date";
 import { ThemePicker } from "@/components/app/theme-picker";
 import { formatMnt, mn } from "@/i18n/mn";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
@@ -52,7 +53,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             <span className="text-xl font-semibold">{self.name}</span>
             <span className="truncate text-sm text-muted-foreground">{user.email}</span>
             <span className="mt-1 text-sm">
-              {sign.nameMn} · {self.birthDate}
+              {sign.nameMn} · {formatBirthDate(self.birthDate)}
             </span>
             {role && (
               <Link
@@ -72,7 +73,9 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             <span className="text-xs text-muted-foreground">{mn.wallet.title}</span>
             <span className="text-2xl font-semibold tabular-nums">{formatMnt(balance)}</span>
           </span>
-          <span className="text-sm font-semibold text-highlight">{mn.wallet.history} →</span>
+          <span className="flex items-center gap-1 text-sm font-semibold text-highlight">
+            {mn.wallet.history} <ArrowRight className="size-4" aria-hidden />
+          </span>
         </Link>
         <div className="lg:col-start-1">
           <AdultConfirm state={adultState} />

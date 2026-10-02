@@ -410,7 +410,7 @@ function PreviewPane({ reloadKey }: { reloadKey: number }) {
         </a>
       </div>
       <div
-        className="mx-auto overflow-hidden rounded-[28px] border-4 border-fg bg-bg"
+        className="mx-auto overflow-hidden rounded-3xl border-4 border-fg bg-bg"
         style={{ width: frame.w * frame.k + 8, height: Math.min(frame.h * frame.k, 760) + 8 }}
       >
         <iframe
@@ -1194,7 +1194,7 @@ function HistoryCard({
             >
               <span className="font-semibold">v{v.version}</span>
               {v.version === liveVersion && (
-                <span className="rounded-full bg-tint-3 px-2 py-0.5 text-[11px] font-semibold">
+                <span className="rounded-full bg-tint-3 px-2 py-0.5 text-xs font-semibold">
                   {t.current}
                 </span>
               )}

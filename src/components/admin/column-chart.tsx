@@ -54,7 +54,7 @@ export function ColumnChart({
           </button>
         ))}
       </div>
-      <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+      <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
         <span>{points[0]?.label}</span>
         <span>{points.at(-1)?.label}</span>
       </div>

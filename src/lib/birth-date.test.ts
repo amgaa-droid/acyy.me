@@ -4,6 +4,10 @@ import {
   ageOn,
   clampBirthDate,
   daysInMonth,
+  formatBirthDate,
+  formatDate,
+  formatDateTime,
+  formatMonthDay,
   isLeapYear,
   parseIsoDate,
   todayYmd,
@@ -77,5 +81,21 @@ describe("todayYmd", () => {
   it("uses Ulaanbaatar time (UTC+8)", () => {
     // 2026-09-30 17:00 UTC is already 2026-10-01 01:00 in Ulaanbaatar.
     expect(todayYmd(new Date("2026-09-30T17:00:00Z"))).toEqual({ y: 2026, m: 10, d: 1 });
+  });
+});
+
+describe("date formats", () => {
+  it("writes every date dotted: a birth date, a month-day", () => {
+    expect(formatBirthDate("1985-04-02")).toBe("1985.04.02");
+    expect(formatMonthDay("05-21")).toBe("05.21");
+  });
+
+  it("writes a moment as the date (and time) in Ulaanbaatar", () => {
+    // 17:05 UTC is 01:05 the next day in Ulaanbaatar (UTC+8): the year turns over too.
+    const at = new Date("2026-12-31T17:05:00Z");
+    expect(formatDate(at)).toBe("2027.01.01");
+    expect(formatDateTime(at)).toBe("2027.01.01 01:05");
+    // Midnight is 00, not 24.
+    expect(formatDateTime(new Date("2026-10-02T16:00:00Z"))).toBe("2026.10.03 00:00");
   });
 });

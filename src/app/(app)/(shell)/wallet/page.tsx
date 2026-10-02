@@ -4,21 +4,13 @@ import type { Metadata } from "next";
 import { TopUpSheet } from "@/components/app/top-up-sheet";
 import { Button } from "@/components/ui/button";
 import { formatMnt, mn } from "@/i18n/mn";
+import { formatDateTime } from "@/lib/birth-date";
 import { cn } from "@/lib/utils";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
 import { getBalance, listEntries } from "@/server/wallet";
 
 export const metadata: Metadata = { title: mn.wallet.title };
-
-const dateFmt = new Intl.DateTimeFormat("mn-MN", {
-  timeZone: "Asia/Ulaanbaatar",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 export default async function WalletPage() {
   const { user } = await requireOnboardedUser();
@@ -30,7 +22,7 @@ export default async function WalletPage() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:items-start">
-      <section className="flex flex-col gap-4 rounded-[32px] bg-nav p-6 text-nav-active">
+      <section className="flex flex-col gap-4 rounded-3xl bg-nav p-6 text-nav-active">
         <span className="text-xs font-semibold tracking-widest text-nav-fg uppercase">
           {t.balance}
         </span>
@@ -67,7 +59,7 @@ export default async function WalletPage() {
                 <span className="flex min-w-0 flex-col">
                   <span className="font-medium">{t.types[e.type]}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {dateFmt.format(e.createdAt)}
+                    {formatDateTime(e.createdAt)}
                     {e.note && ` · ${e.note}`}
                   </span>
                 </span>

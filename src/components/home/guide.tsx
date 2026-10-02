@@ -71,7 +71,7 @@ export function GuidePill({
                   done[s] ? "bg-pair text-pair-fg" : current === s ? "bg-fg text-bg" : "bg-tint-1 text-highlight",
                 )}
               >
-                {done[s] ? <Check className="size-4" strokeWidth={3} aria-hidden /> : i + 1}
+                {done[s] ? <Check className="size-4" strokeWidth={2.5} aria-hidden /> : i + 1}
               </span>
               <span className="flex flex-col">
                 <span className={cn("text-sm font-semibold", done[s] && "text-muted-foreground line-through")}>
@@ -121,7 +121,7 @@ export function GuideTip({
       )}
       style={{ left, top: above ? top - 8 : bottom + 8 }}
     >
-      <div className="relative rounded-[20px] bg-fg px-4 py-2.5 text-bg shadow-[0_14px_34px_rgb(0_0_0/0.28)] motion-safe:animate-guide-bob">
+      <div className="relative rounded-xl bg-fg px-4 py-2.5 text-bg shadow-[0_14px_34px_rgb(0_0_0/0.28)] motion-safe:animate-guide-bob">
         <p className="text-[15px] leading-tight font-semibold">{title}</p>
         <p className="mt-0.5 text-xs leading-snug opacity-75">{sub}</p>
         <span
@@ -150,7 +150,7 @@ export function WelcomeCard({
   return (
     <section
       aria-label={g.welcome.title}
-      className="absolute inset-x-4 bottom-[max(env(safe-area-inset-bottom),1.25rem)] z-[39] mx-auto flex max-w-md animate-rise-in flex-col gap-4 rounded-[32px] bg-surface px-5 pt-5.5 pb-4.5 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] lg:bottom-8"
+      className="absolute inset-x-4 bottom-[max(env(safe-area-inset-bottom),1.25rem)] z-[39] mx-auto flex max-w-md animate-rise-in flex-col gap-4 rounded-3xl bg-surface px-5 pt-5.5 pb-4.5 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] lg:bottom-8"
     >
       <div className="flex flex-col gap-1">
         <span className="text-xs font-semibold tracking-[0.14em] text-highlight uppercase">
@@ -312,7 +312,7 @@ export function GuideToast({ text }: { text: string }) {
       className="absolute bottom-[max(env(safe-area-inset-bottom),1.25rem)] left-1/2 z-[45] flex -translate-x-1/2 animate-pop-in items-center gap-2.5 rounded-full bg-fg py-2.5 pr-5 pl-2.5 whitespace-nowrap text-bg shadow-[0_14px_34px_rgb(0_0_0/0.3)] lg:bottom-8"
     >
       <span className="flex size-7.5 items-center justify-center rounded-full bg-pair text-pair-fg">
-        <Check className="size-4" strokeWidth={3} aria-hidden />
+        <Check className="size-4" strokeWidth={2.5} aria-hidden />
       </span>
       <span className="text-sm font-semibold">{text}</span>
     </div>

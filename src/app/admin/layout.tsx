@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-dvh bg-bg lg:flex">
       <div className="fixed inset-x-0 bottom-0 z-30 p-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] lg:sticky lg:top-0 lg:bottom-auto lg:h-dvh lg:w-64 lg:shrink-0 lg:p-4 lg:pr-0">
-        <aside className="flex flex-col gap-3 rounded-[24px] bg-nav p-2 text-nav-active shadow-[0_-8px_30px_rgb(0_0_0/0.18)] lg:shadow-none lg:h-full lg:gap-8 lg:rounded-[28px] lg:px-3 lg:py-6">
+        <aside className="flex flex-col gap-3 rounded-2xl bg-nav p-2 text-nav-active shadow-[0_-8px_30px_rgb(0_0_0/0.18)] lg:shadow-none lg:h-full lg:gap-8 lg:rounded-3xl lg:px-3 lg:py-6">
           <div className="hidden items-center gap-2.5 px-3 lg:flex">
             <BrandMark className="size-5 text-nav-fg" />
             <span className="font-heading text-2xl font-semibold">{mn.admin.title}</span>

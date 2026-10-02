@@ -7,6 +7,7 @@ import { DailyTeaser } from "@/components/landing/daily-teaser";
 import { CurrentThemeToggle } from "@/components/app/current-theme-toggle";
 import { LandingPlanets } from "@/components/landing/landing-planets";
 import { StickyCta } from "@/components/landing/sticky-cta";
+import { PriceAction } from "@/components/readings/price-action";
 import { ProductIcon } from "@/components/readings/product-icon";
 import { PairHero, type PairHeroPerson, SummaryFields } from "@/components/readings/reading-highlights";
 import { APP_NAME } from "@/env";
@@ -110,7 +111,7 @@ export function LandingView({
               <li key={p.code}>
                 <Link
                   href="/login"
-                  className="flex h-full flex-col gap-4 rounded-[28px] bg-surface p-5 transition hover:ring-2 hover:ring-border"
+                  className="flex h-full flex-col gap-4 rounded-3xl bg-surface p-5 transition hover:ring-2 hover:ring-border"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <ProductIcon product={p} />
@@ -126,12 +127,7 @@ export function LandingView({
                       {o?.hook ? f(o.hook) : p.description}
                     </span>
                   </div>
-                  <span className="flex h-11 items-center justify-between rounded-full bg-subtle pr-2 pl-4 text-sm font-semibold">
-                    {formatMnt(p.price)}
-                    <span className="flex items-center gap-1 rounded-full bg-fg px-3.5 py-1.5 text-bg">
-                      {c.products.open} <ArrowRight className="size-3.5" aria-hidden />
-                    </span>
-                  </span>
+                  <PriceAction price={p.price} label={c.products.open} />
                 </Link>
               </li>
             );
@@ -141,7 +137,7 @@ export function LandingView({
     ),
 
     synastry: synastry && (
-      <section className="grid items-center gap-8 overflow-hidden rounded-[32px] bg-nav p-6 text-nav-active lg:grid-cols-2 lg:gap-12 lg:p-12">
+      <section className="grid items-center gap-8 overflow-hidden rounded-3xl bg-nav p-6 text-nav-active lg:grid-cols-2 lg:gap-12 lg:p-12">
         <div className="flex flex-col gap-4">
           {c.synastry.eyebrow && (
             <span className="text-xs font-semibold tracking-widest text-nav-fg uppercase">
@@ -169,7 +165,7 @@ export function LandingView({
           </Link>
         </div>
         <div className="flex flex-col gap-3 text-fg">
-          <span className="self-start rounded-full bg-nav-active/10 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-nav-fg uppercase">
+          <span className="self-start rounded-full bg-nav-active/10 px-3 py-1.5 text-xs font-semibold tracking-wider text-nav-fg uppercase">
             {c.synastry.example}
           </span>
           {/* The same hero and summary card as a real pair reading (/r/[purchaseId]). */}
@@ -256,7 +252,7 @@ export function LandingView({
                 )}
               >
                 {isBest && (
-                  <span className="mb-1 w-fit rounded-full bg-highlight px-2.5 py-1 text-[11px] font-semibold text-highlight-fg">
+                  <span className="mb-1 w-fit rounded-full bg-highlight px-2.5 py-1 text-xs font-semibold text-highlight-fg">
                     {t.wallet.best}
                   </span>
                 )}
@@ -300,7 +296,7 @@ export function LandingView({
     ),
 
     final: (
-      <section className="relative overflow-hidden rounded-[32px] bg-tint-1 p-8 text-center lg:p-14">
+      <section className="relative overflow-hidden rounded-3xl bg-tint-1 p-8 text-center lg:p-14">
         <ConstellationArt
           sign="gemini"
           className="pointer-events-none absolute -bottom-16 -left-16 size-60 opacity-40"

@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { THEME_GROUND } from "./theme";
+
 /**
  * The colour tokens in globals.css, checked for contrast (WCAG 2.1): text pairs AA (4.5:1),
  * a meaningful graphic against what it sits on 3:1, in each of the five palettes.
@@ -81,6 +83,14 @@ describe("theme tokens (globals.css)", () => {
 
   it("keeps the two cosmic night blocks the same", () => {
     expect(cosmicOsDark).toEqual(cosmicNight);
+  });
+
+  it("THEME_GROUND (browser chrome, manifest) is each mode's --bg", () => {
+    expect(THEME_GROUND).toEqual({
+      cosmic: { light: cosmic.bg, dark: cosmicOsDark.bg },
+      "cosmic-dark": { light: cosmicNight.bg, dark: cosmicNight.bg },
+      white: { light: white.bg, dark: whiteOsDark.bg },
+    });
   });
 
   describe.each(palettes)("%s", (_name, p) => {

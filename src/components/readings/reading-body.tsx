@@ -55,14 +55,14 @@ export function ArticleField({
   switch (field.kind) {
     case "quote":
       return (
-        <figure className="flex flex-col items-center gap-3.5 rounded-[28px] bg-fg px-6 pt-7.5 pb-8.5 text-center text-bg lg:rounded-[32px] lg:px-12 lg:pt-10 lg:pb-11">
-          <svg viewBox="0 0 24 24" aria-hidden className="size-[18px] fill-current text-nav-fg">
+        <figure className="flex flex-col items-center gap-3.5 rounded-3xl bg-fg px-6 pt-7.5 pb-8.5 text-center text-bg lg:rounded-3xl lg:px-12 lg:pt-10 lg:pb-11">
+          <svg viewBox="0 0 24 24" aria-hidden className="size-4.5 fill-current text-nav-fg">
             <path d="M12 1.5l2.2 8.3 8.3 2.2-8.3 2.2L12 22.5l-2.2-8.3L1.5 12l8.3-2.2z" />
           </svg>
-          <figcaption className="font-sans text-[11px] font-semibold tracking-[0.2em] text-nav-fg uppercase lg:text-xs">
+          <figcaption className="font-sans text-xs font-semibold tracking-[0.2em] text-nav-fg uppercase">
             {field.name}
           </figcaption>
-          <blockquote className="font-serif text-[32px] leading-[1.12] font-semibold whitespace-pre-line lg:text-[44px] lg:leading-[1.1]">
+          <blockquote className="font-serif text-[34px] leading-[1.12] font-semibold whitespace-pre-line lg:text-[44px] lg:leading-[1.1]">
             {field.value}
           </blockquote>
         </figure>
@@ -80,7 +80,7 @@ export function ArticleField({
               >
                 <span
                   aria-hidden
-                  className="font-serif text-[22px] leading-none font-semibold text-highlight lining-nums tabular-nums select-none lg:text-[26px]"
+                  className="font-serif text-2xl leading-none font-semibold text-highlight lining-nums tabular-nums select-none lg:text-[28px]"
                 >
                   {String(j + 1).padStart(2, "0")}
                 </span>
@@ -108,7 +108,7 @@ export function Teaser({ text, className }: { text: string; className?: string }
   return (
     <p
       className={cn(
-        "font-serif text-[22px] leading-[1.35] font-medium whitespace-pre-line text-fg/80 italic lg:text-[26px]",
+        "font-serif text-2xl leading-[1.35] font-medium whitespace-pre-line text-fg/80 italic lg:text-[28px]",
         className,
       )}
     >

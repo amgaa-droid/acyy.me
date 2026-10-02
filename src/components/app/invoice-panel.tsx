@@ -111,7 +111,7 @@ export function InvoicePanel({ topup, balance: initialBalance, mockPayUrl, onCon
   const inv = topup.invoice;
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
-      <section className="rounded-[32px] bg-tint-1 p-6 text-center">
+      <section className="rounded-3xl bg-tint-1 p-6 text-center">
         <p className="text-xs font-semibold tracking-widest text-highlight uppercase">{t.amount}</p>
         <p className="mt-1 font-heading text-6xl font-semibold tabular-nums">
           {formatMnt(topup.amount)}
@@ -137,7 +137,7 @@ export function InvoicePanel({ topup, balance: initialBalance, mockPayUrl, onCon
           </section>
 
           {/* Desktop: scan the QR with a phone. */}
-          <section className="hidden flex-col items-center gap-3 rounded-[32px] bg-surface p-6 lg:flex">
+          <section className="hidden flex-col items-center gap-3 rounded-3xl bg-surface p-6 lg:flex">
             <p className="text-xl font-semibold">{t.scan}</p>
             {/* eslint-disable-next-line @next/next/no-img-element -- data URI from QPay */}
             <img

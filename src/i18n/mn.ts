@@ -374,7 +374,6 @@ export const mn = {
     readingsSoon: "Энэ хүнд тохирох зурхайнууд удахгүй энд гарна.",
     readingsTitle: "Зурхайнууд",
     compareWith: "Хэнтэй нийцэх вэ?",
-    compare: "Нийцэл харах",
     confirmBirth: {
       title: "Төрсөн огноо зөв үү?",
       body: "Хадгалсны дараа төрсөн огноог өөрчлөх боломжгүй.",
@@ -393,6 +392,8 @@ export const mn = {
   },
   readings: {
     title: "Зурхай",
+    /** Browser tab title of the catalogue (the app is called "Зурхай" too). */
+    catalogTitle: "Зурхайн каталог",
     catalog: "Каталог",
     mine: "Миний зурхайнууд",
     mineEmpty: "Та одоогоор зурхай аваагүй байна.",
@@ -444,6 +445,8 @@ export const mn = {
     unavailable: "Энэ хэсгийн текст түр засварлагдаж байна.",
     score: "Оноо",
     freeView: "Танд хуваалцсан нийцэл",
+    /** Browser tab title of an opened reading. */
+    pageTitle: "Миний зурхай",
     bought: (date: string) => `Авсан: ${date}`,
     back: "Миний зурхайнууд",
     birthDate: "Төрсөн огноо",

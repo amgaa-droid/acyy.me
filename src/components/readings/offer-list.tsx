@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Lock } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, Lock } from "lucide-react";
 import Link from "next/link";
 
 import { ProductIcon } from "@/components/readings/product-icon";
@@ -17,7 +17,8 @@ export type Offer = {
 
 /**
  * Products available for one person. Bought ones are tinted, keep their own icon colour
- * and read "Унших"; unbought ones have a grey icon and a padlock.
+ * and read "Унших"; unbought ones have a grey icon, a padlock by the price and the same dark
+ * "go" mark as the catalogue cards.
  */
 export function OfferList({ personId, offers }: { personId: string; offers: Offer[] }) {
   return (
@@ -38,25 +39,26 @@ export function OfferList({ personId, offers }: { personId: string; offers: Offe
             >
               <ProductIcon product={o} muted={!bought} />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-semibold">
-                  {o.code === "synastry" ? mn.people.compare : o.name}
-                </span>
+                <span className="truncate font-semibold">{o.name}</span>
                 {bought ? (
                   <span className="flex items-center gap-1 text-sm font-semibold text-highlight">
-                    <Check className="size-3.5" strokeWidth={2.6} aria-hidden />
+                    <Check className="size-3.5" strokeWidth={2.5} aria-hidden />
                     {mn.readings.read}
                   </span>
                 ) : (
-                  <span className="text-sm text-muted-foreground">{formatMnt(o.price)}</span>
+                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Lock className="size-3.5" aria-label={mn.readings.locked} />
+                    {formatMnt(o.price)}
+                  </span>
                 )}
               </span>
               {bought ? (
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-highlight text-highlight-fg">
-                  <ChevronRight className="size-4.5" strokeWidth={2.4} aria-hidden />
+                  <ChevronRight className="size-4.5" strokeWidth={2.5} aria-hidden />
                 </span>
               ) : (
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-subtle text-muted-foreground">
-                  <Lock className="size-4" aria-label={mn.readings.locked} />
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-fg text-bg">
+                  <ArrowRight className="size-4" aria-hidden />
                 </span>
               )}
             </Link>

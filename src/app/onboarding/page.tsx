@@ -29,7 +29,7 @@ export default async function OnboardingPage({ searchParams }: PageProps<"/onboa
 
   return (
     <main className="flex min-h-dvh justify-center bg-bg lg:items-center lg:py-10">
-      <div className="flex w-full max-w-md flex-col lg:min-h-0 lg:rounded-[32px] lg:bg-surface lg:shadow-sm">
+      <div className="flex w-full max-w-md flex-col lg:min-h-0 lg:rounded-3xl lg:bg-surface lg:shadow-sm">
         <OnboardingFlow avatars={avatars} prefill={prefill} candidates={candidates} />
       </div>
     </main>

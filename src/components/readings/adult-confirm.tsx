@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck } from "lucide-react";
 import { useTransition } from "react";
 
 import { confirmAdultAction } from "@/app/(app)/(shell)/readings/actions";
@@ -20,7 +20,9 @@ export function AdultConfirm({ state }: { state: "confirmed" | "can_confirm" | "
         {state === "too_young" ? t.adultTooYoung : t.adultBody}
       </p>
       {state === "confirmed" && (
-        <p className="text-sm font-semibold text-highlight">✓ {t.adultConfirmed}</p>
+        <p className="flex items-center gap-1 text-sm font-semibold text-highlight">
+          <Check className="size-4" strokeWidth={2.5} aria-hidden /> {t.adultConfirmed}
+        </p>
       )}
       {state === "can_confirm" && (
         <Button

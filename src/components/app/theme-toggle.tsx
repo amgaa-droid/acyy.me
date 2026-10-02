@@ -1,4 +1,4 @@
-import { Contrast, Moon, Sparkles } from "lucide-react";
+import { Contrast, Moon, Palette } from "lucide-react";
 
 import { setTheme } from "@/app/actions/theme";
 import { mn } from "@/i18n/mn";
@@ -6,7 +6,7 @@ import { THEMES, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<Theme, typeof Moon> = {
-  cosmic: Sparkles,
+  cosmic: Palette,
   "cosmic-dark": Moon,
   white: Contrast,
 };
@@ -30,7 +30,7 @@ export function ThemeToggle({ current, className }: { current: Theme; className?
         title={mn.themes[next].name}
         className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-fg transition-transform active:scale-95"
       >
-        <Icon className="size-[18px]" aria-hidden />
+        <Icon className="size-4.5" aria-hidden />
       </button>
     </form>
   );
@@ -60,7 +60,7 @@ export function ThemeSwitch({ current }: { current: Theme }) {
               selected ? "ring-2 ring-highlight" : "ring-1 ring-border hover:ring-2",
             )}
           >
-            <Icon className="size-[18px]" aria-hidden />
+            <Icon className="size-4.5" aria-hidden />
             {mn.themes[theme].name}
           </button>
         );

@@ -26,6 +26,37 @@ export function formatBirthDate(value: string): string {
   return value.replaceAll("-", ".");
 }
 
+/** "05-21" → "05.21": a month-day, in the same dotted form as a full date. */
+export function formatMonthDay(value: string): string {
+  return value.replaceAll("-", ".");
+}
+
+const dateTimeParts = new Intl.DateTimeFormat("en-CA", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+function partsOf(at: Date): Record<string, string> {
+  return Object.fromEntries(dateTimeParts.formatToParts(at).map((p) => [p.type, p.value]));
+}
+
+/** A moment as a date in Mongolia, "2026.10.02" — every date in the UI is written this way. */
+export function formatDate(at: Date): string {
+  const p = partsOf(at);
+  return `${p.year}.${p.month}.${p.day}`;
+}
+
+/** A moment as date and time in Mongolia, "2026.10.02 18:27". */
+export function formatDateTime(at: Date): string {
+  const p = partsOf(at);
+  return `${p.year}.${p.month}.${p.day} ${p.hour}:${p.minute}`;
+}
+
 const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Parses "YYYY-MM-DD"; returns null for malformed or impossible dates (e.g. 2023-02-29). */

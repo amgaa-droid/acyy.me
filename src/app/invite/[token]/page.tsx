@@ -28,7 +28,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
-      <div className="flex w-full max-w-md flex-col items-center gap-5 rounded-[32px] bg-surface p-7 text-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-5 rounded-3xl bg-surface p-7 text-center">
         <BrandMark className="size-10 text-highlight" />
         {view ? (
           <>

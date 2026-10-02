@@ -47,7 +47,7 @@ export function ReadingTray({
   return (
     <section
       aria-label={t.trayAria(name)}
-      className="absolute inset-x-3 bottom-[max(env(safe-area-inset-bottom),0.875rem)] z-40 mx-auto flex max-w-md animate-rise-in flex-col gap-3.5 rounded-[28px] bg-surface px-3.5 pt-3.5 pb-4 shadow-[0_-8px_40px_rgb(0_0_0/0.16)] lg:bottom-8"
+      className="absolute inset-x-3 bottom-[max(env(safe-area-inset-bottom),0.875rem)] z-40 mx-auto flex max-w-md animate-rise-in flex-col gap-3.5 rounded-3xl bg-surface px-3.5 pt-3.5 pb-4 shadow-[0_-8px_40px_rgb(0_0_0/0.16)] lg:bottom-8"
     >
       <div className="flex items-center gap-3">
         <span className={cn("size-[42px] shrink-0 overflow-hidden rounded-full border-2", faceClass)}>
@@ -95,7 +95,7 @@ export function ReadingTray({
                   )}
                   {tile.icon}
                 </span>
-                <span className="line-clamp-2 h-[2.4em] text-center text-[11px] leading-[1.2] font-semibold">
+                <span className="line-clamp-2 h-[2.4em] text-center text-xs leading-[1.2] font-semibold">
                   {tile.label}
                 </span>
               </Link>
@@ -120,7 +120,7 @@ function TileTip({ tip, edge }: { tip: { title: string; sub: string }; edge: "st
         edge === "end" && "-right-1",
       )}
     >
-      <div className="relative rounded-[20px] bg-fg px-4 py-2.5 text-bg shadow-[0_14px_34px_rgb(0_0_0/0.28)] motion-safe:animate-guide-bob">
+      <div className="relative rounded-xl bg-fg px-4 py-2.5 text-bg shadow-[0_14px_34px_rgb(0_0_0/0.28)] motion-safe:animate-guide-bob">
         <p className="text-[15px] leading-tight font-semibold">{tip.title}</p>
         <p className="mt-0.5 text-xs leading-snug opacity-75">{tip.sub}</p>
         <span

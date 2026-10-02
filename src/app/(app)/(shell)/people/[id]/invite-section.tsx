@@ -1,12 +1,13 @@
 "use client";
 
-import { Mail, Share2 } from "lucide-react";
+import { Check, Mail, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { BottomSheet } from "@/components/app/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
+import { formatDate } from "@/lib/birth-date";
 import {
   createInviteLinkAction,
   revokeInviteAction,
@@ -53,7 +54,9 @@ export function InviteSection({
   if (state.kind === "linked") {
     return (
       <Box>
-        <p className="text-sm font-semibold text-highlight">✓ {t.linked}</p>
+        <p className="flex items-center gap-1 text-sm font-semibold text-highlight">
+          <Check className="size-4" strokeWidth={2.5} aria-hidden /> {t.linked}
+        </p>
       </Box>
     );
   }
@@ -101,7 +104,7 @@ export function InviteSection({
       {state.kind === "pending" && (
         <p className="flex items-center justify-between gap-2 rounded-2xl bg-subtle px-4 py-2.5 text-sm">
           <span>
-            {t.pending(new Date(state.expiresAt).toLocaleDateString("mn-MN"))}
+            {t.pending(formatDate(new Date(state.expiresAt)))}
             {state.email && ` · ${state.email}`}
           </span>
           <button

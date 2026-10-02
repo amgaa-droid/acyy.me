@@ -17,7 +17,7 @@ export function WalletChip({ balance }: { balance: number }) {
         >
           {formatMnt(balance)}
           <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Plus className="size-4" strokeWidth={2.2} aria-hidden />
+            <Plus className="size-4" strokeWidth={2.5} aria-hidden />
           </span>
         </button>
       }

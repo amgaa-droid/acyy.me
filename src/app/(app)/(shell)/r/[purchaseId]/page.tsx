@@ -11,7 +11,7 @@ import { SelectionShare } from "@/components/readings/selection-share";
 import { ShareCardButton } from "@/components/readings/share-card-button";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { mn } from "@/i18n/mn";
-import { formatBirthDate } from "@/lib/birth-date";
+import { formatBirthDate, formatDate } from "@/lib/birth-date";
 import { sectionLabel } from "@/lib/content-keys-display";
 import { SUMMARY_FIELD_KINDS } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
@@ -20,15 +20,10 @@ import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
 import { ReadingNotFoundError, getReading, readingPeople } from "@/server/reading";
 
-export const metadata: Metadata = { title: mn.readings.title };
+export const metadata: Metadata = { title: mn.reading.pageTitle };
 
 /** Readings with a "Хуваалцах" card button (top right); the rest share only selected text. */
 const SHARE_CARD = new Set(["birthday", "synastry"]);
-
-const dateFmt = new Intl.DateTimeFormat("mn-MN", {
-  timeZone: "Asia/Ulaanbaatar",
-  dateStyle: "medium",
-});
 
 /** The reading (SPEC §6.1 /r/[purchaseId]). Full text only reaches this page via getReading(). */
 export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]">) {
@@ -81,7 +76,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
           <ChevronLeft className="size-5" aria-hidden /> {t.back}
         </Link>
         {pair && (
-          <span className="min-w-0 truncate rounded-full bg-surface px-3 py-1.5 text-[11px] font-semibold tracking-wider text-highlight uppercase lg:px-3.5 lg:text-xs lg:tracking-widest">
+          <span className="min-w-0 truncate rounded-full bg-pair px-2.5 py-1.5 text-xs font-semibold tracking-wide text-pair-fg uppercase lg:px-3.5 lg:tracking-widest">
             {reading.viaLink ? t.freeView : reading.productName}
           </span>
         )}
@@ -116,13 +111,13 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
               )}
             </PairHero>
           ) : (
-            <section className="relative min-h-[340px] overflow-hidden rounded-[32px] bg-tint-1 lg:min-h-[440px] lg:rounded-[36px]">
+            <section className="relative min-h-[340px] overflow-hidden rounded-3xl bg-tint-1 lg:min-h-[440px] lg:rounded-4xl">
               <ConstellationArt
                 sign={people[0].sign}
                 className="absolute -top-8 -right-16 size-80 lg:-top-12 lg:-right-20 lg:size-[26rem]"
               />
               <div className="absolute inset-x-6 bottom-6.5 flex flex-col gap-2 lg:inset-x-9 lg:bottom-8.5 lg:gap-2.5">
-                <span className="text-[11px] font-semibold tracking-[0.16em] text-highlight uppercase lg:text-xs">
+                <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
                   {reading.productName}
                 </span>
                 <h1 className="text-[52px] leading-[0.95] font-semibold lg:text-[76px]">
@@ -145,7 +140,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
           {summary.length > 0 && <SummaryFields fields={summary} />}
         </div>
 
-        <article className="flex flex-col gap-12 rounded-[32px] bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-[36px] lg:px-16 lg:pt-14 lg:pb-11">
+        <article className="flex flex-col gap-12 rounded-3xl bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-4xl lg:px-16 lg:pt-14 lg:pb-11">
           <SelectionShare purchaseId={reading.id} className="flex flex-col gap-12">
             {reading.sections.map((s) => {
               const article = (s.fields ?? []).filter((f) => !isSummary(f.kind));
@@ -158,7 +153,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                 >
                   <header className="flex flex-col gap-3 lg:gap-3.5">
                     {multiPart && (
-                      <span className="text-[11px] font-semibold tracking-[0.16em] text-highlight uppercase lg:text-xs">
+                      <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
                         {sectionLabel(s, signNames)}
                       </span>
                     )}
@@ -168,7 +163,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                       s.teaser && <Teaser text={s.teaser} className="mt-1" />
                     ) : (
                       <>
-                        <h2 className="text-[42px] leading-none font-semibold lg:text-[60px]">
+                        <h2 className="text-[44px] leading-none font-semibold lg:text-[60px]">
                           {s.title}
                         </h2>
                         {s.teaser && <Teaser text={s.teaser} className="mt-1" />}
@@ -182,7 +177,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
             })}
           </SelectionShare>
           <div className="flex max-w-[640px] flex-wrap items-center justify-between gap-3 border-t border-border pt-4.5 lg:pt-5">
-            <p className="text-xs text-muted-foreground">{t.bought(dateFmt.format(reading.createdAt))}</p>
+            <p className="text-xs text-muted-foreground">{t.bought(formatDate(reading.createdAt))}</p>
             {reading.linkedPersonId && <UnlinkButton personId={reading.linkedPersonId} />}
           </div>
         </article>

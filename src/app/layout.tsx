@@ -3,7 +3,7 @@ import { Cormorant_Garamond, Golos_Text } from "next/font/google";
 
 import { APP_NAME } from "@/env";
 import { mn } from "@/i18n/mn";
-import { isAlwaysDark } from "@/lib/theme";
+import { THEME_GROUND, isAlwaysDark } from "@/lib/theme";
 import { readTheme } from "@/server/theme";
 import "./globals.css";
 
@@ -29,16 +29,18 @@ export const metadata: Metadata = {
 
 export async function generateViewport(): Promise<Viewport> {
   const theme = await readTheme();
+  const ground = THEME_GROUND[theme];
   return {
     width: "device-width",
     initialScale: 1,
     viewportFit: "cover",
-    // Browser chrome colour: follows the OS, except a theme that is always dark.
+    // Browser chrome colour: the mode's page ground. It follows the OS, except a theme that is
+    // always dark.
     themeColor: isAlwaysDark(theme)
-      ? "#111027"
+      ? ground.dark
       : [
-          { media: "(prefers-color-scheme: light)", color: "#f5f1eb" },
-          { media: "(prefers-color-scheme: dark)", color: "#111027" },
+          { media: "(prefers-color-scheme: light)", color: ground.light },
+          { media: "(prefers-color-scheme: dark)", color: ground.dark },
         ],
   };
 }

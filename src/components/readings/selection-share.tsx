@@ -102,7 +102,7 @@ export function SelectionShare({
             document.getSelection()?.removeAllRanges();
           }}
         >
-          <Share2 className="size-[18px]" aria-hidden />
+          <Share2 className="size-4.5" aria-hidden />
         </button>
       )}
       <ShareSheet

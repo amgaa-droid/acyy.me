@@ -118,7 +118,7 @@ export function Stat({
   return (
     <div className={cn("flex flex-col gap-1 rounded-3xl p-5", big ? "bg-tint-1" : "bg-surface")}>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-2xl font-semibold tabular-nums lg:text-[26px]">{value}</div>
+      <div className="text-2xl font-semibold tabular-nums lg:text-[28px]">{value}</div>
       {shown && (
         <div
           className={cn(

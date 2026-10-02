@@ -111,7 +111,7 @@ function load(key: string): Partial<Stored> | null {
 
 function ProductGlyph({ icon, className }: { icon: string | undefined; className?: string }) {
   const Icon = PRODUCT_ICON_COMPONENTS[icon as ProductIconName] ?? Sparkles;
-  return <Icon className={className} strokeWidth={1.8} aria-hidden />;
+  return <Icon className={className} strokeWidth={1.75} aria-hidden />;
 }
 
 /**
@@ -392,7 +392,7 @@ export function PlanetSystem({
           onClick={() => setMenuOpen(true)}
           className="flex size-12 items-center justify-center rounded-full bg-fg text-bg shadow-[0_8px_20px_rgb(0_0_0/0.18)]"
         >
-          <Menu className="size-5.5" aria-hidden />
+          <Menu className="size-6" aria-hidden />
         </button>
         <span className="hidden items-center gap-2 font-heading text-3xl font-semibold lg:flex">
           <BrandMark className="size-5 text-highlight" />
@@ -407,7 +407,7 @@ export function PlanetSystem({
         title={today ? mn.home.view.toPlanets : mn.home.view.toToday}
         className="absolute top-[max(env(safe-area-inset-top),1rem)] left-[76px] z-40 flex size-12 items-center justify-center gap-2 rounded-full bg-surface text-highlight shadow-[0_8px_20px_rgb(0_0_0/0.12)] transition-transform active:scale-95 lg:top-24 lg:left-8 lg:w-auto lg:pr-5 lg:pl-4"
       >
-        {today ? <Orbit className="size-5.5" aria-hidden /> : <Calendar1 className="size-5.5" aria-hidden />}
+        {today ? <Orbit className="size-6" aria-hidden /> : <Calendar1 className="size-6" aria-hidden />}
         <span className="hidden text-sm font-semibold text-fg lg:inline">
           {today ? mn.home.view.toPlanets : mn.home.view.toToday}
         </span>
@@ -719,7 +719,7 @@ export function PlanetSystem({
                 <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 flex w-28 -translate-x-1/2 flex-col items-center">
                   <span className="max-w-full truncate text-[13px] leading-tight font-semibold lg:text-[15px]">{p.name}</span>
                   {!fromDock && (
-                    <span className="max-w-full truncate text-[11px] leading-tight text-muted-foreground">{p.signName}</span>
+                    <span className="max-w-full truncate text-xs leading-tight text-muted-foreground">{p.signName}</span>
                   )}
                 </span>
               </button>
@@ -826,12 +826,12 @@ export function PlanetSystem({
           const body = (
             <>
               {e.on ? (
-                <Link2 className="size-[38%] lg:size-[52%]" strokeWidth={2.4} aria-hidden />
+                <Link2 className="size-[38%] lg:size-[52%]" strokeWidth={2.5} aria-hidden />
               ) : (
-                <Lock className="size-[44%]" strokeWidth={2} aria-hidden />
+                <Lock className="size-[44%]" aria-hidden />
               )}
               {e.count !== undefined && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-fg px-1 text-[11px] font-bold text-bg">
+                <span className="absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-fg px-1 text-xs font-bold text-bg">
                   {e.count}
                 </span>
               )}
@@ -893,7 +893,7 @@ export function PlanetSystem({
             <div
               role="region"
               aria-label={t.dockTitle(hidden.length)}
-              className="absolute z-[15] -translate-x-1/2 animate-rise-in rounded-[36px] bg-surface/85 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] backdrop-blur-md"
+              className="absolute z-[15] -translate-x-1/2 animate-rise-in rounded-4xl bg-surface/85 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] backdrop-blur-md"
               style={{ left: w / 2, top: dockY - dockR - 40, width: Math.min(w - 32, Math.max(240, dockCount * step + 48)), height: dockR * 2 + 76 }}
             >
               <p className="absolute inset-x-6 top-3.5 truncate text-center text-xs font-semibold text-highlight">
@@ -1024,7 +1024,7 @@ export function PlanetSystem({
                   href: readingHref(sel!, r),
                   label: t.short[r.code] ?? product?.name.replace(/ зурхай$/u, "") ?? r.code,
                   aria: t.reading(product?.name ?? r.code, owner, !!r.purchaseId),
-                  icon: <ProductGlyph icon={product?.icon} className="size-[22px]" />,
+                  icon: <ProductGlyph icon={product?.icon} className="size-5" />,
                   kind: r.purchaseId ? "on" : "off",
                   onClick:
                     sel === ME
@@ -1042,7 +1042,7 @@ export function PlanetSystem({
                 href: `/people/${sel === ME ? data.me.id : sel}`,
                 label: t.info,
                 aria: t.infoAria(sel === ME ? data.me.name : (selPerson?.name ?? "")),
-                icon: <UserRound className="size-5" strokeWidth={1.8} aria-hidden />,
+                icon: <UserRound className="size-5" strokeWidth={1.75} aria-hidden />,
                 kind: "info",
               },
             ]}
@@ -1120,7 +1120,7 @@ export function PlanetSystem({
               <article
                 key={r.code}
                 className={cn(
-                  `rounded-[28px] bg-surface p-5 shadow-[0_8px_24px_rgb(0_0_0/0.06)] transition-[opacity,translate] duration-500 ${SWAP_EASE} motion-reduce:transition-none lg:p-6`,
+                  `rounded-3xl bg-surface p-5 shadow-[0_8px_24px_rgb(0_0_0/0.06)] transition-[opacity,translate] duration-500 ${SWAP_EASE} motion-reduce:transition-none lg:p-6`,
                   today ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
                 )}
                 style={{ transitionDelay: today ? `${650 + i * 90}ms` : "0ms" }}

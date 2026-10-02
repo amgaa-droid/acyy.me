@@ -51,11 +51,14 @@ export type ProductLook = { icon: string; tint: string };
 export function ProductIcon({
   product,
   muted = false,
+  pair = false,
   className,
 }: {
   product: ProductLook | null | undefined;
   /** Grey, colourless tile for a product the viewer hasn't bought. */
   muted?: boolean;
+  /** A bought pair reading: the orange of its link on home, whatever the product's own tint. */
+  pair?: boolean;
   className?: string;
 }) {
   const Icon = PRODUCT_ICON_COMPONENTS[product?.icon as ProductIconName] ?? Sparkles;
@@ -64,11 +67,11 @@ export function ProductIcon({
     <span
       className={cn(
         "flex size-11 shrink-0 items-center justify-center rounded-2xl",
-        muted ? "bg-subtle text-muted-foreground/70" : tile,
+        muted ? "bg-subtle text-muted-foreground" : pair ? "bg-pair text-pair-fg" : tile,
         className,
       )}
     >
-      <Icon className="size-5.5" strokeWidth={1.7} aria-hidden />
+      <Icon className="size-5" strokeWidth={1.75} aria-hidden />
     </span>
   );
 }

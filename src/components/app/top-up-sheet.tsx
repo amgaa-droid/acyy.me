@@ -134,20 +134,15 @@ export function TopUpSheet({
             aria-checked={tier?.id === x.id}
             onClick={() => setPicked(x.id)}
             className={cn(
-              "flex h-18 flex-col items-center justify-center rounded-3xl text-lg font-semibold tabular-nums transition-colors",
+              "flex h-18 flex-col items-center justify-center rounded-3xl text-lg font-semibold tabular-nums transition-shadow",
               tier?.id === x.id
-                ? "bg-primary text-primary-foreground"
-                : "bg-subtle ring-1 ring-border",
+                ? "bg-tint-1 ring-2 ring-highlight"
+                : "bg-subtle ring-1 ring-border hover:ring-2",
             )}
           >
             {formatMnt(x.amount)}
             {x.bonus > 0 && (
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  tier?.id === x.id ? "text-primary-foreground/75" : "text-highlight",
-                )}
-              >
+              <span className="text-xs font-medium text-highlight">
                 {t.bonus(formatMnt(x.bonus))}
               </span>
             )}

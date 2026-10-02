@@ -35,7 +35,7 @@ test("add a person, see their sign, edit, then delete", async ({ page }, info) =
   const personUrl = page.url();
   await expect(page.getByRole("heading", { name })).toBeVisible();
   await expect(page.getByText("Багш").first()).toBeVisible();
-  await expect(page.getByText("1990-01-01")).toBeVisible();
+  await expect(page.getByText("1990.01.01")).toBeVisible();
 
   // Edit: no birth-date field, rename works
   await page.getByRole("button", { name: "Засах" }).click();

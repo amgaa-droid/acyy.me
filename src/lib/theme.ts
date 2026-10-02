@@ -17,6 +17,16 @@ export function parseTheme(value: string | undefined): Theme {
   return parsed.success ? parsed.data : DEFAULT_THEME;
 }
 
+/**
+ * Each mode's page ground (`--bg` in globals.css; theme-tokens.test.ts keeps them equal), for
+ * the places CSS variables don't reach: the browser chrome colour, the PWA manifest.
+ */
+export const THEME_GROUND: Record<Theme, { light: string; dark: string }> = {
+  cosmic: { light: "#f5f1eb", dark: "#111027" },
+  "cosmic-dark": { light: "#111027", dark: "#111027" },
+  white: { light: "#f5f5f5", dark: "#0a0a0a" },
+};
+
 /** Themes that are dark whatever the OS says (mirrors the `dark` variant in globals.css). */
 export function isAlwaysDark(theme: Theme): boolean {
   return theme === "cosmic-dark";

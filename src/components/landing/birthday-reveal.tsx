@@ -39,7 +39,7 @@ export function BirthdayReveal({ price }: { price: number }) {
 
   if (reveal) {
     return (
-      <div className="flex flex-col gap-4 rounded-[32px] bg-surface p-5 lg:p-7">
+      <div className="flex flex-col gap-4 rounded-3xl bg-surface p-5 lg:p-7">
         <div className="relative -mx-1 overflow-hidden rounded-3xl bg-tint-1 p-5">
           <ConstellationArt
             sign={reveal.sign.code}
@@ -101,7 +101,7 @@ export function BirthdayReveal({ price }: { price: number }) {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 rounded-[32px] bg-surface p-5 lg:p-7">
+    <form onSubmit={submit} className="flex flex-col gap-3 rounded-3xl bg-surface p-5 lg:p-7">
       <span className="font-semibold">{t.title}</span>
       <div className="grid grid-cols-2 gap-2.5">
         <label className="flex flex-col gap-1.5">

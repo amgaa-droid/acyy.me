@@ -21,7 +21,7 @@ export default async function MockQPayPage({
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-bg px-4">
-      <div className="flex w-full max-w-sm flex-col gap-5 rounded-[32px] bg-surface p-6 text-center">
+      <div className="flex w-full max-w-sm flex-col gap-5 rounded-3xl bg-surface p-6 text-center">
         <span className="text-xs font-semibold tracking-widest text-highlight uppercase">
           {t.title}
         </span>

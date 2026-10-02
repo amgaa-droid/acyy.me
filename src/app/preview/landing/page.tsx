@@ -51,7 +51,7 @@ export default async function LandingPreviewPage({ searchParams }: PageProps<"/p
       refs={refs}
       daily={await landingDaily(db, refs)}
     />
-      <span className="pointer-events-none fixed bottom-2 left-2 z-50 rounded-full bg-highlight px-3 py-1 text-[11px] font-semibold text-highlight-fg">
+      <span className="pointer-events-none fixed bottom-2 left-2 z-50 rounded-full bg-highlight px-3 py-1 text-xs font-semibold text-highlight-fg">
         {mn.admin.landing.preview} · {label}
       </span>
     </>

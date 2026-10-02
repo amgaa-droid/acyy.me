@@ -5,11 +5,11 @@ import { mn } from "@/i18n/mn";
 import { THEMES, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-// Fixed preview swatches (ground, tint, ink) so each option shows its own colours.
-const SWATCHES: Record<Theme, [string, string, string]> = {
-  cosmic: ["#f5f1eb", "#e6e3fb", "#1d1b3f"],
-  "cosmic-dark": ["#111027", "#2b2862", "#eeebfb"],
-  white: ["#f5f5f5", "#ffffff", "#0a0a0a"],
+// The tile inside each preview: a pastel in the cosmic modes, a white card in the white one.
+const SWATCH_TILE: Record<Theme, string> = {
+  cosmic: "bg-tint-1",
+  "cosmic-dark": "bg-tint-1",
+  white: "bg-surface",
 };
 
 /** Colour mode choice. A plain form + server action, so it works without JS. */
@@ -18,7 +18,6 @@ export function ThemePicker({ current }: { current: Theme }) {
     <form action={setTheme} className="grid grid-cols-3 gap-2.5 lg:gap-3">
       {THEMES.map((theme) => {
         const selected = theme === current;
-        const [ground, tint, ink] = SWATCHES[theme];
         return (
           <button
             key={theme}
@@ -31,19 +30,21 @@ export function ThemePicker({ current }: { current: Theme }) {
               selected ? "ring-highlight" : "ring-transparent hover:ring-border",
             )}
           >
+            {/* `data-theme` here draws the preview in that mode's own tokens (see globals.css):
+                as it will look on this device, OS dark mode included. */}
             <span
-              className="relative flex h-16 items-end gap-1.5 overflow-hidden rounded-2xl p-2 lg:h-20 lg:p-2.5"
-              style={{ background: ground }}
+              data-theme={theme}
+              className="relative flex h-16 items-end gap-1.5 overflow-hidden rounded-2xl bg-bg p-2 lg:h-20 lg:p-2.5"
             >
-              <span className="h-10 flex-1 rounded-xl" style={{ background: tint }} />
-              <span className="h-6 w-8 rounded-full lg:w-10" style={{ background: ink }} />
+              <span className={cn("h-10 flex-1 rounded-xl", SWATCH_TILE[theme])} />
+              <span className="h-6 w-8 rounded-full bg-fg lg:w-10" />
             </span>
             <span className="flex items-start justify-between gap-1 px-1">
               <span className="flex min-w-0 flex-col">
                 <span className="text-sm leading-tight font-semibold lg:text-base">
                   {mn.themes[theme].name}
                 </span>
-                <span className="mt-0.5 text-[11px] leading-snug text-muted-foreground lg:text-xs">
+                <span className="mt-0.5 text-xs leading-snug text-muted-foreground">
                   {mn.themes[theme].description}
                 </span>
               </span>

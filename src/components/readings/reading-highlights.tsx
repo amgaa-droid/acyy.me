@@ -43,7 +43,7 @@ export function PairHero({
       .filter(Boolean)
       .join(" · ");
   return (
-    <section className="relative flex flex-col gap-5 overflow-hidden rounded-[32px] bg-tint-1 px-5 pt-6 pb-6 text-fg lg:px-6">
+    <section className="relative flex flex-col gap-5 overflow-hidden rounded-3xl bg-tint-1 px-5 pt-6 pb-6 text-fg lg:px-6">
       {a.sign && (
         <ConstellationArt
           sign={a.sign.code}
@@ -132,7 +132,7 @@ export function SummaryFields({ fields }: { fields: ReadingField[] }) {
               <section
                 key={f.code}
                 className={cn(
-                  "flex flex-col rounded-3xl px-4.5 pt-4.5 pb-2 lg:rounded-[28px] lg:px-5.5 lg:pt-5.5 lg:pb-2.5",
+                  "flex flex-col rounded-3xl px-4.5 pt-4.5 pb-2 lg:rounded-3xl lg:px-5.5 lg:pt-5.5 lg:pb-2.5",
                   i === 0 ? "bg-tint-3" : "bg-tint-2",
                   group.length === 1 && "col-span-2",
                 )}
@@ -151,7 +151,7 @@ export function SummaryFields({ fields }: { fields: ReadingField[] }) {
         ) : (
           <section
             key={group[0].code}
-            className="flex flex-col divide-y divide-border rounded-3xl bg-surface px-5 py-0.5 lg:rounded-[28px] lg:px-6 lg:py-1"
+            className="flex flex-col divide-y divide-border rounded-3xl bg-surface px-5 py-0.5 lg:rounded-3xl lg:px-6 lg:py-1"
           >
             {group.map((f) => (
               <SummaryRow key={f.code} field={f} />
@@ -166,7 +166,7 @@ export function SummaryFields({ fields }: { fields: ReadingField[] }) {
 const SummaryLabel = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <h3
     className={cn(
-      "font-sans text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase",
+      "font-sans text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase",
       className,
     )}
   >
@@ -186,7 +186,7 @@ function SummaryRow({ field }: { field: ReadingField }) {
           alert ? "bg-tint-2" : "bg-tint-1 text-highlight",
         )}
       >
-        <Icon className="size-[18px]" aria-hidden />
+        <Icon className="size-4.5" aria-hidden />
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
         <SummaryLabel>{field.name}</SummaryLabel>

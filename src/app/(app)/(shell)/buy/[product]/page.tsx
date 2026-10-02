@@ -32,7 +32,7 @@ import { getBalance } from "@/server/wallet";
 import { setGenderForPurchaseAction } from "../../readings/actions";
 import { BuyConfirm } from "./buy-confirm";
 
-export const metadata: Metadata = { title: mn.readings.title };
+export const metadata: Metadata = { title: mn.readings.catalogTitle };
 
 const id = z.uuid();
 const one = (v: string | string[] | undefined) =>
@@ -153,7 +153,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
           {header}
           <form
             action={setGenderForPurchaseAction}
-            className="flex flex-col gap-4 rounded-[32px] bg-surface p-6"
+            className="flex flex-col gap-4 rounded-3xl bg-surface p-6"
           >
             <h1 className="text-[30px] leading-tight font-semibold">
               {t.genderTitle(chosenA!.name)}
@@ -213,7 +213,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
         ))}
       </div>
 
-      <article className="flex flex-col gap-4 rounded-[32px] bg-surface p-6">
+      <article className="flex flex-col gap-4 rounded-3xl bg-surface p-6">
         <span className="text-xs font-semibold tracking-widest text-highlight uppercase">
           {t.preview}
         </span>

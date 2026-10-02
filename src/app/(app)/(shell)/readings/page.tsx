@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageTitle } from "@/components/app/empty-state";
+import { PriceAction } from "@/components/readings/price-action";
 import { ProductIcon } from "@/components/readings/product-icon";
-import { formatMnt, mn } from "@/i18n/mn";
+import { mn } from "@/i18n/mn";
+import { formatDate } from "@/lib/birth-date";
 import { cn } from "@/lib/utils";
 import { requireOnboardedUser } from "@/server/auth/current";
 import {
@@ -18,12 +20,9 @@ import { db } from "@/server/db";
 import { listPurchases } from "@/server/purchase";
 import { linkedPairReadings, readingNames } from "@/server/reading";
 
-export const metadata: Metadata = { title: mn.readings.title };
-
-const dateFmt = new Intl.DateTimeFormat("mn-MN", {
-  timeZone: "Asia/Ulaanbaatar",
-  dateStyle: "medium",
-});
+export async function generateMetadata({ searchParams }: PageProps<"/readings">): Promise<Metadata> {
+  return { title: (await searchParams).tab === "mine" ? mn.readings.mine : mn.readings.catalogTitle };
+}
 
 export default async function ReadingsPage({ searchParams }: PageProps<"/readings">) {
   const { tab, product } = await searchParams;
@@ -78,12 +77,7 @@ export default async function ReadingsPage({ searchParams }: PageProps<"/reading
                   <span className="text-lg font-semibold">{p.nameMn}</span>
                   <span className="text-sm text-muted-foreground">{p.description}</span>
                 </div>
-                <span className="mt-auto flex items-center justify-between text-sm font-semibold">
-                  {formatMnt(p.price)}
-                  <span className="flex items-center gap-1 text-highlight">
-                    {t.choose} <ChevronRight className="size-4" aria-hidden />
-                  </span>
-                </span>
+                <PriceAction price={p.price} label={t.choose} className="mt-auto" />
               </Link>
             </li>
           ))}
@@ -144,13 +138,16 @@ async function MyReadings({
               href={`/r/${p.id}`}
               className="flex items-center gap-4 rounded-3xl bg-surface p-4 hover:ring-2 hover:ring-border"
             >
-              <ProductIcon product={catalog.get(p.productCode)} />
+              <ProductIcon
+                product={catalog.get(p.productCode)}
+                pair={catalog.get(p.productCode)?.personCount === 2}
+              />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-semibold">
                   {catalog.get(p.productCode)?.nameMn ?? p.productCode}
                 </span>
                 <span className="truncate text-sm text-muted-foreground">
-                  {names.get(p.id)?.join(" × ")} · {dateFmt.format(p.createdAt)}
+                  {names.get(p.id)?.join(" × ")} · {formatDate(p.createdAt)}
                 </span>
               </span>
               <ChevronRight className="size-5 text-muted-foreground" aria-hidden />
@@ -168,7 +165,7 @@ async function MyReadings({
                   href={`/r/${id}`}
                   className="flex items-center gap-4 rounded-3xl bg-surface p-4"
                 >
-                  <ProductIcon product={catalog.get(productCode)} />
+                  <ProductIcon product={catalog.get(productCode)} pair />
                   <span className="font-semibold">
                     {catalog.get(productCode)?.nameMn ?? productCode}
                   </span>

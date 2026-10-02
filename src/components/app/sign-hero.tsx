@@ -10,7 +10,7 @@ type SignHeroProps = {
 /** Big tinted card with the sign's constellation — "Таны орд: Хилэнц". */
 export function SignHero({ label, signCode, signName, chips }: SignHeroProps) {
   return (
-    <section className="relative h-60 overflow-hidden rounded-3xl bg-tint-1 lg:h-90 lg:rounded-[32px]">
+    <section className="relative h-60 overflow-hidden rounded-3xl bg-tint-1 lg:h-90 lg:rounded-3xl">
       <ConstellationArt
         sign={signCode}
         className="absolute -top-2 -right-10 size-60 lg:top-[-20px] lg:right-4 lg:size-100"

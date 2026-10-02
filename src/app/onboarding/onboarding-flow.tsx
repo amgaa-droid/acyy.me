@@ -9,6 +9,7 @@ import { DatePicker } from "@/components/app/date-picker";
 import { AvatarPicker, GenderPicker, type AvatarOption } from "@/components/people/pickers";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
+import { formatBirthDate } from "@/lib/birth-date";
 import type { Gender } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { createSelfAction, promoteSelfAction, type OnboardingResult } from "./actions";
@@ -139,7 +140,7 @@ export function OnboardingFlow({
             {picked ? (
               <>
                 <p className="rounded-3xl bg-surface px-5 py-4 font-heading text-4xl font-semibold tabular-nums lg:bg-subtle">
-                  {birthDate.replaceAll("-", ".")}
+                  {formatBirthDate(birthDate)}
                 </p>
                 <p className="mt-4 flex items-start gap-2.5 rounded-2xl bg-tint-2 px-4 py-3 text-sm">
                   <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -244,7 +245,7 @@ function PickSelfStep({
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-semibold">{c.name}</span>
                   <span className="text-sm text-muted-foreground tabular-nums">
-                    {c.birthDate.replaceAll("-", ".")}
+                    {formatBirthDate(c.birthDate)}
                   </span>
                 </span>
                 <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -286,7 +287,7 @@ function ResultStep({ result, name }: { result: Done; name: string }) {
   const { sign, period } = result;
   return (
     <div className="flex flex-1 flex-col gap-5 px-5 pt-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] lg:p-8">
-      <section className="relative flex h-96 flex-col justify-end overflow-hidden rounded-[32px] bg-tint-1 p-6">
+      <section className="relative flex h-96 flex-col justify-end overflow-hidden rounded-3xl bg-tint-1 p-6">
         <ConstellationArt sign={sign.code} className="absolute -top-4 -right-12 size-80" />
         <span className="relative text-xs font-semibold tracking-widest text-highlight uppercase">
           {name} · {t.resultLabel}
@@ -310,7 +311,7 @@ function ResultStep({ result, name }: { result: Done; name: string }) {
         nativeButton={false}
       >
         {t.enter}
-        <ArrowRight className="size-[18px]" aria-hidden />
+        <ArrowRight className="size-4.5" aria-hidden />
       </Button>
     </div>
   );

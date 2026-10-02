@@ -8,6 +8,7 @@ import { ConstellationArt } from "@/components/app/constellation";
 import { OfferList } from "@/components/readings/offer-list";
 import { mn } from "@/i18n/mn";
 import { avatarOptions } from "@/lib/avatars";
+import { formatBirthDate, formatMonthDay } from "@/lib/birth-date";
 import { relationTint, relationText } from "@/lib/people";
 import { cn } from "@/lib/utils";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
@@ -54,7 +55,7 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
         <section
           className={cn(
-            "relative flex min-h-80 flex-col justify-end overflow-hidden rounded-[32px] p-6 lg:min-h-105",
+            "relative flex min-h-80 flex-col justify-end overflow-hidden rounded-3xl p-6 lg:min-h-105",
             person.isSelf ? "bg-tint-1" : relationTint(person.relation),
           )}
         >
@@ -78,7 +79,7 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
             <Chip>{mn.people.periodValue(period.no)}</Chip>
             <Chip>
               <Lock className="size-3.5" aria-label={mn.people.birthDateLocked} />
-              {person.birthDate}
+              {formatBirthDate(person.birthDate)}
             </Chip>
           </div>
         </section>
@@ -88,12 +89,12 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
             <Fact
               label={mn.people.sign}
               value={sign.nameMn}
-              sub={`${sign.startMd} – ${sign.endMd}`}
+              sub={`${formatMonthDay(sign.startMd)} – ${formatMonthDay(sign.endMd)}`}
             />
             <Fact
               label={mn.people.period}
               value={mn.people.periodValue(period.no)}
-              sub={`${period.startMd} – ${period.endMd}`}
+              sub={`${formatMonthDay(period.startMd)} – ${formatMonthDay(period.endMd)}`}
             />
           </dl>
 

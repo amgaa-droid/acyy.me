@@ -62,7 +62,7 @@ export function DailyTeaser({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-3 rounded-[32px] bg-surface p-5 lg:p-7">
+      <div className="flex min-w-0 flex-col gap-3 rounded-3xl bg-surface p-5 lg:p-7">
         <span className="text-sm font-semibold">{copy.pickSign}</span>
         <div
           ref={rowRef}
@@ -137,5 +137,5 @@ export function DailyTeaser({
 
 function KindIcon({ icon, className }: { icon: string; className?: string }) {
   const Icon = PRODUCT_ICON_COMPONENTS[icon as ProductIconName] ?? Sparkles;
-  return <Icon className={className} strokeWidth={1.8} aria-hidden />;
+  return <Icon className={className} strokeWidth={1.75} aria-hidden />;
 }
