@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AiError, aiComplete, geminiText, openAiText } from "./providers";
+import { AiError, aiComplete, geminiText, limitOf, openAiText } from "./providers";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -74,5 +74,61 @@ describe("AI providers", () => {
         fetchImpl as unknown as typeof fetch,
       ),
     ).rejects.toMatchObject({ code: "empty" });
+  });
+
+  it("tells a used-up quota from a short rate limit", () => {
+    const quotaFailure = (quotaId: string) => ({
+      "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+      violations: [{ quotaId }],
+    });
+    const retryInfo = (retryDelay: string) => ({
+      "@type": "type.googleapis.com/google.rpc.RetryInfo",
+      retryDelay,
+    });
+    // Gemini free tier, daily requests used up.
+    expect(
+      limitOf(
+        429,
+        { details: [quotaFailure("GenerateRequestsPerDayPerProjectPerModel-FreeTier")] },
+        null,
+      ),
+    ).toEqual({ quota: true, retryAfterMs: undefined });
+    // Gemini per-minute limit: wait as told.
+    expect(
+      limitOf(
+        429,
+        {
+          details: [
+            quotaFailure("GenerateRequestsPerMinutePerProjectPerModel-FreeTier"),
+            retryInfo("37.2s"),
+          ],
+        },
+        null,
+      ),
+    ).toEqual({ quota: false, retryAfterMs: 37_200 });
+    // A wait longer than a minute counts as used up.
+    expect(limitOf(429, { details: [retryInfo("3600s")] }, null).quota).toBe(true);
+    // OpenAI.
+    expect(limitOf(429, { code: "insufficient_quota" }, null).quota).toBe(true);
+    expect(limitOf(429, { code: "rate_limit_exceeded" }, "12")).toEqual({
+      quota: false,
+      retryAfterMs: 12_000,
+    });
+    expect(limitOf(503, { code: "insufficient_quota" }, "5")).toEqual({});
+  });
+
+  it("puts the limit on the thrown error", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: { message: "quota", code: "insufficient_quota" } }), {
+          status: 429,
+        }),
+    );
+    const err = await aiComplete(
+      { provider: "openai", model: "m", apiKey: "k" },
+      { system: "", user: "" },
+      fetchImpl as unknown as typeof fetch,
+    ).catch((e) => e);
+    expect(err.limit).toEqual({ quota: true, retryAfterMs: undefined });
   });
 });

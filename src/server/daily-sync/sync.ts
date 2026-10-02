@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 
 import { addDays, todayIso } from "@/lib/daily";
 import { AiError, type AiComplete, type AiProviderId } from "@/server/ai/providers";
@@ -60,7 +60,6 @@ export type SyncOptions = {
 };
 
 const FETCH_CONCURRENCY = 4;
-const AI_CONCURRENCY = 3;
 
 /** Runs `fn` over `items` with at most `n` at a time, keeping order. */
 async function pool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -78,23 +77,32 @@ async function pool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): P
 
 /** Waits before the 2nd and 3rd try when the AI is busy (429 / 5xx / network). */
 export const AI_RETRY_DELAYS_MS = [5_000, 20_000];
+/** Longest wait a provider's own "retry after" may ask for. */
+const MAX_WAIT_MS = 60_000;
+
+/** The AI can't answer anything this run (wrong key or model, used-up quota): stop asking. */
+function isFatal(err: unknown): err is AiError {
+  if (!(err instanceof AiError) || !err.status) return false;
+  return err.limit.quota === true || (err.status >= 400 && err.status < 500 && err.status !== 429);
+}
 
 /**
- * A wrong key or model (other 4xx) won't fix itself: no retry. A busy provider (429, 5xx,
- * network) is retried after a pause; a bad answer (not our JSON) is retried at once.
+ * A fatal error is thrown at once. A busy provider (rate limit, 5xx, network) is retried after
+ * a pause — the provider's own "retry after" if it gave one; a bad answer (not our JSON) is
+ * retried at once.
  */
 async function withRetries<R>(fn: () => Promise<R>, delaysMs: number[]): Promise<R> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (err) {
-      const busy =
-        err instanceof AiError &&
-        (err.code === "network" || err.status === 429 || (err.status ?? 0) >= 500);
-      if (err instanceof AiError && !busy) throw err;
-      if (attempt >= delaysMs.length) throw err;
-      if (busy && delaysMs[attempt] > 0) {
-        await new Promise((r) => setTimeout(r, delaysMs[attempt]));
+      if (isFatal(err) || attempt >= delaysMs.length) throw err;
+      if (err instanceof AiError) {
+        const wait = Math.max(
+          delaysMs[attempt],
+          Math.min(err.limit.retryAfterMs ?? 0, MAX_WAIT_MS),
+        );
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       }
     }
   }
@@ -140,7 +148,13 @@ export async function runDailySync(db: AppDb, opts: SyncOptions): Promise<SyncRe
     if (!groups.has(key)) groups.set(key, { kind: p.kind, date: p.date, texts: {} });
     groups.get(key)!.texts[p.sign] = p.text;
   }
-  const translated = await pool([...groups.values()], AI_CONCURRENCY, async (g) => {
+  // One kind after another (not at once) to stay under per-minute limits.
+  let stopped: AiError | null = null;
+  const translated = await pool([...groups.values()], 1, async (g) => {
+    if (stopped) {
+      issues.push({ kind: g.kind, code: "ai", detail: stopped.message });
+      return { ...g, texts: {} };
+    }
     const codes = Object.keys(g.texts);
     const req = buildTranslationRequest({
       prompt: opts.ai.prompt,
@@ -157,6 +171,7 @@ export async function runDailySync(db: AppDb, opts: SyncOptions): Promise<SyncRe
       for (const sign of parsed.tooLong) issues.push({ kind: g.kind, sign, code: "too_long" });
       return { ...g, texts: parsed.texts };
     } catch (err) {
+      if (isFatal(err)) stopped = err;
       issues.push(
         err instanceof AiError
           ? { kind: g.kind, code: "ai", detail: err.message }
@@ -231,6 +246,21 @@ export async function runDailySyncOnce(db: AppDb, opts: SyncOptions): Promise<Sy
   } finally {
     running = null;
   }
+}
+
+export type SyncRun = { at: Date; trigger: SyncTrigger; saved: number; total: number };
+
+/** Syncs logged since `since`, oldest first (for the daily cron's schedule). */
+export async function syncRunsSince(db: AppDb, since: Date): Promise<SyncRun[]> {
+  const rows = await db
+    .select({ at: auditLogs.createdAt, data: auditLogs.data })
+    .from(auditLogs)
+    .where(and(eq(auditLogs.action, "daily.sync"), gte(auditLogs.createdAt, since)))
+    .orderBy(asc(auditLogs.createdAt));
+  return rows.map((r) => {
+    const d = r.data as SyncReport;
+    return { at: r.at, trigger: d.trigger, saved: d.saved, total: d.total };
+  });
 }
 
 /** The latest sync (from the audit log), for the admin pages. */

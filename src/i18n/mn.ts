@@ -581,7 +581,7 @@ export const mn = {
         last: (when: string, saved: number, total: number) =>
           `Сүүлд: ${when} · ${saved}/${total} текст`,
         cron: "автомат",
-        autoOn: "Өдөр бүр 20:00-д автоматаар",
+        autoOn: (time: string) => `Өдөр бүр ${time}-д автоматаар`,
         autoOff: "Автомат sync унтраалттай",
         notConfigured: "AI орчуулгын түлхүүр тохируулаагүй байна.",
         configure: "AI тохиргоо",
@@ -655,7 +655,10 @@ export const mn = {
       resetPrompt: "Анхны заавар",
       autoSync: "Өдөр бүр автоматаар sync хийх",
       autoSyncHint:
-        "Сервер өдөр бүр 20:00-д (Монголын цагаар) /api/cron/daily-sync-ийг дуудна — host crontab-д нэмсэн байх ёстой.",
+        "Тохируулсан цагт astrology.com-оос маргаашийнхыг татаж орчуулна. Дутуу гарвал 1 цагийн дараа дахин оролдоно (өдөрт 3 хүртэл). Сервер /api/cron/daily-sync-ийг 5 минут тутам дуудах ёстой (host crontab).",
+      autoSyncTime: "Хэдэн цагт (Монголын цагаар)",
+      autoSyncEarly: (earliest: string) =>
+        `${earliest}-аас өмнө astrology.com-д маргаашийнх хараахан гараагүй байдаг — энэ цагт өнөөдрийн зурхай татагдана.`,
       save: "Хадгалах",
       saving: "Хадгалж байна…",
       saved: "Хадгаллаа",

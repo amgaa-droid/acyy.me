@@ -131,7 +131,6 @@ export async function syncDailyAction(): Promise<DailySyncResult> {
   const admin = await requireAdmin();
   try {
     const report = await syncWithSavedSettings(db, admin.userId, "manual");
-    if ("skipped" in report) return { ok: false, error: "generic" };
     revalidatePath("/admin/daily");
     revalidatePath("/home");
     return { ok: true, report };

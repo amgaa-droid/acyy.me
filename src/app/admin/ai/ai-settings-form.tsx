@@ -21,10 +21,13 @@ export function AiSettingsForm({
   initial,
   defaultModels,
   encryptionReady,
+  earliestTomorrow,
 }: {
   initial: AiSettingsView;
   defaultModels: Record<AiProviderId, string>;
   encryptionReady: boolean;
+  /** Before this, astrology.com's "tomorrow" is still today. */
+  earliestTomorrow: string;
 }) {
   const [saved, setSaved] = useState(initial);
   const [provider, setProvider] = useState(initial.provider);
@@ -35,6 +38,7 @@ export function AiSettingsForm({
   });
   const [prompt, setPrompt] = useState(initial.prompt);
   const [autoSync, setAutoSync] = useState(initial.autoSync);
+  const [autoSyncTime, setAutoSyncTime] = useState(initial.autoSyncTime);
   const [msg, setMsg] = useState<Msg>(null);
   const [test, setTest] = useState<TestAiResult | null>(null);
   const [saving, startSave] = useTransition();
@@ -43,7 +47,14 @@ export function AiSettingsForm({
   const save = () =>
     startSave(async () => {
       setMsg(null);
-      const res = await saveAiSettingsAction({ provider, models, keys, prompt, autoSync });
+      const res = await saveAiSettingsAction({
+        provider,
+        models,
+        keys,
+        prompt,
+        autoSync,
+        autoSyncTime,
+      });
       if (res.ok) {
         setSaved(res.settings);
         setKeys({ gemini: { apiKey: "", clear: false }, openai: { apiKey: "", clear: false } });
@@ -174,6 +185,23 @@ export function AiSettingsForm({
 
       <section className="flex flex-col gap-2 rounded-3xl bg-surface p-5 lg:col-span-2">
         <Toggle label={t.autoSync} on={autoSync} onChange={setAutoSync} />
+        {autoSync && (
+          <Field label={t.autoSyncTime} className="mt-2 w-48">
+            <input
+              type="time"
+              step={300}
+              required
+              className={inputClass}
+              value={autoSyncTime}
+              onChange={(e) => setAutoSyncTime(e.target.value.slice(0, 5))}
+            />
+          </Field>
+        )}
+        {autoSync && autoSyncTime < earliestTomorrow && (
+          <p className="text-xs font-semibold text-destructive">
+            {t.autoSyncEarly(earliestTomorrow)}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">{t.autoSyncHint}</p>
       </section>
 

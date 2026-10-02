@@ -42,21 +42,64 @@ export class AiError extends Error {
     readonly code: "http" | "empty" | "network",
     message: string,
     readonly status?: number,
+    readonly limit: {
+      /** The plan's quota is used up (daily / billing) — retrying won't help today. */
+      quota?: boolean;
+      /** The provider says when to try again (a per-minute rate limit). */
+      retryAfterMs?: number;
+    } = {},
   ) {
     super(message);
   }
+}
+
+type ApiError = {
+  message?: string;
+  code?: string | number;
+  type?: string;
+  details?: { "@type"?: string; retryDelay?: string; violations?: { quotaId?: string }[] }[];
+};
+
+/** A rate limit asking us to wait longer than this is treated as a used-up quota. */
+const MAX_RETRY_AFTER_MS = 60_000;
+
+/**
+ * Reads a 429: Gemini puts the quota (`…PerDay…` / `…PerMinute…`) and a `RetryInfo` delay in
+ * `error.details`; OpenAI says `insufficient_quota` and may send a `retry-after` header.
+ */
+export function limitOf(
+  status: number,
+  error: ApiError | undefined,
+  retryAfterHeader: string | null,
+): AiError["limit"] {
+  if (status !== 429) return {};
+  const header = Number(retryAfterHeader);
+  const delay = error?.details?.find((d) => d["@type"]?.endsWith("RetryInfo"))?.retryDelay;
+  const retryAfterMs =
+    retryAfterHeader && Number.isFinite(header)
+      ? header * 1000
+      : delay && /^\d+(\.\d+)?s$/.test(delay)
+        ? Math.ceil(parseFloat(delay) * 1000)
+        : undefined;
+  const quotaIds = (error?.details ?? []).flatMap((d) => d.violations ?? []).map((v) => v.quotaId);
+  const quota =
+    error?.code === "insufficient_quota" ||
+    error?.type === "insufficient_quota" ||
+    quotaIds.some((id) => id && /per ?day/i.test(id)) ||
+    (retryAfterMs ?? 0) > MAX_RETRY_AFTER_MS;
+  return { quota, retryAfterMs };
 }
 
 const TIMEOUT_MS = 180_000;
 
 type GeminiResponse = {
   candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
-  error?: { message?: string };
+  error?: ApiError;
 };
 
 type OpenAiResponse = {
   choices?: { message?: { content?: string | null } }[];
-  error?: { message?: string };
+  error?: ApiError;
 };
 
 export function geminiText(body: GeminiResponse): string {
@@ -120,7 +163,12 @@ export async function aiComplete(
   const body = (await res.json().catch(() => ({}))) as GeminiResponse & OpenAiResponse;
   if (!res.ok) {
     const msg = body.error?.message ?? res.statusText;
-    throw new AiError("http", `${res.status}: ${msg}`.slice(0, 300), res.status);
+    throw new AiError(
+      "http",
+      `${res.status}: ${msg}`.slice(0, 300),
+      res.status,
+      limitOf(res.status, body.error, res.headers.get("retry-after")),
+    );
   }
   const text = cfg.provider === "gemini" ? geminiText(body) : openAiText(body);
   if (!text) throw new AiError("empty", "empty response");

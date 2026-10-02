@@ -127,6 +127,7 @@ export default async function AdminDailyPage({ searchParams }: PageProps<"/admin
         ready={ai.keys[ai.provider].set}
         providerName={`${mn.admin.ai.providers[ai.provider].name} (${ai.models[ai.provider]})`}
         autoSync={ai.autoSync}
+        autoSyncTime={ai.autoSyncTime}
         isOwner={admin.role === "owner"}
         last={
           lastSync

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { logAudit } from "@/server/audit";
 import { appSettings } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
+import { AUTO_SYNC_DEFAULT_TIME, AUTO_SYNC_TIME_RE } from "@/server/daily-sync/schedule";
 import { openSecret, sealSecret } from "@/server/secret-box";
 import {
   AI_PROVIDERS,
@@ -41,6 +42,8 @@ const storedSchema = z.object({
   /** "" = the default prompt. */
   prompt: z.string().default(""),
   autoSync: z.boolean().default(false),
+  /** "HH:MM", Mongolia time. */
+  autoSyncTime: z.string().regex(AUTO_SYNC_TIME_RE).default(AUTO_SYNC_DEFAULT_TIME),
 });
 type Stored = z.infer<typeof storedSchema>;
 
@@ -52,6 +55,7 @@ export type AiSettingsView = {
   prompt: string;
   defaultPrompt: string;
   autoSync: boolean;
+  autoSyncTime: string;
 };
 
 export class AiSettingsError extends Error {
@@ -85,6 +89,7 @@ export async function getAiSettingsView(db: AppDb): Promise<AiSettingsView> {
     prompt: s.prompt || DEFAULT_TRANSLATION_PROMPT,
     defaultPrompt: DEFAULT_TRANSLATION_PROMPT,
     autoSync: s.autoSync,
+    autoSyncTime: s.autoSyncTime,
   };
 }
 
@@ -104,6 +109,7 @@ export const saveAiSettingsSchema = z.object({
   keys: z.object({ gemini: keyInput, openai: keyInput }),
   prompt: z.string().trim().max(8000),
   autoSync: z.boolean(),
+  autoSyncTime: z.string().regex(AUTO_SYNC_TIME_RE),
 });
 
 function hintOf(key: string): string {
@@ -137,6 +143,7 @@ export async function saveAiSettings(
     keys,
     prompt: data.prompt === DEFAULT_TRANSLATION_PROMPT ? "" : data.prompt,
     autoSync: data.autoSync,
+    autoSyncTime: data.autoSyncTime,
   };
   await db.transaction(async (tx) => {
     await tx
@@ -158,13 +165,14 @@ export async function saveAiSettings(
         keys: changedKeys,
         customPrompt: !!value.prompt,
         autoSync: value.autoSync,
+        autoSyncTime: value.autoSyncTime,
       },
     });
   });
   return getAiSettingsView(db);
 }
 
-export type AiRuntime = AiConfig & { prompt: string; autoSync: boolean };
+export type AiRuntime = AiConfig & { prompt: string };
 
 /**
  * The provider the sync should use right now, with its key opened. `override` lets the
@@ -195,6 +203,11 @@ export async function loadAiRuntime(
     model,
     apiKey,
     prompt: override.prompt?.trim() || s.prompt || DEFAULT_TRANSLATION_PROMPT,
-    autoSync: s.autoSync,
   };
+}
+
+/** Whether and when the daily cron syncs. */
+export async function getAutoSync(db: AppDb): Promise<{ on: boolean; time: string }> {
+  const s = await loadStored(db);
+  return { on: s.autoSync, time: s.autoSyncTime };
 }

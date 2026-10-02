@@ -9,6 +9,7 @@ import {
   AiSettingsError,
   DEFAULT_TRANSLATION_PROMPT,
   getAiSettingsView,
+  getAutoSync,
   loadAiRuntime,
   saveAiSettings,
 } from "./settings";
@@ -25,6 +26,7 @@ const base = {
   keys: noKeys,
   prompt: DEFAULT_TRANSLATION_PROMPT,
   autoSync: false,
+  autoSyncTime: "20:00",
 };
 
 beforeAll(async () => {
@@ -46,6 +48,7 @@ describe("AI settings", () => {
       prompt: DEFAULT_TRANSLATION_PROMPT,
       defaultPrompt: DEFAULT_TRANSLATION_PROMPT,
       autoSync: false,
+      autoSyncTime: "20:00",
     });
     await expect(loadAiRuntime(db, SECRET)).rejects.toEqual(new AiSettingsError("not_configured"));
   });
@@ -86,11 +89,17 @@ describe("AI settings", () => {
     const kept = await saveAiSettings(
       db,
       actor,
-      { ...base, provider: "openai", prompt: "Custom.", autoSync: true },
+      { ...base, provider: "openai", prompt: "Custom.", autoSync: true, autoSyncTime: "21:30" },
       SECRET,
     );
     expect(kept.keys.openai).toEqual({ set: true, hint: "…1234" });
-    expect(kept).toMatchObject({ provider: "openai", prompt: "Custom.", autoSync: true });
+    expect(kept).toMatchObject({
+      provider: "openai",
+      prompt: "Custom.",
+      autoSync: true,
+      autoSyncTime: "21:30",
+    });
+    expect(await getAutoSync(db)).toEqual({ on: true, time: "21:30" });
     expect((await loadAiRuntime(db, SECRET)).apiKey).toBe("sk-abc-1234");
 
     const cleared = await saveAiSettings(
@@ -155,5 +164,10 @@ describe("AI settings", () => {
     await expect(
       saveAiSettings(db, actor, { ...base, provider: "claude" as never }, SECRET),
     ).rejects.toBeInstanceOf(ZodError);
+    for (const autoSyncTime of ["24:00", "9:00", "20:60", ""]) {
+      await expect(
+        saveAiSettings(db, actor, { ...base, autoSyncTime }, SECRET),
+      ).rejects.toBeInstanceOf(ZodError);
+    }
   });
 });

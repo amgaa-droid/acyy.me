@@ -19,6 +19,7 @@ export function DailySync({
   ready,
   providerName,
   autoSync,
+  autoSyncTime,
   isOwner,
   last,
   kindNames,
@@ -27,6 +28,7 @@ export function DailySync({
   ready: boolean;
   providerName: string;
   autoSync: boolean;
+  autoSyncTime: string;
   isOwner: boolean;
   /** Pre-formatted "when · n/total" of the latest sync. */
   last: string | null;
@@ -65,7 +67,7 @@ export function DailySync({
         </h2>
         <p className="max-w-2xl text-sm text-muted-foreground">{t.intro(providerName)}</p>
         <p className="text-xs text-muted-foreground">
-          {[last, autoSync ? t.autoOn : t.autoOff].filter(Boolean).join(" · ")}
+          {[last, autoSync ? t.autoOn(autoSyncTime) : t.autoOff].filter(Boolean).join(" · ")}
         </p>
       </div>
 

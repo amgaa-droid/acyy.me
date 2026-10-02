@@ -6,6 +6,7 @@ import { requireOwner } from "@/server/admin/guard";
 import { DEFAULT_MODELS } from "@/server/ai/providers";
 import { getAiSettingsView } from "@/server/ai/settings";
 import { db } from "@/server/db";
+import { AUTO_SYNC_EARLIEST_TOMORROW } from "@/server/daily-sync/schedule";
 import { AiSettingsForm } from "./ai-settings-form";
 
 export const metadata: Metadata = { title: mn.admin.nav.ai };
@@ -36,6 +37,7 @@ export default async function AiSettingsPage() {
         initial={settings}
         defaultModels={DEFAULT_MODELS}
         encryptionReady={encryptionReady}
+        earliestTomorrow={AUTO_SYNC_EARLIEST_TOMORROW}
       />
     </div>
   );

@@ -6,7 +6,14 @@ import { auditLogs, dailyEntries, dailyKinds } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import { createTestDb, insertUser } from "@/test/db";
 import { SOURCE_PATHS } from "./astrology";
-import { SyncError, lastDailySync, runDailySync, runDailySyncOnce, type SyncOptions } from "./sync";
+import {
+  SyncError,
+  lastDailySync,
+  runDailySync,
+  runDailySyncOnce,
+  syncRunsSince,
+  type SyncOptions,
+} from "./sync";
 
 let db: AppDb;
 let close: () => Promise<void>;
@@ -140,7 +147,7 @@ describe("daily sync", () => {
     expect(await text("work", "aries")).toBeUndefined();
   });
 
-  it("retries a flaky answer once, but not an auth error", async () => {
+  it("retries a flaky answer, but stops asking the AI after an auth error", async () => {
     let calls = 0;
     const ok = fakeAi();
     const flaky = vi.fn(async (req: Parameters<typeof ok>[0]) =>
@@ -151,9 +158,13 @@ describe("daily sync", () => {
     expect(flaky).toHaveBeenCalledTimes(4);
 
     const auth = fakeAi({ failKind: "general" });
-    await runDailySync(db, options({ complete: auth }));
-    // general: 1 call (no retry), love + work: 1 each.
-    expect(auth).toHaveBeenCalledTimes(3);
+    const failed = await runDailySync(db, options({ complete: auth }));
+    // general: 1 call, no retry; love and work are not asked — the same key would fail.
+    expect(auth).toHaveBeenCalledTimes(1);
+    expect(failed.saved).toBe(0);
+    expect(failed.issues).toEqual(
+      ["general", "love", "work"].map((kind) => ({ kind, code: "ai", detail: "401: bad key" })),
+    );
   });
 
   it("retries a busy provider (503 / 429) up to 3 times", async () => {
@@ -175,6 +186,43 @@ describe("daily sync", () => {
     const failed = await runDailySync(db, options({ complete: down as never }));
     expect(down).toHaveBeenCalledTimes(9);
     expect(failed.issues.map((i) => i.detail)).toEqual(Array(3).fill("503: high demand"));
+  });
+
+  it("doesn't retry or go on after a used-up quota", async () => {
+    const quota = vi.fn(async () => {
+      throw new AiError("http", "429: You exceeded your current quota", 429, { quota: true });
+    });
+    const report = await runDailySync(db, options({ complete: quota as never }));
+    expect(quota).toHaveBeenCalledTimes(1);
+    expect(report.issues).toHaveLength(3);
+  });
+
+  it("waits as long as a rate limit asks, then retries", async () => {
+    const ok = fakeAi();
+    let first = true;
+    const limited = vi.fn(async (req: Parameters<typeof ok>[0]) => {
+      if (first) {
+        first = false;
+        throw new AiError("http", "429: slow down", 429, { retryAfterMs: 30 });
+      }
+      return ok(req);
+    });
+    const started = Date.now();
+    const report = await runDailySync(db, options({ complete: limited as never }));
+    expect(report.saved).toBe(36);
+    expect(limited).toHaveBeenCalledTimes(4);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(25);
+  });
+
+  it("lists the runs since a time, for the cron schedule", async () => {
+    await runDailySync(db, options({ trigger: "cron", actorId: null }));
+    await runDailySync(db, options({ fetchPage: fakeSite({ fail: ["love:leo"] }) }));
+    const runs = await syncRunsSince(db, new Date(Date.now() - 60_000));
+    expect(runs.map((r) => [r.trigger, r.saved, r.total])).toEqual([
+      ["cron", 36, 36],
+      ["manual", 35, 36],
+    ]);
+    expect(await syncRunsSince(db, new Date(Date.now() + 60_000))).toEqual([]);
   });
 
   it("never writes a page whose date is not around today", async () => {
