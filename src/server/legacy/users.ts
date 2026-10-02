@@ -224,7 +224,7 @@ export function planLegacyUsers(t: LegacyTables, today: string): LegacyPlan {
   for (const u of t.users) {
     const guid = str(u.RowGUID);
     const legacyUserId = num(u.UserID);
-    const balance = Math.max(0, num(u.CurrentPoint));
+    const balance = Math.max(0, Math.floor(num(u.CurrentPoint)));
     const actions = paidActions.get(guid) ?? [];
     const relations = paidRelations.get(legacyUserId) ?? [];
     if (actions.length === 0 && relations.length === 0 && balance === 0) continue;

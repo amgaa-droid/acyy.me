@@ -14,7 +14,7 @@ import {
 import { loadProductDefs } from "@/server/products";
 import { getBalance } from "@/server/wallet";
 import { createTestDb, insertUser } from "@/test/db";
-import { applyLegacyUser, legacyAvatar, type ApplyContext } from "./apply";
+import { applyLegacyUser, legacyAvatar, legacyDate, type ApplyContext } from "./apply";
 import type { UserPlan } from "./users";
 
 let db: AppDb;
@@ -139,9 +139,22 @@ describe("applyLegacyUser", () => {
     if (again.ok) expect(await getBalance(db, again.userId)).toBe(13000);
   });
 
-  it("adopts an existing account with the same email", async () => {
+  it("leaves an existing account with the same email alone: an email match proves nothing", async () => {
+    const p = plan();
+    const existing = await insertUser(db, p.email);
+    expect(await applyLegacyUser(db, p, ctx)).toEqual({ ok: false, reason: "email_taken" });
+    const [u] = await db.select().from(user).where(eq(user.id, existing.id));
+    expect(u.legacyUserId).toBeNull();
+    expect(await getBalance(db, existing.id)).toBe(0);
+    expect(await db.select().from(account).where(eq(account.userId, existing.id))).toEqual([]);
+  });
+
+  it("adopts an existing account whose owner linked this Facebook id", async () => {
     const p = plan({ balance: 0 });
     const existing = await insertUser(db, p.email);
+    await db
+      .insert(account)
+      .values({ providerId: "facebook", accountId: p.facebookId, userId: existing.id });
     const res = await applyLegacyUser(db, p, ctx);
     expect(res).toMatchObject({
       ok: true,
@@ -175,6 +188,15 @@ describe("applyLegacyUser", () => {
     });
     const [u] = await db.select().from(user).where(eq(user.id, existing.id));
     expect(u.legacyUserId).toBeNull();
+  });
+});
+
+describe("legacyDate", () => {
+  it("reads the old site's zone-less timestamps and tolerates missing ones", () => {
+    expect(legacyDate("2019-06-01T08:00:00.000")?.toISOString()).toBe("2019-06-01T08:00:00.000Z");
+    expect(legacyDate("")).toBeUndefined();
+    expect(legacyDate(null)).toBeUndefined();
+    expect(legacyDate("not a date")).toBeUndefined();
   });
 });
 

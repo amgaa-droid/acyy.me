@@ -19,7 +19,11 @@ import { todayYmd, toIsoDate } from "@/lib/birth-date";
 import { loadAstroRefs } from "@/server/astro/refs";
 import * as schema from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
-import { applyLegacyUser, type ApplyResult } from "@/server/legacy/apply";
+import {
+  LegacyProductMissingError,
+  applyLegacyUser,
+  type ApplyResult,
+} from "@/server/legacy/apply";
 import { readDump } from "@/server/legacy/mssql";
 import { planLegacyUsers } from "@/server/legacy/users";
 import { loadProductDefs } from "@/server/products";
@@ -81,7 +85,9 @@ async function main() {
   };
   console.log(JSON.stringify(summary, null, 2));
 
-  const results: { legacyUserId: number; result: ApplyResult }[] = [];
+  // One account's bad data must not stop the run: it is reported and the next one goes on.
+  type Outcome = ApplyResult | { ok: false; reason: "error"; message: string };
+  const results: { legacyUserId: number; result: Outcome }[] = [];
   if (commit) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL is not set");
@@ -92,7 +98,18 @@ async function main() {
 
     console.time("apply");
     for (const [i, u] of users.entries()) {
-      results.push({ legacyUserId: u.legacyUserId, result: await applyLegacyUser(db, u, ctx) });
+      let result: Outcome;
+      try {
+        result = await applyLegacyUser(db, u, ctx);
+      } catch (err) {
+        if (err instanceof LegacyProductMissingError) throw err; // nothing can be applied
+        result = {
+          ok: false,
+          reason: "error",
+          message: err instanceof Error ? err.message : String(err),
+        };
+      }
+      results.push({ legacyUserId: u.legacyUserId, result });
       if ((i + 1) % 500 === 0) console.log(`  ${i + 1} / ${users.length}`);
     }
     console.timeEnd("apply");

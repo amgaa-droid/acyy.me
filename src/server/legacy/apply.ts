@@ -12,7 +12,9 @@ import type { PersonPlan, UserPlan } from "./users";
 /**
  * Writes one planned legacy account (src/server/legacy/users.ts). Idempotent — re-running with
  * the same plan changes nothing:
- * - user: found by legacy_user_id, else by email (an existing account is adopted), else created;
+ * - user: found by legacy_user_id, else created. An account that already exists with the same
+ *   email is adopted only if its owner has linked this very Facebook id (from /me) — the old
+ *   site's emails prove nothing, so a matching address alone must not hand someone a login;
  * - Facebook account row (provider "facebook", the old app-scoped id) → Better Auth signs the
  *   person straight into this user, before any email matching;
  * - people: UNIQUE(owner, legacy_key); purchases: UNIQUE(user, product, subject);
@@ -31,7 +33,11 @@ export type ApplyResult =
       newPurchases: number;
       credited: number;
     }
-  | { ok: false; reason: "facebook_id_taken" | "user_has_other_facebook" | "legacy_id_mismatch" };
+  | {
+      ok: false;
+      reason:
+        "facebook_id_taken" | "user_has_other_facebook" | "legacy_id_mismatch" | "email_taken";
+    };
 
 export class LegacyProductMissingError extends Error {
   constructor(readonly product: string) {
@@ -52,6 +58,13 @@ function hash(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0;
+}
+
+/** "2019-06-01T08:00:00.000" (no zone, taken as UTC) → Date; undefined when missing or malformed. */
+export function legacyDate(raw: string | null | undefined): Date | undefined {
+  if (!raw) return undefined;
+  const d = new Date(`${raw}Z`);
+  return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
 /** A stable avatar per person, matching the gender when it's known. */
@@ -87,12 +100,30 @@ function applyInTx(db: AppDb, plan: UserPlan, ctx: ApplyContext): Promise<ApplyR
       const [byEmail] = await tx.select().from(user).where(eq(user.email, plan.email));
       if (byEmail) {
         if (byEmail.legacyUserId !== null) throw new LegacyConflict("legacy_id_mismatch");
+        const [proof] = await tx
+          .select({ id: account.id })
+          .from(account)
+          .where(
+            and(
+              eq(account.userId, byEmail.id),
+              eq(account.providerId, "facebook"),
+              eq(account.accountId, plan.facebookId),
+            ),
+          );
+        if (!proof) {
+          const [otherFb] = await tx
+            .select({ id: account.id })
+            .from(account)
+            .where(and(eq(account.userId, byEmail.id), eq(account.providerId, "facebook")));
+          throw new LegacyConflict(otherFb ? "user_has_other_facebook" : "email_taken");
+        }
         [u] = await tx
           .update(user)
           .set({ legacyUserId: plan.legacyUserId })
           .where(eq(user.id, byEmail.id))
           .returning();
       } else {
+        const createdAt = legacyDate(plan.createdAt);
         [u] = await tx
           .insert(user)
           .values({
@@ -100,7 +131,7 @@ function applyInTx(db: AppDb, plan: UserPlan, ctx: ApplyContext): Promise<ApplyR
             email: plan.email,
             emailVerified: false,
             legacyUserId: plan.legacyUserId,
-            ...(plan.createdAt ? { createdAt: new Date(`${plan.createdAt}Z`) } : {}),
+            ...(createdAt ? { createdAt } : {}),
           })
           .returning();
         createdUser = true;
@@ -170,6 +201,7 @@ function applyInTx(db: AppDb, plan: UserPlan, ctx: ApplyContext): Promise<ApplyR
     for (const p of plan.purchases) {
       const people = p.personKeys.map((k) => byKey.get(k)!);
       const def = ctx.products.get(p.product)!;
+      const createdAt = legacyDate(p.createdAt);
       const [row] = await tx
         .insert(purchases)
         .values({
@@ -181,7 +213,8 @@ function applyInTx(db: AppDb, plan: UserPlan, ctx: ApplyContext): Promise<ApplyR
           subjectKey: subjectKey(people.map((x) => x.id)),
           snapshot: buildSnapshot(activeParts(def), people, ctx.refs),
           legacyRef: p.legacyRef,
-          createdAt: new Date(`${p.createdAt}Z`),
+          // No usable date on the old row → the default (now).
+          ...(createdAt ? { createdAt } : {}),
         })
         .onConflictDoNothing()
         .returning({ id: purchases.id });
