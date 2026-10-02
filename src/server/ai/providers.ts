@@ -8,7 +8,7 @@ export const AI_PROVIDERS = ["gemini", "openai"] as const;
 export type AiProviderId = (typeof AI_PROVIDERS)[number];
 
 export const DEFAULT_MODELS: Record<AiProviderId, string> = {
-  gemini: "gemini-2.5-flash",
+  gemini: "gemini-3.8-flash",
   openai: "gpt-5-mini",
 };
 

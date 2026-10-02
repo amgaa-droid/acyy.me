@@ -21,7 +21,7 @@ const SECRET = "s".repeat(64);
 const noKeys = { gemini: { apiKey: "" }, openai: { apiKey: "" } };
 const base = {
   provider: "gemini" as const,
-  models: { gemini: "gemini-2.5-flash", openai: "gpt-5-mini" },
+  models: { gemini: "gemini-3.8-flash", openai: "gpt-5-mini" },
   keys: noKeys,
   prompt: DEFAULT_TRANSLATION_PROMPT,
   autoSync: false,
@@ -41,7 +41,7 @@ describe("AI settings", () => {
   it("starts with Gemini, default models and prompt, no keys, cron off", async () => {
     expect(await getAiSettingsView(db)).toEqual({
       provider: "gemini",
-      models: { gemini: "gemini-2.5-flash", openai: "gpt-5-mini" },
+      models: { gemini: "gemini-3.8-flash", openai: "gpt-5-mini" },
       keys: { gemini: { set: false, hint: null }, openai: { set: false, hint: null } },
       prompt: DEFAULT_TRANSLATION_PROMPT,
       defaultPrompt: DEFAULT_TRANSLATION_PROMPT,
@@ -70,7 +70,7 @@ describe("AI settings", () => {
     const rt = await loadAiRuntime(db, SECRET);
     expect(rt).toMatchObject({
       provider: "gemini",
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       apiKey: "AIza-secret-9876",
       prompt: DEFAULT_TRANSLATION_PROMPT,
     });
