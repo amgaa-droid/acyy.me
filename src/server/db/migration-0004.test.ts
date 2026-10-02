@@ -56,8 +56,9 @@ describe("migration 0004 (body → fields)", () => {
     expect(parts.rows.map((r) => `${r.product_code}.${r.code}`)).toEqual([
       "birthday.main",
       "sign.main",
-      "synastry.sign_pair",
+      // 0016 puts the period pair ("Харилцааны зөвлөмж") first.
       "synastry.period_pair",
+      "synastry.sign_pair",
     ]);
     const icon = await pg.query<{ icon: string }>(
       "SELECT icon FROM products WHERE code = 'birthday'",

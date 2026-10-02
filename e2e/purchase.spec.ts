@@ -117,7 +117,7 @@ test("new user: short balance → top-up → back to confirm → buys every acti
   await confirmPurchase(page);
   const synUrl = page.url();
   await expect(page.getByRole("region", { name: /^Ордны нийцэл · / }).first()).toBeVisible();
-  await expect(page.getByRole("region", { name: "Төрсөн үеийн нийцэл" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Харилцааны зөвлөмж" })).toBeVisible();
 
   // Every reading bought once.
   const left = credited - total;

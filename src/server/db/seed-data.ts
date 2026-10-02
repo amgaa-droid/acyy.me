@@ -188,16 +188,10 @@ export const PRODUCTS: SeedProduct[] = [
     icon: "blend",
     tint: "nav",
     parts: [
-      // 144 ordered texts (A→B); a reading shows both directions (migration 0008).
-      {
-        code: "sign_pair",
-        nameMn: "Ордны нийцэл",
-        keyType: "sign_pair_ordered",
-        fields: [GENERAL],
-      },
+      // The relationship advice (period pair) reads first (migration 0016).
       {
         code: "period_pair",
-        nameMn: "Төрсөн үеийн нийцэл",
+        nameMn: "Харилцааны зөвлөмж",
         keyType: "period_pair",
         fields: [
           GENERAL,
@@ -206,6 +200,13 @@ export const PRODUCTS: SeedProduct[] = [
           { code: "good_for", nameMn: "Нийцтэй харилцаа", kind: "chips" },
           { code: "caution_for", nameMn: "Сорилттой харилцаа", kind: "alert" },
         ],
+      },
+      // 144 ordered texts (A→B); a reading shows both directions (migration 0008).
+      {
+        code: "sign_pair",
+        nameMn: "Ордны нийцэл",
+        keyType: "sign_pair_ordered",
+        fields: [GENERAL],
       },
     ],
   },

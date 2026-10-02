@@ -59,15 +59,26 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
       .map((f) => ({ ...f, code: `${s.section}.${s.key}.${f.code}` })),
   );
   const multiPart = reading.sections.length > 1;
+  // A pair's headline (the first part's title, "Харилцааны зөвлөмж") sits in the hero with the two
+  // people instead of atop its article section.
+  const headline = pair ? reading.sections.find((s) => s.fields !== null && s.title) : undefined;
+  const firstScored = reading.sections.find((s) => s.score !== null);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <Link
-        href="/readings?tab=mine"
-        className="flex h-11 items-center gap-1 self-start rounded-full bg-surface pr-4 pl-2 text-sm font-semibold"
-      >
-        <ChevronLeft className="size-5" aria-hidden /> {t.back}
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href="/readings?tab=mine"
+          className="flex h-11 shrink-0 items-center gap-1 rounded-full bg-surface pr-4 pl-2 text-sm font-semibold"
+        >
+          <ChevronLeft className="size-5" aria-hidden /> {t.back}
+        </Link>
+        {pair && (
+          <span className="min-w-0 truncate rounded-full bg-surface px-3 py-1.5 text-[11px] font-semibold tracking-wider text-highlight uppercase lg:px-3.5 lg:text-xs lg:tracking-widest">
+            {reading.viaLink ? t.freeView : reading.productName}
+          </span>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:items-start">
         <div className="flex flex-col gap-3 lg:sticky lg:top-10">
@@ -83,11 +94,8 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                 rings={false}
                 className="absolute -top-2 -right-8 size-44 opacity-25"
               />
-              <span className="relative self-center rounded-full bg-surface px-3.5 py-1.5 text-xs font-semibold tracking-widest text-highlight uppercase">
-                {reading.viaLink ? t.freeView : reading.productName}
-              </span>
-              <h1 className="sr-only">
-                {people[0].name} &amp; {people[1].name}
+              <h1 className="relative px-6 text-center font-serif text-[30px] leading-[1.05] font-semibold text-balance lg:text-[34px]">
+                {headline?.title ?? `${people[0].name} & ${people[1].name}`}
               </h1>
               <div className="relative grid grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] items-start">
                 <PairPerson {...personProps(0)} />
@@ -118,7 +126,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                       >
                         <ScoreRing
                           value={s.score}
-                          tone={s === reading.sections[0] ? "primary" : "secondary"}
+                          tone={s === firstScored ? "primary" : "secondary"}
                         />
                         <span className="text-sm leading-tight font-semibold">
                           {sectionLabel(s, signNames)}
@@ -174,6 +182,8 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                   )}
                   {s.fields === null ? (
                     <p className="text-muted-foreground">{t.unavailable}</p>
+                  ) : s === headline ? (
+                    s.teaser && <Teaser text={s.teaser} className="mt-1" />
                   ) : (
                     <>
                       <h2 className="text-[42px] leading-none font-semibold lg:text-[60px]">

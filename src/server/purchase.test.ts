@@ -286,7 +286,7 @@ describe("reading & preview", () => {
     });
     const r = await getReading(db, friend.id, syn.purchase.id);
     expect(r.viaLink).toBe(true);
-    expect(r.sections.map((s) => s.section)).toEqual(["sign_pair", "period_pair"]);
+    expect(r.sections.map((s) => s.section)).toEqual(["period_pair", "sign_pair"]);
     await expect(getReading(db, friend.id, sign.purchase.id)).rejects.toBeInstanceOf(
       ReadingNotFoundError,
     );
@@ -297,8 +297,8 @@ describe("reading & preview", () => {
       sign_pair: "aries|leo",
       period_pair: "1|2",
     });
-    // Ordered sign pair: both directions, then the period pair.
-    expect(preview.sections.map((s) => s.key)).toEqual(["aries|leo", "leo|aries", "1|2"]);
+    // The period pair (relationship advice, migration 0016), then both sign-pair directions.
+    expect(preview.sections.map((s) => s.key)).toEqual(["1|2", "aries|leo", "leo|aries"]);
     const first = preview.sections[0];
     expect(first.excerpt).toContain("Энэ бол жинхэнэ текст ирэх хүртэлх түр бичвэр юм!");
     expect(first.excerpt).not.toContain("Гурав дахь");

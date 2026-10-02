@@ -113,6 +113,13 @@
       "when": 1790902556913,
       "tag": "0015_synastry_relation_labels",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790911583860,
+      "tag": "0016_synastry_advice_first",
+      "breakpoints": true
     }
   ]
 }
