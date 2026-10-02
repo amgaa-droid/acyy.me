@@ -163,7 +163,8 @@ test("share cards: owner gets a PNG in both formats and of selected text; strang
     expect(res.headers()["content-type"]).toBe("image/png");
     expect((await res.body()).length).toBeGreaterThan(20_000);
   }
-  await page.getByRole("button", { name: "Хуваалцах" }).click();
+  // Phones show the share button twice: under the name card and again where the reading ends.
+  await page.getByRole("button", { name: "Хуваалцах" }).first().click();
   await expect(page.getByRole("dialog", { name: "Карт хуваалцах" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Карт хуваалцах" })).toBeHidden();
