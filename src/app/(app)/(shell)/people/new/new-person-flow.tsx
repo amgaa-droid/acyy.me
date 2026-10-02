@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 
-import { BottomSheet } from "@/components/app/bottom-sheet";
 import { DatePicker } from "@/components/app/date-picker";
 import { useCloseAllModals } from "@/components/app/modal-scope";
+import { BirthDateConfirm } from "@/components/people/birth-date-confirm";
 import {
   AvatarPicker,
   GenderPicker,
@@ -16,7 +16,6 @@ import {
 } from "@/components/people/pickers";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
-import { parseIsoDate } from "@/lib/birth-date";
 import type { Gender, Relation } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { createPersonAction } from "../actions";
@@ -68,7 +67,6 @@ export function NewPersonFlow({
 
   const labelOk = relation !== "other" || relationLabel.trim().length >= 1;
   const nameOk = name.trim().length >= 1 && name.trim().length <= 40;
-  const ymd = parseIsoDate(birthDate);
 
   const save = () => {
     if (saving.current) return;
@@ -226,35 +224,15 @@ export function NewPersonFlow({
         </Button>
       </div>
 
-      <BottomSheet
-        title={t.confirmBirth.title}
-        description={t.confirmBirth.body}
+      <BirthDateConfirm
         open={confirming}
-        onOpenChange={(open) => !pending && setConfirming(open)}
-        footer={
-          <>
-            <Button size="lg" className="rounded-full" disabled={pending || saved} onClick={save}>
-              {t.confirmBirth.yes}
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="rounded-full"
-              disabled={pending || saved}
-              onClick={() => setConfirming(false)}
-            >
-              {t.confirmBirth.fix}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col items-center gap-1 rounded-3xl bg-subtle px-5 py-5 text-center">
-          <span className="max-w-full truncate text-sm text-muted-foreground">{name.trim()}</span>
-          <span className="font-heading text-[28px] leading-tight font-semibold text-balance">
-            {ymd ? mn.datePicker.long(ymd.y, ymd.m, ymd.d) : birthDate}
-          </span>
-        </div>
-      </BottomSheet>
+        onOpenChange={setConfirming}
+        name={name}
+        birthDate={birthDate}
+        busy={pending || saved}
+        onConfirm={save}
+        onFix={() => setConfirming(false)}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 
 import { ConstellationArt } from "@/components/app/constellation";
 import { DatePicker } from "@/components/app/date-picker";
+import { BirthDateConfirm } from "@/components/people/birth-date-confirm";
 import { AvatarPicker, GenderPicker, type AvatarOption } from "@/components/people/pickers";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
@@ -51,6 +52,9 @@ export function OnboardingFlow({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Done | null>(null);
   const [pending, startTransition] = useTransition();
+  // "Би" can be neither deleted nor given another birth date, so a new one is read back,
+  // spelled out, before it is saved. (A migrated person's date isn't picked here: no question.)
+  const [confirming, setConfirming] = useState(false);
 
   const back = () => {
     setError(null);
@@ -77,6 +81,7 @@ export function OnboardingFlow({
         : await createSelfAction({ name, birthDate, gender, avatarSeed });
       if (res.ok) setResult(res);
       else {
+        setConfirming(false);
         setError(t.errors[res.error]);
         if (res.error === "name") setStep(0);
         if (res.error === "birthDate") setStep(1);
@@ -92,7 +97,11 @@ export function OnboardingFlow({
     { label: mn.common.next, disabled: !nameValid, onClick: () => setStep(1) },
     { label: mn.common.next, disabled: false, onClick: () => setStep(2) },
     { label: mn.common.next, disabled: false, onClick: () => setStep(3) },
-    { label: t.finish, disabled: !avatarSeed || pending, onClick: submit },
+    {
+      label: t.finish,
+      disabled: !avatarSeed || pending,
+      onClick: picked ? submit : () => setConfirming(true),
+    },
   ][step];
 
   return (
@@ -211,6 +220,19 @@ export function OnboardingFlow({
           {primary.label}
         </Button>
       </div>
+
+      <BirthDateConfirm
+        open={confirming}
+        onOpenChange={setConfirming}
+        name={name}
+        birthDate={birthDate}
+        busy={pending}
+        onConfirm={submit}
+        onFix={() => {
+          setConfirming(false);
+          setStep(1);
+        }}
+      />
     </div>
   );
 }

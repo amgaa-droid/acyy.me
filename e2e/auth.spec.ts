@@ -47,6 +47,14 @@ test("new user: email OTP → onboarding → home", async ({ page, context }, in
   await page.getByRole("button", { name: "Алгасах" }).click();
   await page.getByRole("radio", { name: "Дүрс 14", exact: true }).click();
   await page.getByRole("button", { name: "Дуусгах" }).click();
+  // The date can't be changed later: it is read back first. "Засах" returns to the date step.
+  await expect(page.getByText("2000 оны 1-р сарын 1")).toBeVisible();
+  await page.getByRole("button", { name: "Засах" }).click();
+  await expect(page.getByRole("listbox", { name: "Он" })).toBeVisible();
+  await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
+  await page.getByRole("button", { name: "Алгасах" }).click();
+  await page.getByRole("button", { name: "Дуусгах" }).click();
+  await page.getByRole("button", { name: "Тийм, хадгалах" }).click();
 
   // Default picker date 2000-01-01 → Матар.
   await expect(page.getByText("Матар")).toBeVisible();
