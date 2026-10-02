@@ -55,6 +55,8 @@ export type SyncOptions = {
   ai: { provider: AiProviderId; model: string; prompt: string; complete: AiComplete };
   fetchPage?: FetchPage;
   now?: Date;
+  /** Pauses between AI retries (tests pass zeros). */
+  retryDelaysMs?: number[];
 };
 
 const FETCH_CONCURRENCY = 4;
@@ -74,13 +76,27 @@ async function pool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): P
   return out;
 }
 
-async function retryOnce<R>(fn: () => Promise<R>): Promise<R> {
-  try {
-    return await fn();
-  } catch (err) {
-    // A wrong key or model won't fix itself; anything else (timeout, 5xx, bad JSON) gets one more go.
-    if (err instanceof AiError && err.status && err.status >= 400 && err.status < 500) throw err;
-    return fn();
+/** Waits before the 2nd and 3rd try when the AI is busy (429 / 5xx / network). */
+export const AI_RETRY_DELAYS_MS = [5_000, 20_000];
+
+/**
+ * A wrong key or model (other 4xx) won't fix itself: no retry. A busy provider (429, 5xx,
+ * network) is retried after a pause; a bad answer (not our JSON) is retried at once.
+ */
+async function withRetries<R>(fn: () => Promise<R>, delaysMs: number[]): Promise<R> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const busy =
+        err instanceof AiError &&
+        (err.code === "network" || err.status === 429 || (err.status ?? 0) >= 500);
+      if (err instanceof AiError && !busy) throw err;
+      if (attempt >= delaysMs.length) throw err;
+      if (busy && delaysMs[attempt] > 0) {
+        await new Promise((r) => setTimeout(r, delaysMs[attempt]));
+      }
+    }
   }
 }
 
@@ -133,8 +149,9 @@ export async function runDailySync(db: AppDb, opts: SyncOptions): Promise<SyncRe
       texts: g.texts,
     });
     try {
-      const parsed = await retryOnce(async () =>
-        parseTranslation(await opts.ai.complete(req), codes, DAILY_TEXT_MAX),
+      const parsed = await withRetries(
+        async () => parseTranslation(await opts.ai.complete(req), codes, DAILY_TEXT_MAX),
+        opts.retryDelaysMs ?? AI_RETRY_DELAYS_MS,
       );
       for (const sign of parsed.missing) issues.push({ kind: g.kind, sign, code: "missing" });
       for (const sign of parsed.tooLong) issues.push({ kind: g.kind, sign, code: "too_long" });

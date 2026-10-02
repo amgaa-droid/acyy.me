@@ -12,6 +12,20 @@ export const DEFAULT_MODELS: Record<AiProviderId, string> = {
   openai: "gpt-5-mini",
 };
 
+/**
+ * Models a provider has shut down → the one to use instead. Saved settings still naming one are
+ * upgraded when read, so a retirement doesn't break the sync until someone edits /admin/ai.
+ */
+export const RETIRED_MODELS: Record<AiProviderId, Record<string, string>> = {
+  gemini: { "gemini-2.5-flash": DEFAULT_MODELS.gemini },
+  openai: {},
+};
+
+export function currentModel(provider: AiProviderId, model: string): string {
+  const m = model.trim();
+  return RETIRED_MODELS[provider][m] ?? m;
+}
+
 export type AiConfig = { provider: AiProviderId; model: string; apiKey: string };
 
 export type AiRequest = {

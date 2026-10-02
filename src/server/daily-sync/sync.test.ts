@@ -52,6 +52,7 @@ function options(over: Partial<SyncOptions> & { complete?: ReturnType<typeof fak
     ai: { provider: "gemini" as const, model: "m", prompt: "P", complete: complete ?? fakeAi() },
     fetchPage: fakeSite(),
     now: NOW,
+    retryDelaysMs: [0, 0],
     ...rest,
   };
 }
@@ -153,6 +154,27 @@ describe("daily sync", () => {
     await runDailySync(db, options({ complete: auth }));
     // general: 1 call (no retry), love + work: 1 each.
     expect(auth).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries a busy provider (503 / 429) up to 3 times", async () => {
+    const ok = fakeAi();
+    const tries = new Map<string, number>();
+    const busy = vi.fn(async (req: Parameters<typeof ok>[0]) => {
+      const n = (tries.get(req.user) ?? 0) + 1;
+      tries.set(req.user, n);
+      if (n <= 2) throw new AiError("http", "503: high demand", n === 1 ? 503 : 429);
+      return ok(req);
+    });
+    const report = await runDailySync(db, options({ complete: busy as never }));
+    expect(report.saved).toBe(36);
+    expect(busy).toHaveBeenCalledTimes(9);
+
+    const down = vi.fn(async () => {
+      throw new AiError("http", "503: high demand", 503);
+    });
+    const failed = await runDailySync(db, options({ complete: down as never }));
+    expect(down).toHaveBeenCalledTimes(9);
+    expect(failed.issues.map((i) => i.detail)).toEqual(Array(3).fill("503: high demand"));
   });
 
   it("never writes a page whose date is not around today", async () => {

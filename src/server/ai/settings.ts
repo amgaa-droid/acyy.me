@@ -5,7 +5,13 @@ import { logAudit } from "@/server/audit";
 import { appSettings } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import { openSecret, sealSecret } from "@/server/secret-box";
-import { AI_PROVIDERS, DEFAULT_MODELS, type AiConfig, type AiProviderId } from "./providers";
+import {
+  AI_PROVIDERS,
+  DEFAULT_MODELS,
+  currentModel,
+  type AiConfig,
+  type AiProviderId,
+} from "./providers";
 
 /**
  * AI translation settings (/admin/ai, Owner): which provider the daily sync uses, each
@@ -57,7 +63,14 @@ export class AiSettingsError extends Error {
 async function loadStored(db: AppDb): Promise<Stored> {
   const [row] = await db.select().from(appSettings).where(eq(appSettings.key, KEY));
   const parsed = storedSchema.safeParse(row?.value ?? {});
-  return parsed.success ? parsed.data : storedSchema.parse({});
+  const s = parsed.success ? parsed.data : storedSchema.parse({});
+  return {
+    ...s,
+    models: {
+      gemini: currentModel("gemini", s.models.gemini),
+      openai: currentModel("openai", s.models.openai),
+    },
+  };
 }
 
 export async function getAiSettingsView(db: AppDb): Promise<AiSettingsView> {
@@ -164,7 +177,7 @@ export async function loadAiRuntime(
 ): Promise<AiRuntime> {
   const s = await loadStored(db);
   const provider = override.provider ?? s.provider;
-  const model = override.model?.trim() || s.models[provider];
+  const model = currentModel(provider, override.model?.trim() || s.models[provider]);
   let apiKey = override.apiKey?.trim() ?? "";
   if (!apiKey) {
     const sealed = s.keys[provider];

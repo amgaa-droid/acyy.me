@@ -138,6 +138,16 @@ describe("AI settings", () => {
     });
   });
 
+  it("upgrades a retired model saved earlier", async () => {
+    await db.insert(appSettings).values({
+      key: "ai",
+      value: { provider: "gemini", models: { gemini: "gemini-2.5-flash", openai: "gpt-5-mini" } },
+    });
+    expect((await getAiSettingsView(db)).models.gemini).toBe("gemini-3.8-flash");
+    const rt = await loadAiRuntime(db, undefined, { apiKey: "typed", model: "gemini-2.5-flash" });
+    expect(rt.model).toBe("gemini-3.8-flash");
+  });
+
   it("validates input", async () => {
     await expect(
       saveAiSettings(db, actor, { ...base, models: { gemini: "", openai: "x" } }, SECRET),
