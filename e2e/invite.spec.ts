@@ -105,7 +105,7 @@ test("A invites B by email and buys a synastry → B signs up from the link and 
   await b.getByRole("button", { name: "Алгасах" }).click();
   await b.getByRole("radio", { name: "Nova" }).click();
   await b.getByRole("button", { name: "Дуусгах" }).click();
-  await b.getByRole("button", { name: "Дараа" }).click();
+  await b.getByRole("button", { name: "Орчлон руугаа орох" }).click();
 
   // B reads the synastry for free; not the sign reading.
   await b.goto("/readings?tab=mine");

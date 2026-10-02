@@ -3,9 +3,10 @@
 import { ChevronLeft, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { DatePicker } from "@/components/app/date-picker";
+import { useCloseAllModals } from "@/components/app/modal-scope";
 import {
   AvatarPicker,
   GenderPicker,
@@ -45,11 +46,18 @@ export function NewPersonFlow({
   const [gender, setGender] = useState<Gender>("unspecified");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // One tap saves once: a quick double tap fires before the button re-renders as disabled, and
+  // after saving it stays locked while the navigation that follows takes its moment.
+  const saving = useRef(false);
+  const [saved, setSaved] = useState(false);
+  const closeAll = useCloseAllModals();
 
   const labelOk = relation !== "other" || relationLabel.trim().length >= 1;
   const nameOk = name.trim().length >= 1 && name.trim().length <= 40;
 
-  const save = () =>
+  const save = () => {
+    if (saving.current) return;
+    saving.current = true;
     startTransition(async () => {
       setError(null);
       const res = await createPersonAction({
@@ -61,22 +69,28 @@ export function NewPersonFlow({
         gender,
       });
       if (res.ok) {
+        setSaved(true);
         if (returnTo) {
           const url = new URL(returnTo.next, window.location.origin);
           url.searchParams.set(returnTo.slot, res.id);
           router.push(`${url.pathname}${url.search}`);
-        } else if (returnHome) router.push("/home", { scroll: false });
-        else router.push(`/people/${res.id}`);
+        } else if (returnHome) {
+          // In the home popup: close it (back to /home) — pushing /home would keep the popup open.
+          if (closeAll) closeAll();
+          else router.push("/home", { scroll: false });
+        } else router.push(`/people/${res.id}`);
         return;
       }
+      saving.current = false;
       setError(t.errors[res.error]);
       if (res.error === "relationLabel") setStep(0);
     });
+  };
 
   const primary = [
     { label: mn.common.next, disabled: !relation || !labelOk, onClick: () => setStep(1) },
     { label: mn.common.next, disabled: !avatarSeed, onClick: () => setStep(2) },
-    { label: t.save, disabled: !nameOk || pending, onClick: save },
+    { label: t.save, disabled: !nameOk || pending || saved, onClick: save },
   ][step];
 
   return (

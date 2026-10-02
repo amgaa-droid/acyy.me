@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Lock } from "lucide-react";
+import { ArrowRight, ChevronLeft, Lock } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
@@ -200,29 +200,20 @@ function ResultStep({ result, name }: { result: Done; name: string }) {
           {sign.startMd} – {sign.endMd} · {period.no}-р {t.periodLabel}
         </span>
       </section>
-      <div className="rounded-3xl bg-surface p-5 lg:bg-subtle">
-        <h2 className="text-2xl font-semibold">{t.addPeopleTitle}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t.addPeopleHint}</p>
+      {/* No "add someone?" here: the home guide walks them through it, one step at a time. */}
+      <div className="flex flex-col gap-1.5 px-1">
+        <h2 className="text-[30px] leading-[1.05] font-semibold">{t.readyTitle}</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t.readyHint}</p>
       </div>
-      <div className="mt-auto grid grid-cols-2 gap-2">
-        <Button
-          variant="outline"
-          size="lg"
-          className="rounded-full"
-          render={<Link href="/home" />}
-          nativeButton={false}
-        >
-          {t.later}
-        </Button>
-        <Button
-          size="lg"
-          className="rounded-full"
-          render={<Link href="/people/new" />}
-          nativeButton={false}
-        >
-          {t.addPeople}
-        </Button>
-      </div>
+      <Button
+        size="lg"
+        className="mt-auto h-14 gap-2.5 rounded-full text-base"
+        render={<Link href="/home" />}
+        nativeButton={false}
+      >
+        {t.enter}
+        <ArrowRight className="size-[18px]" aria-hidden />
+      </Button>
     </div>
   );
 }
