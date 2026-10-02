@@ -8,7 +8,9 @@ import { requireAdmin } from "@/server/admin/guard";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { DAILY_TEXT_MAX, dailyCoverage, dailyDay, listDailyKinds } from "@/server/daily";
 import { db } from "@/server/db";
+import { DAILY_TEMPLATE_MAX_DAYS } from "@/server/import/daily";
 import { DailyEditor, KindsManager } from "./daily-editor";
+import { DailyImport } from "./daily-import";
 
 export const metadata: Metadata = { title: mn.admin.nav.daily };
 
@@ -155,6 +157,8 @@ export default async function AdminDailyPage({ searchParams }: PageProps<"/admin
           {t.noKinds}
         </p>
       )}
+
+      <DailyImport today={today} maxDays={DAILY_TEMPLATE_MAX_DAYS} />
 
       {admin.role === "owner" && <KindsManager kinds={kinds} />}
     </div>

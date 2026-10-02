@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { mn } from "@/i18n/mn";
 import { db } from "@/server/db";
@@ -16,6 +17,15 @@ export default async function ImportPage({ searchParams }: PageProps<"/admin/imp
       <div>
         <h1 className="text-[40px] leading-none font-semibold">{mn.admin.import.title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{mn.admin.import.intro}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {mn.admin.import.dailyHint}{" "}
+          <Link
+            href="/admin/daily#excel"
+            className="font-semibold text-highlight underline-offset-4 hover:underline"
+          >
+            {mn.admin.nav.daily} →
+          </Link>
+        </p>
       </div>
       <ImportForm
         initialKind={typeof kind === "string" ? kind : undefined}

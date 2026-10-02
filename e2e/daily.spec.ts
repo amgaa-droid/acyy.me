@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import { expect, test } from "@playwright/test";
 
 import { loginWithPassword } from "./helpers";
@@ -51,4 +52,44 @@ test("an editor writes today's text for a sign and its people read it on home", 
   await expect(
     page.getByRole("region", { name: "Өнөөдрийн зурхай" }).getByText(text),
   ).toBeVisible();
+});
+
+test("an editor imports several days from the Excel template", async ({ page }, info) => {
+  test.skip(
+    info.project.name !== "desktop-chrome",
+    "admin is desktop-first; one project avoids racing writes",
+  );
+  const stamp = Date.now();
+  // Far ahead, so the run doesn't touch the days people read now.
+  const from = "2030-01-01";
+
+  await loginWithPassword(page, "editor@test.local", "/admin/daily");
+  const res = await page.request.get(`/api/admin/daily-template?from=${from}&days=2`);
+  expect(res.status()).toBe(200);
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load((await res.body()) as unknown as ArrayBuffer);
+  const ws = wb.worksheets[0];
+  expect(ws.rowCount).toBe(1 + 2 * 12);
+  ws.eachRow((row, i) => {
+    if (i > 1)
+      row.getCell(3).value = `E2E ${stamp} ${row.getCell(1).value} ${row.getCell(2).value}`;
+  });
+  const file = Buffer.from(await wb.xlsx.writeBuffer());
+
+  await page.locator("summary", { hasText: "Excel импорт" }).click();
+  await page.getByLabel("Excel файл (.xlsx)").setInputFiles({
+    name: "daily.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: file,
+  });
+  await page.getByRole("button", { name: "Шалгах" }).click();
+  const report = page.getByRole("region", { name: "Импортын тайлан" });
+  await expect(report.getByRole("status")).toHaveText("Алдаагүй. Импортлоход бэлэн.");
+  await page.getByRole("button", { name: "Импортлох" }).click();
+  await expect(report.getByRole("status")).toHaveText("Импорт амжилттай.");
+
+  await page.goto(`/admin/daily?date=2030-01-02&kind=general`);
+  await expect(page.getByRole("textbox", { name: "Хилэнц" })).toHaveValue(
+    `E2E ${stamp} 2030-01-02 Хилэнц`,
+  );
 });
