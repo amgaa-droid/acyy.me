@@ -131,14 +131,14 @@ export function ShareSheet({
   );
 }
 
-/** "Хуваалцах": the reading's summary card. */
+/** "Хуваалцах": the reading's summary card. Phones: just the icon (it sits in the top bar). */
 export function ShareCardButton({ purchaseId }: { purchaseId: string }) {
   return (
     <ShareSheet
       purchaseId={purchaseId}
       trigger={
-        <Button className="rounded-full">
-          <Share2 aria-hidden /> {t.button}
+        <Button aria-label={t.button} className="size-11 shrink-0 rounded-full p-0 sm:h-11 sm:w-auto sm:px-4">
+          <Share2 aria-hidden /> <span className="max-sm:hidden">{t.button}</span>
         </Button>
       }
     />

@@ -249,7 +249,7 @@ export function DragHint({ from, to, avatarUri, tint }: { from: Body; to: Body; 
         >
           <span
             className={cn(
-              "block size-full overflow-hidden rounded-full border-[3px] border-surface opacity-80 shadow-[0_12px_30px_rgb(0_0_0/0.25)] dark:bg-nav",
+              "block size-full overflow-hidden rounded-full border-[3px] border-surface opacity-80 shadow-[0_12px_30px_rgb(0_0_0/0.25)] dark:bg-face",
               tint,
             )}
           >

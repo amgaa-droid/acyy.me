@@ -68,7 +68,7 @@ const STARS = [
 ];
 const SPRING = "ease-[cubic-bezier(.2,.9,.25,1.3)]";
 /** Planet faces: pastel by relation; light in dark mode so the line-art avatar reads. */
-const FACE = "dark:bg-nav";
+const FACE = "dark:bg-face";
 /**
  * A bought pair's colours, also set inline (with fallbacks) so they show even if a cached
  * stylesheet predates the `--pair` tokens.
@@ -957,7 +957,7 @@ export function PlanetSystem({
             )}
             <span
               className={cn(
-                `block size-full overflow-hidden rounded-full border-4 border-fg bg-surface transition-[scale] duration-500 ${SPRING} group-hover/me:scale-104 dark:border-highlight dark:bg-nav`,
+                `block size-full overflow-hidden rounded-full border-4 border-fg bg-surface transition-[scale] duration-500 ${SPRING} group-hover/me:scale-104 dark:border-highlight dark:bg-face`,
                 drag?.target === ME && "scale-110",
               )}
               style={{
@@ -1140,7 +1140,6 @@ export function PlanetSystem({
                 )}
               </article>
             ))}
-            <p className="px-1 text-center text-xs text-muted-foreground lg:text-left">{mn.common.entertainmentOnly}</p>
           </div>
         </section>
 

@@ -146,7 +146,8 @@ test("share cards: owner gets a PNG in both formats and of selected text; strang
   test.setTimeout(120_000);
   await signUpFresh(page, "sharer");
   await topUp10k(page);
-  await page.goto("/buy/sign");
+  // Only the birthday and pair readings have a "Хуваалцах" card button; any reading shares text.
+  await page.goto("/buy/birthday");
   await page.getByRole("link", { name: /Туршилт/ }).click();
   await page.getByRole("button", { name: /^Нээх · / }).click();
   await page

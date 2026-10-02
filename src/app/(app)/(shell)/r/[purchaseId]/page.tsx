@@ -22,6 +22,9 @@ import { ReadingNotFoundError, getReading, readingPeople } from "@/server/readin
 
 export const metadata: Metadata = { title: mn.readings.title };
 
+/** Readings with a "Хуваалцах" card button (top right); the rest share only selected text. */
+const SHARE_CARD = new Set(["birthday", "synastry"]);
+
 const dateFmt = new Intl.DateTimeFormat("mn-MN", {
   timeZone: "Asia/Ulaanbaatar",
   dateStyle: "medium",
@@ -76,11 +79,15 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
         >
           <ChevronLeft className="size-5" aria-hidden /> {t.back}
         </Link>
-        {pair && (
-          <span className="min-w-0 truncate rounded-full bg-surface px-3 py-1.5 text-[11px] font-semibold tracking-wider text-highlight uppercase lg:px-3.5 lg:text-xs lg:tracking-widest">
-            {reading.viaLink ? t.freeView : reading.productName}
-          </span>
-        )}
+        <div className="flex min-w-0 items-center gap-2">
+          {pair && (
+            <span className="min-w-0 truncate rounded-full bg-surface px-3 py-1.5 text-[11px] font-semibold tracking-wider text-highlight uppercase lg:px-3.5 lg:text-xs lg:tracking-widest">
+              {reading.viaLink ? t.freeView : reading.productName}
+            </span>
+          )}
+          {/* Only the birthday and pair readings make a card; any other reading shares selected text. */}
+          {SHARE_CARD.has(reading.productCode) && <ShareCardButton purchaseId={reading.id} />}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:items-start">
@@ -175,13 +182,8 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
             })}
           </SelectionShare>
           <div className="flex max-w-[640px] flex-wrap items-center justify-between gap-3 border-t border-border pt-4.5 lg:pt-5">
-            <p className="text-xs text-muted-foreground">
-              {mn.common.entertainmentOnly} · {t.bought(dateFmt.format(reading.createdAt))}
-            </p>
-            <div className="flex items-center gap-2">
-              {reading.linkedPersonId && <UnlinkButton personId={reading.linkedPersonId} />}
-              <ShareCardButton purchaseId={reading.id} />
-            </div>
+            <p className="text-xs text-muted-foreground">{t.bought(dateFmt.format(reading.createdAt))}</p>
+            {reading.linkedPersonId && <UnlinkButton personId={reading.linkedPersonId} />}
           </div>
         </article>
       </div>

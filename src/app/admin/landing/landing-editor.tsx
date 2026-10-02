@@ -722,11 +722,12 @@ function AvatarPicker({ path, tint }: { path: Path; tint: string }) {
             className={cn(
               "size-11 shrink-0 overflow-hidden rounded-full border-2",
               tint,
+              "dark:bg-face",
               value.seed === i ? "border-highlight" : "border-transparent",
             )}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
-            <img src={avatars[i]} alt="" className="size-full dark:invert" />
+            <img src={avatars[i]} alt="" className="size-full" />
           </button>
         ))}
       </div>

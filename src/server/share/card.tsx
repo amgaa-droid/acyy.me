@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { ImageResponse } from "next/og";
 
-import { mn } from "@/i18n/mn";
 import { STAR_PATH } from "@/lib/brand-icon";
 import { CONSTELLATIONS } from "@/lib/constellations";
 
@@ -577,7 +576,6 @@ export async function renderCard(d: CardData): Promise<ImageResponse> {
         }}
       >
         <span>{d.host}</span>
-        <span>{mn.common.entertainmentOnly.replace(/\.$/, "")}</span>
       </div>
     </div>,
     { width: W, height: H, fonts: await loadCardFonts() },

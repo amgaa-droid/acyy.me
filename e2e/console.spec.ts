@@ -49,8 +49,12 @@ test("main screens load and open sheets without React/console errors", async ({ 
   if (await reading.count()) {
     await reading.click();
     await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: "Хуваалцах" }).click();
-    await expect(page.getByRole("dialog", { name: "Карт хуваалцах" })).toBeVisible();
+    // Only birthday and pair readings have the card button.
+    const share = page.getByRole("button", { name: "Хуваалцах" });
+    if (await share.count()) {
+      await share.click();
+      await expect(page.getByRole("dialog", { name: "Карт хуваалцах" })).toBeVisible();
+    }
   }
 
   expect(errors).toEqual([]);

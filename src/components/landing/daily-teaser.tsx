@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { ConstellationArt } from "@/components/app/constellation";
 import { PRODUCT_ICON_COMPONENTS, PRODUCT_TINT_CLASSES } from "@/components/readings/product-icon";
-import { mn } from "@/i18n/mn";
 import type { ProductIconName, ProductTint } from "@/lib/domain";
 import type { LandingContent } from "@/lib/landing-content";
 import { cn } from "@/lib/utils";
@@ -131,7 +130,6 @@ export function DailyTeaser({
           {copy.cta} <ArrowRight className="size-4.5" aria-hidden />
         </Link>
         {copy.note && <p className="text-center text-xs text-muted-foreground">{copy.note}</p>}
-        <p className="text-center text-[11px] text-muted-foreground">{mn.common.entertainmentOnly}</p>
       </div>
     </section>
   );

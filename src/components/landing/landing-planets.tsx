@@ -51,6 +51,9 @@ const STARS = [
   { x: 94, y: 66, d: 0.9 },
 ];
 const LABEL_W = 112;
+/** On a phone the first screen shows at most this many example people, and links between them. */
+const PHONE_PEOPLE = 4;
+const PHONE_LINKS = 2;
 /** The outer orbit's diameter, in "Та" radii; seats stay round it. */
 const OUTER_ORBIT = 7.8;
 /** Below this height the headline shrinks (the `short` variant in globals.css). */
@@ -137,8 +140,8 @@ const INFO_W = 280;
 export function LandingPlanets({
   appName,
   copy,
-  people,
-  links,
+  people: allPeople,
+  links: allLinks,
   products,
   synastry,
   birthdayPrice,
@@ -185,6 +188,11 @@ export function LandingPlanets({
   }, []);
 
   const desktop = !!size && size.w >= 1024;
+  // Phones: fewer example people and links, so names and link chips don't pile up.
+  const people = desktop ? allPeople : allPeople.slice(0, PHONE_PEOPLE);
+  const links = allLinks
+    .filter((l) => people.some((p) => p.id === l.a) && people.some((p) => p.id === l.b))
+    .slice(0, desktop ? undefined : PHONE_LINKS);
   const short = !!size && size.h < SHORT_H;
   const base = desktop ? LANDING_DESKTOP : LANDING_PHONE;
   const k = size ? layoutScale(base, size.w, size.h) : 1;
@@ -486,12 +494,13 @@ export function LandingPlanets({
             >
               <span
                 className={cn(
-                  `flex max-w-28 items-center gap-1 truncate rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap shadow-[0_4px_12px_rgb(0_0_0/0.12)] transition-[scale] duration-300 ${SPRING} group-hover/l:scale-110`,
+                  `flex max-w-28 items-center gap-1 truncate rounded-full p-2 text-xs lg:px-2.5 lg:py-1 font-semibold whitespace-nowrap shadow-[0_4px_12px_rgb(0_0_0/0.12)] transition-[scale] duration-300 ${SPRING} group-hover/l:scale-110`,
                   open ? "bg-fg text-bg" : "bg-surface text-highlight",
                 )}
               >
                 <HeartHandshake className="size-3.5 shrink-0" aria-hidden />
-                {l.goodFor[0] && <span className="truncate">{l.goodFor[0]}</span>}
+                {/* Phones: just the icon (the name is in the card it opens). */}
+                {l.goodFor[0] && <span className="hidden truncate lg:inline">{l.goodFor[0]}</span>}
               </span>
             </button>
             {open && (
@@ -623,7 +632,7 @@ export function LandingPlanets({
                   >
                     <span
                       className={cn(
-                        `relative block size-full overflow-hidden rounded-full border-[3px] border-surface shadow-[0_8px_24px_rgb(0_0_0/0.14)] transition-[scale] duration-500 ${SPRING} group-hover/p:scale-108 dark:bg-nav`,
+                        `relative block size-full overflow-hidden rounded-full border-[3px] border-surface shadow-[0_8px_24px_rgb(0_0_0/0.14)] transition-[scale] duration-500 ${SPRING} group-hover/p:scale-108 dark:bg-face`,
                         p.tint,
                         selected === p.id && "shadow-[0_0_0_5px_var(--bg),0_0_0_8px_var(--highlight)]",
                       )}
@@ -634,7 +643,8 @@ export function LandingPlanets({
                     <span className="pointer-events-none absolute top-full left-1/2 mt-1 flex -translate-x-1/2 flex-col items-center rounded-xl bg-tint-1/85 px-2 py-0.5 leading-tight whitespace-nowrap">
                       <span className="text-[13px] font-semibold lg:text-[15px]">{p.name}</span>
                       <span className="text-[11px] text-muted-foreground lg:text-xs">
-                        {p.signName} · {p.birthDate}
+                        {p.signName}
+                        <span className="hidden lg:inline"> · {p.birthDate}</span>
                       </span>
                     </span>
                   </button>

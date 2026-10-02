@@ -29,12 +29,12 @@ export function AvatarPicker({
           aria-label={a.seed}
           onClick={() => onChange(a.seed)}
           className={cn(
-            "aspect-square overflow-hidden rounded-full bg-surface ring-offset-2 ring-offset-bg transition-shadow",
+            "aspect-square overflow-hidden rounded-full bg-surface dark:bg-face ring-offset-2 ring-offset-bg transition-shadow",
             value === a.seed ? "ring-2 ring-highlight" : "ring-1 ring-border hover:ring-2",
           )}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
-          <img src={a.uri} alt="" className="size-full dark:invert" />
+          <img src={a.uri} alt="" className="size-full" />
         </button>
       ))}
     </div>
