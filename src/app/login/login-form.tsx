@@ -11,6 +11,8 @@ type Props = {
   next: string;
   passwordEnabled: boolean;
   providers: ("google" | "facebook")[];
+  /** Error code of a failed Google/Facebook sign-in (from the callback's ?error=…). */
+  socialError?: string;
   /** Local dev without a mail server: point to the /dev/mail outbox. */
   devMail?: boolean;
 };
@@ -32,14 +34,27 @@ function errorText(error: AuthError): string {
 const inputClass =
   "h-12 w-full rounded-2xl border bg-bg px-4 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-export function LoginForm({ next, passwordEnabled, providers, devMail = false }: Props) {
+/** A provider account that can't join the existing account with its email → say how to get in. */
+function socialErrorText(code: string): string {
+  return /link/i.test(code) ? mn.login.errors.socialNotLinked : mn.login.errors.generic;
+}
+
+export function LoginForm({
+  next,
+  passwordEnabled,
+  providers,
+  socialError,
+  devMail = false,
+}: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    socialError ? socialErrorText(socialError) : null,
+  );
 
   const done = () => {
     router.replace(next);
@@ -97,7 +112,13 @@ export function LoginForm({ next, passwordEnabled, providers, devMail = false }:
           size="lg"
           className="rounded-full"
           disabled={pending}
-          onClick={() => authClient.signIn.social({ provider: p, callbackURL: next })}
+          onClick={() =>
+            authClient.signIn.social({
+              provider: p,
+              callbackURL: next,
+              errorCallbackURL: `/login?next=${encodeURIComponent(next)}`,
+            })
+          }
         >
           {p === "google" ? mn.login.google : mn.login.facebook}
         </Button>

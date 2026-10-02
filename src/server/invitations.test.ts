@@ -5,6 +5,7 @@ import { invitations, persons, user } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import { createTestDb, insertUser } from "@/test/db";
 import {
+  EMAIL_INVITES_PER_DAY,
   INVITE_TTL_MS,
   InvitationError,
   acceptInvitation,
@@ -101,6 +102,34 @@ describe("createInvitation", () => {
       email: "Bat@Mail.mn",
     });
     expect(await reason(viewInvitation(db, first.token))).toBe("revoked");
+  });
+
+  it("limits how many invitation emails one user sends in a day (links stay free)", async () => {
+    const a = await inviter();
+    const send = () =>
+      createInvitation(db, {
+        inviterId: a.userId,
+        personId: a.friend.id,
+        channel: "email",
+        email: "bat@mail.mn",
+      });
+    for (let i = 0; i < EMAIL_INVITES_PER_DAY; i++) await send();
+    expect(await reason(send())).toBe("rate_limited");
+    await createInvitation(db, { inviterId: a.userId, personId: a.friend.id, channel: "link" });
+
+    // The window is rolling: a day later the user may send again.
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000 + 1000);
+    expect(
+      await reason(
+        createInvitation(db, {
+          inviterId: a.userId,
+          personId: a.friend.id,
+          channel: "email",
+          email: "bat@mail.mn",
+          now: tomorrow,
+        }),
+      ),
+    ).toBe("ok");
   });
 });
 

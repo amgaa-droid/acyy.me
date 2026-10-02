@@ -12,7 +12,8 @@ import { LoginForm } from "./login-form";
 export const metadata: Metadata = { title: mn.login.title };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { next } = await searchParams;
+  // Back from Google/Facebook: Better Auth adds ?error=… when the sign-in failed.
+  const { next, error } = await searchParams;
   const target = safeNext(typeof next === "string" ? next : undefined);
   if (await getSession()) redirect(target);
 
@@ -30,6 +31,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             next={target}
             passwordEnabled={env().AUTH_PASSWORD_ENABLED}
             providers={enabledSocialProviders}
+            socialError={typeof error === "string" ? error : undefined}
             devMail={env().NODE_ENV !== "production" && env().EMAIL_TRANSPORT === "console"}
           />
         </div>

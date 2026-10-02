@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import type { AppDb } from "@/server/db/types";
@@ -14,6 +14,8 @@ import { getPerson, getSelf, PersonNotFoundError } from "@/server/persons";
  */
 
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Email invitations one user may send in 24 h — the app must not become a way to mail strangers. */
+export const EMAIL_INVITES_PER_DAY = 20;
 export type Invitation = typeof invitations.$inferSelect;
 
 export class InvitationError extends Error {
@@ -26,7 +28,8 @@ export class InvitationError extends Error {
       | "own_invitation"
       | "self_person"
       | "already_linked"
-      | "person_gone",
+      | "person_gone"
+      | "rate_limited",
   ) {
     super(reason);
   }
@@ -61,6 +64,19 @@ export async function createInvitation(
 
   const token = newToken();
   const now = opts.now ?? new Date();
+  if (email) {
+    const [{ sent }] = await db
+      .select({ sent: count() })
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.inviterUserId, opts.inviterId),
+          eq(invitations.channel, "email"),
+          gte(invitations.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000)),
+        ),
+      );
+    if (sent >= EMAIL_INVITES_PER_DAY) throw new InvitationError("rate_limited");
+  }
   const invitation = await db.transaction(async (tx) => {
     await tx
       .update(invitations)
