@@ -76,8 +76,8 @@ const FACE = "dark:bg-face";
  * A bought pair's colours, also set inline (with fallbacks) so they show even if a cached
  * stylesheet predates the `--pair` tokens.
  */
-const PAIR = "var(--pair, #f06a2a)";
-const PAIR_FG = "var(--pair-fg, #1d1b3f)";
+const PAIR = "var(--pair, #dc5815)";
+const PAIR_FG = "var(--pair-fg, #100f26)";
 /** Smallest gap between planets in the "+N" dock before it shows a "see all" link instead. */
 const DOCK_MIN_STEP = 60;
 /** How long the opening fly-out lasts (ms). */

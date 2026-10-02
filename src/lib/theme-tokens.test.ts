@@ -65,8 +65,16 @@ const TEXT_PAIRS: [string, string][] = [
   ["ring-2", "surface"],
 ];
 
-/** [graphic, what it is drawn on]: the second score ring on its track. */
-const GRAPHIC_PAIRS: [string, string][] = [["ring-2", "tint-2"]];
+/**
+ * [graphic, what it is drawn on]: the second score ring on its track; a bought pair's dashed
+ * link, its badge and tile on home's ground (tint-1), a page and a card.
+ */
+const GRAPHIC_PAIRS: [string, string][] = [
+  ["ring-2", "tint-2"],
+  ["pair", "tint-1"],
+  ["pair", "bg"],
+  ["pair", "surface"],
+];
 
 describe("contrast", () => {
   it("is 21:1 for black on white and 1:1 for a colour on itself", () => {
