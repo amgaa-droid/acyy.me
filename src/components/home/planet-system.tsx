@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2, Lock, Menu, Plus, Sparkles, UserRound, Wallet, X } from "lucide-react";
+import { Link2, Lock, Menu, Orbit, Plus, Sparkles, Sun, UserRound, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -19,9 +19,10 @@ import { BrandMark } from "@/components/app/brand-mark";
 import { NAV_ITEMS } from "@/components/app/nav-items";
 import { SignOutButton } from "@/components/app/sign-out-button";
 import { WalletChip } from "@/components/app/wallet-chip";
-import { PRODUCT_ICON_COMPONENTS } from "@/components/readings/product-icon";
+import { PRODUCT_ICON_COMPONENTS, PRODUCT_TINT_CLASSES } from "@/components/readings/product-icon";
 import { mn } from "@/i18n/mn";
-import { isOffOrbit, type ProductIconName } from "@/lib/domain";
+import { HOME_VIEW_COOKIE, type HomeView } from "@/lib/daily";
+import { isOffOrbit, type ProductIconName, type ProductTint } from "@/lib/domain";
 import { guideState, type GuideStep, type OnboardingMark, type OnboardingProgress } from "@/lib/onboarding";
 import { relationTint } from "@/lib/people";
 import {
@@ -40,6 +41,7 @@ import {
   rimLine,
   ringAngles,
   scatter,
+  todayLayout,
   toPct,
   toPx,
   type Body,
@@ -80,6 +82,8 @@ const DOCK_MIN_STEP = 60;
 const LABEL_W = 112;
 /** How long the opening fly-out lasts (ms). */
 const INTRO_MS = 1600;
+/** Switching between "today" and the planets: me grows/shrinks, the planets fold in/out. */
+const SWAP_EASE = "ease-[cubic-bezier(.65,0,.35,1)]";
 
 type Drag = {
   id: string;
@@ -117,15 +121,21 @@ function ProductGlyph({ icon, className }: { icon: string | undefined; className
  * readings and its links; drag it onto another to open their pair reading; drop it on empty
  * space to move it. Details open as popups (intercepted routes). Beyond six planets, and for
  * everyone marked "Хэн ч биш", people wait in a "+N" dock.
+ *
+ * Home has a second view, "today": me big with my sign's daily horoscopes beside it. Switching
+ * moves the same "me" — it shrinks into the middle while the planets fly out of it, or grows
+ * back while they fold into it — and the last view is remembered (cookie `home_view`).
  */
 export function PlanetSystem({
   data,
   balance,
   appName,
+  initialView = "planets",
 }: {
   data: PlanetSystemData;
   balance: number;
   appName: string;
+  initialView?: HomeView;
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -137,7 +147,10 @@ export function PlanetSystem({
   const [places, setPlaces] = useState<Places>({ phone: {}, desktop: {} });
   const [drawn, setDrawn] = useState<PairLink[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [intro, setIntro] = useState(true);
+  const [view, setView] = useState<HomeView>(initialView);
+  const today = view === "today";
+  // The opening fly-out belongs to the planets; opening on "today" has nothing to fly.
+  const [intro, setIntro] = useState(initialView === "planets");
   const [selected, setSelected] = useState<string | null>(null);
   const [dockOpen, setDockOpen] = useState(false);
   const [drag, setDragState] = useState<Drag | null>(null);
@@ -160,6 +173,18 @@ export function PlanetSystem({
     if (progress[m]) return;
     setProgress((p) => (p[m] ? p : { ...p, [m]: new Date().toISOString() }));
     void markOnboardingAction(m);
+  };
+
+  const switchView = (next: HomeView) => {
+    setSelected(null);
+    setDockOpen(false);
+    setDrag(null);
+    setView(next);
+    try {
+      document.cookie = `${HOME_VIEW_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    } catch {
+      // Cookies blocked: home just opens on the default view next time.
+    }
   };
 
   useLayoutEffect(() => {
@@ -335,8 +360,9 @@ export function PlanetSystem({
     <div
       ref={rootRef}
       data-screen="home"
+      data-view={view}
       className="fixed inset-0 h-dvh touch-none overflow-hidden bg-tint-1 select-none"
-      aria-label={t.label}
+      aria-label={today ? mn.home.today.label : t.label}
     >
       {/* Tapping empty space clears a selection or closes the dock. */}
       <div
@@ -371,12 +397,25 @@ export function PlanetSystem({
           {appName}
         </span>
       </div>
+      {/* Today ⇄ planets. Phone: a round button beside the menu; desktop: a pill under it. */}
+      <button
+        type="button"
+        onClick={() => switchView(today ? "planets" : "today")}
+        aria-label={today ? mn.home.view.toPlanetsAria : mn.home.view.toTodayAria}
+        title={today ? mn.home.view.toPlanets : mn.home.view.toToday}
+        className="absolute top-[max(env(safe-area-inset-top),1rem)] left-[76px] z-40 flex size-12 items-center justify-center gap-2 rounded-full bg-surface text-highlight shadow-[0_8px_20px_rgb(0_0_0/0.12)] transition-transform active:scale-95 lg:top-24 lg:left-8 lg:w-auto lg:pr-5 lg:pl-4"
+      >
+        {today ? <Orbit className="size-5.5" aria-hidden /> : <Sun className="size-5.5" aria-hidden />}
+        <span className="hidden text-sm font-semibold text-fg lg:inline">
+          {today ? mn.home.view.toPlanets : mn.home.view.toToday}
+        </span>
+      </button>
       <div className="absolute top-[max(env(safe-area-inset-top),1rem)] right-4 z-40 lg:top-8 lg:right-8">
         <WalletChip balance={balance} />
       </div>
 
       {/* First-run guide: progress, welcome, cheers */}
-      {size && loaded && !intro && ((guide.active && !guide.welcome) || readyFlash) && (
+      {size && loaded && !intro && !today && ((guide.active && !guide.welcome) || readyFlash) && (
         <GuidePill
           done={guide.done}
           current={guide.current}
@@ -385,7 +424,7 @@ export function PlanetSystem({
           onToggle={() => setPillOpen((o) => !o)}
         />
       )}
-      {size && loaded && !intro && guide.welcome && (
+      {size && loaded && !intro && !today && guide.welcome && (
         <WelcomeCard name={data.me.name} onStart={() => mark("welcome")} onLater={() => mark("welcome")} />
       )}
       {toast && <GuideToast text={toast} />}
@@ -473,6 +512,9 @@ export function PlanetSystem({
     const me = bodyPx(layout.me, w, h, k);
     const more = hidden.length > 0 ? bodyPx(layout.more, w, h, k) : null;
     const center = { x: w / 2, y: h / 2 };
+    // "Today": me big beside my daily horoscopes; everything else folds into me.
+    const tl = todayLayout(w, h);
+    const meNow = today ? tl.me : me;
 
     // The "+N" dock: hidden people in a row near the bottom, as many as fit.
     const dockY = (layout.dock.y / 100) * h;
@@ -612,12 +654,25 @@ export function PlanetSystem({
       return (
         <div
           key={p.id}
+          inert={today}
           className={cn(
             "absolute -translate-1/2",
             isDrag ? "z-30" : cn(`transition-[left,top,opacity] duration-500 ${SPRING}`, fromDock ? "z-20" : cn("z-10", dim(p.id))),
           )}
           style={{ left: b.x, top: b.y, width: b.r * 2, height: b.r * 2 }}
         >
+          {/* Folded into me on "today": they fly back out (one after another) on the way to the planets. */}
+          <div
+            className={cn(
+              `size-full transition-[translate,scale,opacity] ${SWAP_EASE} motion-reduce:transition-none`,
+              today ? "duration-500" : "duration-700",
+            )}
+            style={
+              today && !fromDock
+                ? { translate: `${me.x - b.x}px ${me.y - b.y}px`, scale: "0.2", opacity: 0, transitionDelay: `${index * 40}ms` }
+                : { transitionDelay: `${420 + index * 70}ms` }
+            }
+          >
           <div className={cn("size-full", fromDock ? "animate-rise-in" : intro && "motion-safe:animate-fly-in")} style={fly}>
             <div
               className={cn("size-full", !isDrag && !fromDock && DRIFT[index % DRIFT.length])}
@@ -663,6 +718,7 @@ export function PlanetSystem({
               </button>
             </div>
           </div>
+          </div>
         </div>
       );
     };
@@ -706,7 +762,7 @@ export function PlanetSystem({
     // First-run guide: one tip at a time, on the next thing to do; out of the way while
     // dragging or while a sheet or the dock is open.
     const guideOn =
-      guide.active && !guide.welcome && !intro && !drag?.moved && !menuOpen && !foldedFor && !showDock;
+      guide.active && !guide.welcome && !intro && !today && !drag?.moved && !menuOpen && !foldedFor && !showDock;
     const birthday = data.me.readings.find((r) => r.code === "birthday") ?? data.me.readings[0];
     const guideSelf = guideOn && guide.current === "self";
     const guideAdd = guideOn && guide.current === "add" && data.people.length === 0;
@@ -722,15 +778,16 @@ export function PlanetSystem({
 
     return (
       <>
+        {/* Orbits around me; on "today" they hug the big me as halos. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -translate-1/2 rounded-full border-[1.5px] border-dashed border-highlight/25 motion-safe:animate-orbit-spin"
-          style={{ left: me.x, top: me.y, width: me.r * 4.6, height: me.r * 4.6 }}
+          className={`pointer-events-none absolute -translate-1/2 rounded-full border-[1.5px] border-dashed border-highlight/25 transition-[left,top,width,height] duration-700 ${SWAP_EASE} motion-safe:animate-orbit-spin motion-reduce:transition-none`}
+          style={{ left: meNow.x, top: meNow.y, width: meNow.r * (today ? 2.5 : 4.6), height: meNow.r * (today ? 2.5 : 4.6), transitionDelay: today ? "150ms" : "0ms" }}
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute -translate-1/2 rounded-full border border-highlight/15"
-          style={{ left: me.x, top: me.y, width: me.r * 7.8, height: me.r * 7.8 }}
+          className={`pointer-events-none absolute -translate-1/2 rounded-full border border-highlight/15 transition-[left,top,width,height] duration-700 ${SWAP_EASE} motion-reduce:transition-none`}
+          style={{ left: meNow.x, top: meNow.y, width: meNow.r * (today ? 3.2 : 7.8), height: meNow.r * (today ? 3.2 : 7.8), transitionDelay: today ? "150ms" : "0ms" }}
         />
 
         {/* Links of the tapped planet, rim to rim, with the chain in the middle. */}
@@ -809,8 +866,12 @@ export function PlanetSystem({
 
         {more && (
           <div
-            className={cn("absolute z-20 -translate-1/2 transition-opacity duration-300", selected && !showDock ? "opacity-30" : "opacity-100")}
-            style={{ left: more.x, top: more.y, width: more.r * 2, height: more.r * 2 }}
+            inert={today}
+            className={cn(
+              "absolute z-20 -translate-1/2 transition-[opacity,scale] duration-300",
+              today ? "scale-50 opacity-0" : selected && !showDock ? "opacity-30" : "opacity-100",
+            )}
+            style={{ left: more.x, top: more.y, width: more.r * 2, height: more.r * 2, transitionDelay: today ? "0ms" : "700ms" }}
           >
             <div className="size-full motion-safe:animate-drift-a" style={{ animationDelay: "-4s" }}>
               <button
@@ -861,10 +922,14 @@ export function PlanetSystem({
         )}
 
         <div
-          className={cn("absolute z-10 -translate-1/2 transition-opacity duration-300", selected || showDock ? "opacity-30" : "opacity-100")}
+          inert={today}
+          className={cn(
+            "absolute z-10 -translate-1/2 transition-[opacity,scale] duration-300",
+            today ? "scale-50 opacity-0" : selected || showDock ? "opacity-30" : "opacity-100",
+          )}
           style={(() => {
             const a = bodyPx(layout.add, w, h, k);
-            return { left: a.x, top: a.y, width: a.r * 2, height: a.r * 2 } as CSSProperties;
+            return { left: a.x, top: a.y, width: a.r * 2, height: a.r * 2, transitionDelay: today ? "0ms" : "750ms" } as CSSProperties;
           })()}
         >
           <div className="size-full motion-safe:animate-drift-b" style={{ animationDelay: "-6s" }}>
@@ -884,11 +949,22 @@ export function PlanetSystem({
 
         {/* Me */}
         <div
-          className={cn("absolute z-[16] -translate-1/2 transition-opacity duration-300", dim(ME))}
-          style={{ left: me.x, top: me.y, width: me.r * 2, height: me.r * 2 }}
+          className={cn(
+            `absolute z-[16] -translate-1/2 transition-[left,top,width,height,opacity] duration-700 ${SWAP_EASE} motion-reduce:transition-none`,
+            dim(ME),
+          )}
+          style={{
+            left: meNow.x,
+            top: meNow.y,
+            width: meNow.r * 2,
+            height: meNow.r * 2,
+            // To "today": the planets fold in first. To the planets: me goes first, they follow.
+            transitionDelay: today ? "250ms" : "100ms",
+          }}
         >
           <button
             type="button"
+            inert={today}
             aria-label={t.meAria(data.me.name, data.me.signName)}
             aria-pressed={selected === ME}
             onClick={() => setSelected((cur) => (cur === ME ? null : ME))}
@@ -911,7 +987,13 @@ export function PlanetSystem({
               <img src={data.me.avatarUri} alt="" draggable={false} className="size-full" />
             </span>
           </button>
-          <div className="pointer-events-none absolute top-full left-1/2 flex -translate-x-1/2 -translate-y-[18px] flex-col items-center gap-1">
+          <div
+            className={cn(
+              `pointer-events-none absolute top-full left-1/2 flex origin-top -translate-x-1/2 -translate-y-[18px] flex-col items-center gap-1 transition-[scale] duration-700 ${SWAP_EASE}`,
+              today ? "scale-115 lg:scale-135" : "scale-100",
+            )}
+            style={{ transitionDelay: today ? "250ms" : "100ms" }}
+          >
             <h1 className="max-w-48 truncate rounded-full bg-fg px-4 py-1 font-heading text-xl leading-tight font-semibold text-bg lg:text-2xl">
               {data.me.name}
             </h1>
@@ -1060,11 +1142,62 @@ export function PlanetSystem({
           </button>
         )}
 
+        {/* Today: my sign's daily horoscopes */}
+        <section
+          aria-label={mn.home.today.label}
+          inert={!today}
+          className={cn(
+            "absolute z-20 flex touch-pan-y flex-col overflow-y-auto overscroll-contain transition-opacity duration-500 [scrollbar-width:none] max-lg:[mask-image:linear-gradient(to_bottom,transparent,black_14px)]",
+            today ? "opacity-100 delay-[650ms]" : "pointer-events-none opacity-0 delay-0",
+          )}
+          style={{ left: tl.panel.left, top: tl.panel.top, width: tl.panel.width, bottom: tl.panel.bottom }}
+        >
+          <div className="my-auto flex flex-col gap-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:gap-4 lg:py-2">
+            <p className="px-1 text-center text-[13px] font-semibold text-highlight lg:text-left lg:text-sm">
+              {mn.home.today.eyebrow(data.today.label, data.me.signName)}
+            </p>
+            {data.today.readings.map((r, i) => (
+              <article
+                key={r.code}
+                className={cn(
+                  `rounded-[28px] bg-surface p-5 shadow-[0_8px_24px_rgb(0_0_0/0.06)] transition-[opacity,translate] duration-500 ${SWAP_EASE} motion-reduce:transition-none lg:p-6`,
+                  today ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
+                )}
+                style={{ transitionDelay: today ? `${650 + i * 90}ms` : "0ms" }}
+              >
+                <h2 className="flex items-center gap-3 font-heading text-xl leading-tight font-semibold lg:text-2xl">
+                  <span
+                    className={cn(
+                      "flex size-10 shrink-0 items-center justify-center rounded-full",
+                      PRODUCT_TINT_CLASSES[r.tint as ProductTint] ?? PRODUCT_TINT_CLASSES["tint-1"],
+                    )}
+                  >
+                    <ProductGlyph icon={r.icon} className="size-5" />
+                  </span>
+                  {r.name}
+                </h2>
+                {r.text ? (
+                  <div className="mt-3 flex flex-col gap-2.5 text-[15px] leading-relaxed lg:text-base">
+                    {r.text.split(/\n\s*\n/).map((para, j) => (
+                      <p key={j} className="whitespace-pre-line">
+                        {para}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-[15px] text-muted-foreground">{mn.home.today.empty}</p>
+                )}
+              </article>
+            ))}
+            <p className="px-1 text-center text-xs text-muted-foreground lg:text-left">{mn.common.entertainmentOnly}</p>
+          </div>
+        </section>
+
         <p
           aria-live="polite"
           className={cn(
             "pointer-events-none absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-5 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground transition-opacity lg:bottom-8",
-            (showDock && !drag?.moved) || guideOn || guide.welcome || toast ? "opacity-0" : "opacity-100",
+            today || (showDock && !drag?.moved) || guideOn || guide.welcome || toast ? "opacity-0" : "opacity-100",
           )}
         >
           {drag?.moved

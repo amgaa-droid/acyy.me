@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loginWithPassword } from "./helpers";
+import { loginWithPassword, showPlanets } from "./helpers";
 
 test("add a person, see their sign, edit, then delete", async ({ page }, info) => {
   const name = `Тест ${info.project.name.slice(0, 3)} ${Date.now() % 100000}`;
@@ -69,6 +69,7 @@ test("'Би' has no delete button and its relation can't be edited", async ({ pa
 
 test("home shows me and my people as planets", async ({ page }) => {
   await loginWithPassword(page);
+  await showPlanets(page);
   await expect(page.getByRole("heading", { name: "Анар" })).toBeVisible();
   await expect(page.getByText("Хилэнц", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Сарангэрэл, Ээж, Матар/ })).toBeVisible();
@@ -79,6 +80,7 @@ test("tapping a planet shows its readings; they open as a popup over home", asyn
   // Planets drift; with reduced motion they hold still (and the page must honour that).
   await page.emulateMedia({ reducedMotion: "reduce" });
   await loginWithPassword(page);
+  await showPlanets(page);
   await page.getByRole("button", { name: /^Сарангэрэл, Ээж/ }).click();
   const reading = page.getByRole("link", { name: /^Төрсөн өдрийн зурхай — Сарангэрэл/ });
   await reading.click();

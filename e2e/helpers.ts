@@ -13,6 +13,16 @@ export async function loginWithPassword(page: Page, email = "user@test.local", n
   await expect(page).toHaveURL(new RegExp(`${next.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
 }
 
+/** Home opens on "today" unless the planets were picked last; switches to the planets. */
+export async function showPlanets(page: Page) {
+  const home = page.locator("[data-screen=home]");
+  await expect(home).toBeVisible();
+  if ((await home.getAttribute("data-view")) !== "planets") {
+    await page.getByRole("button", { name: "Нарны систем рүү шилжих" }).click();
+  }
+  await expect(home).toHaveAttribute("data-view", "planets");
+}
+
 /** Reads the latest OTP sent to `email` from the dev outbox (/dev/mail). */
 export async function readOtpFromDevMail(page: Page, email: string): Promise<string> {
   let code = "";

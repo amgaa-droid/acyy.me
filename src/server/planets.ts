@@ -1,4 +1,5 @@
 import { formatBirthDate } from "@/lib/birth-date";
+import { dayLabel, todayIso } from "@/lib/daily";
 import { RELATION_GROUP, isOffOrbit, type Relation, type RelationGroup } from "@/lib/domain";
 import { avatarDataUri } from "@/lib/avatars";
 import { relationText } from "@/lib/people";
@@ -6,6 +7,7 @@ import { pairKey, type PairLink } from "@/lib/planet-system";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { getSign } from "@/server/astro/zodiac";
 import { loadViewer, offersForPerson, productsByCode } from "@/server/catalog";
+import { dailyForSign, type DailyReading } from "@/server/daily";
 import type { AppDb } from "@/server/db/types";
 import { listPeople, type Person } from "@/server/persons";
 import type { OnboardingProgress } from "@/lib/onboarding";
@@ -38,6 +40,8 @@ export type PlanetSystemData = {
   products: Record<string, { name: string; icon: string }>;
   /** First-run guide progress (src/server/onboarding.ts). */
   onboarding: OnboardingProgress;
+  /** The "today" view: my sign's daily horoscopes (src/server/daily.ts). */
+  today: { date: string; label: string; readings: DailyReading[] };
 };
 
 const CLOSENESS: Record<RelationGroup, number> = {
@@ -110,9 +114,11 @@ export async function loadPlanetSystem(
     getOnboarding(db, userId),
   ]);
   const others = byCloseness(persons.filter((p) => p.id !== self.id && !p.isSelf));
-  const offers = await Promise.all(
-    [self, ...others].map((p) => offersForPerson(db, viewer, p)),
-  );
+  const date = todayIso();
+  const [daily, ...offers] = await Promise.all([
+    dailyForSign(db, getSign(self.birthDate, refs.signs).code, date),
+    ...[self, ...others].map((p) => offersForPerson(db, viewer, p)),
+  ]);
   const readingsOf = (i: number): PlanetReading[] =>
     offers[i]
       .filter((o) => o.product.personCount === 1)
@@ -154,5 +160,6 @@ export async function loadPlanetSystem(
       [...products.values()].map((p) => [p.code, { name: p.nameMn, icon: p.icon }]),
     ),
     onboarding,
+    today: { date, label: dayLabel(date), readings: daily },
   };
 }

@@ -546,3 +546,52 @@ export const pageVersions = pgTable(
   },
   (t) => [unique("page_versions_page_version_uq").on(t.page, t.version)],
 );
+
+// ---------- Daily horoscopes ----------
+
+/**
+ * Kinds of daily horoscope ("Өнөөдрийн зурхай", "…хайрын…", "…ажлын…"): free texts per sign
+ * per day, shown on home's "today" view to the account owner for their sign. Admin-managed;
+ * an inactive kind is hidden but keeps its texts.
+ */
+export const dailyKinds = pgTable(
+  "daily_kinds",
+  {
+    code: text().primaryKey(),
+    nameMn: text().notNull(),
+    icon: text().notNull().default("sun"),
+    tint: text().notNull().default("tint-2"),
+    sort: integer().notNull().default(0),
+    isActive: boolean().notNull().default(true),
+    createdAt: createdAt(),
+  },
+  () => [
+    check("daily_kinds_icon", inList("icon", PRODUCT_ICONS)),
+    check("daily_kinds_tint", inList("tint", PRODUCT_TINTS)),
+  ],
+);
+
+/** One kind's text for one sign on one calendar day (Mongolia time). */
+export const dailyEntries = pgTable(
+  "daily_entries",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    kindCode: text()
+      .notNull()
+      .references(() => dailyKinds.code, { onUpdate: "cascade", onDelete: "cascade" }),
+    date: date({ mode: "string" }).notNull(),
+    signCode: text()
+      .notNull()
+      .references(() => zodiacSigns.code, { onUpdate: "cascade" }),
+    text: text().notNull(),
+    updatedBy: uuid().references(() => user.id, { onDelete: "set null" }),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("daily_entries_kind_date_sign").on(t.kindCode, t.date, t.signCode),
+    index("daily_entries_date_idx").on(t.date),
+  ],
+);

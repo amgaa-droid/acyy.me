@@ -8,9 +8,16 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import { todayYmd } from "@/lib/birth-date";
+import { addDays, todayIso } from "@/lib/daily";
 import { buildPlaceholderPeriods } from "@/server/astro/calendar";
 import * as schema from "./schema";
-import { PRODUCTS, ZODIAC_SIGNS, catalogRows, placeholderContentRows } from "./seed-data";
+import {
+  PRODUCTS,
+  ZODIAC_SIGNS,
+  catalogRows,
+  placeholderContentRows,
+  placeholderDailyRows,
+} from "./seed-data";
 import { seedTestUsers } from "./seed-users";
 import type { AppDb } from "./types";
 
@@ -84,6 +91,24 @@ async function main() {
   } else {
     const created = await seedTestUsers(db as unknown as AppDb, password, todayYmd());
     console.log(`Test accounts: ${created.length ? created.join(", ") : "already present"}.`);
+  }
+
+  // Daily horoscopes: placeholders around today, dev/staging only, never over real texts.
+  if (process.env.NODE_ENV !== "production") {
+    const kinds = await db.select({ code: schema.dailyKinds.code }).from(schema.dailyKinds);
+    const today = todayIso();
+    const dates = Array.from({ length: 17 }, (_, i) => addDays(today, i - 3));
+    const res = await db
+      .insert(schema.dailyEntries)
+      .values(
+        placeholderDailyRows(
+          kinds.map((k) => k.code),
+          dates,
+        ),
+      )
+      .onConflictDoNothing()
+      .returning({ id: schema.dailyEntries.id });
+    console.log(`Daily horoscopes: +${res.length} placeholders (${dates[0]} … ${dates.at(-1)}).`);
   }
 }
 

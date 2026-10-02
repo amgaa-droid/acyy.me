@@ -4,7 +4,7 @@
 
 - Бизнесийн дүрэм, схем, дэлгэцүүд: **[docs/SPEC.md](docs/SPEC.md)** — эх сурвалж энэ.
 - Хийх ажлын дараалал: **[docs/PHASES.md](docs/PHASES.md)** — нэг удаад нэг phase.
-- `docs/archive/` — хуучин судалгаа (AI, өдрийн зурхай гэх мэт **хэрэгжүүлэхгүй**). SPEC-тэй зөрвөл SPEC дагана.
+- `docs/archive/` — хуучин судалгаа (AI гэх мэт **хэрэгжүүлэхгүй**). SPEC-тэй зөрвөл SPEC дагана (өдрийн зурхай одоо SPEC §3.2-оор хэрэгжсэн).
 
 ## Стек
 - **Next.js** (App Router, хамгийн сүүлийн тогтвортой хувилбар) + **TypeScript strict** + **Tailwind CSS** + shadcn/ui
@@ -49,7 +49,7 @@ PGlite (`db:local`) нь бүх холболтыг нэг session-д нийлү�
 - Бизнес логик `src/server/*` (UI-гүй, тестлэгдэхүйц цэвэр функц), React компонентод биш.
 - Mobile-first: 360–390px-ээс эхэлж зурна, товч ≥ 44px, гол үйлдэл доод хэсэгт, сонголтуудыг bottom sheet-ээр.
 - Desktop (`lg` ≥ 1024px): контент олон баганаар (`lg:grid-cols-…`), `BottomSheet` автоматаар төвийн **dialog** болно, унших текст ≤ 680px. Загвар: [Cosmic soft v2](https://claude.ai/artifact/UsPJUf9XeTrS72tBih7hHD).
-- Нүүр (`/home`) — бүтэн дэлгэцийн **гараг систем** (`src/components/home/planet-system.tsx`, логик `src/lib/planet-system.ts`). Нүүрнээс нээсэн дэлгэрэнгүй хуудсууд `src/app/(app)/home/@modal/(..)*` intercept-ээр **popup** болж гарна; шууд URL / refresh → `(shell)` layout ижил popup-ыг (`ScreenSheet`) гараг системийн дээр серверт render хийнэ — тусдаа бүтэн хуудас, sidebar, tab bar байхгүй; хаавал `/home`. Шинэ дэлгэрэнгүй хуудас нэмбэл `@modal/(..)`-д intercept-ийг нь нэмнэ.
+- Нүүр (`/home`) — бүтэн дэлгэцийн 2 горим нэг компонентод: **Өнөөдөр** ("Би" том + өдрийн зурхай, SPEC §3.2) ба **гараг систем** (`src/components/home/planet-system.tsx`, логик `src/lib/planet-system.ts`; горим cookie `home_view`). Нүүрнээс нээсэн дэлгэрэнгүй хуудсууд `src/app/(app)/home/@modal/(..)*` intercept-ээр **popup** болж гарна; шууд URL / refresh → `(shell)` layout ижил popup-ыг (`ScreenSheet`) гараг системийн дээр серверт render хийнэ — тусдаа бүтэн хуудас, sidebar, tab bar байхгүй; хаавал `/home`. Шинэ дэлгэрэнгүй хуудас нэмбэл `@modal/(..)`-д intercept-ийг нь нэмнэ.
 - Дизайн: **Cosmic soft** бүтэц (том орд hero, пастел хавтан, хөвөгч pill tab bar, дугуй карт). Хэрэглэгч **Cosmic** ба **White** гэсэн 2 өнгөний горимоос сонгоно (`src/lib/theme.ts`, cookie `theme`), тус бүр OS dark mode-ыг дагана. Өнгийг зөвхөн CSS token-оор (`--bg`, `--surface`, `--fg`, `--muted`, `--highlight`, `--tint-1..3`, `--nav-*` — `globals.css`), hex-ийг компонентод бичихгүй.
 - Шинэ бизнес логик бүрт unit тест. Мөнгө, эрх, импортын логикт тест **заавал**.
 

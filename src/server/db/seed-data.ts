@@ -305,3 +305,25 @@ export function placeholderContentRows() {
     ),
   );
 }
+
+/**
+ * Dev-only placeholder daily horoscopes (never seeded in production, where a placeholder would
+ * read as a real "today"): every kind × sign × day.
+ */
+export function placeholderDailyRows(kinds: readonly string[], dates: readonly string[]) {
+  return dates.flatMap((date) =>
+    kinds.flatMap((kindCode) =>
+      ZODIAC_SIGNS.map((s) => ({
+        kindCode,
+        date,
+        signCode: s.code,
+        text: [
+          `[Placeholder] ${s.nameMn} · ${date} · ${kindCode}.`,
+          "Өнөөдөр шинэ зүйл эхлэхэд тохиромжтой өдөр. Ойр дотны хүмүүстэйгээ илүү их цагийг өнгөрөөгөөрэй.",
+          "",
+          "Админ /admin/daily-аас жинхэнэ текстийг оруулахад энэ бичвэр солигдоно.",
+        ].join("\n"),
+      })),
+    ),
+  );
+}

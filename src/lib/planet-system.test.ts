@@ -18,6 +18,7 @@ import {
   ringAngles,
   scatter,
   seatCount,
+  todayLayout,
   toPx,
 } from "./planet-system";
 
@@ -203,5 +204,37 @@ describe("geometry", () => {
     ];
     expect(dropTarget({ x: 0, y: 0, r: 30 }, bodies)).toBe("near");
     expect(dropTarget({ x: 0, y: 300, r: 30 }, bodies)).toBeNull();
+  });
+});
+
+describe("todayLayout", () => {
+  it("phone: me big at the top centre, the cards below its name", () => {
+    const { me, panel } = todayLayout(390, 844);
+    expect(me.x).toBe(195);
+    expect(me.r).toBeGreaterThan(PHONE_LAYOUT.me.r * 1.5);
+    expect(me.y - me.r).toBeGreaterThanOrEqual(88); // clear of the top bar
+    expect(panel.top).toBeGreaterThan(me.y + me.r);
+    expect(panel.left + panel.width).toBe(390 - 16);
+  });
+
+  it("small phone: me shrinks so the cards keep room", () => {
+    const { me, panel } = todayLayout(360, 640);
+    expect(me.r).toBeGreaterThanOrEqual(72);
+    expect(640 - panel.top).toBeGreaterThan(260);
+  });
+
+  it("desktop: the cards on the left, me large on the right, on screen", () => {
+    for (const [w, h] of [
+      [1440, 900],
+      [1024, 700],
+      [1920, 1080],
+    ]) {
+      const { me, panel } = todayLayout(w, h);
+      expect(me.x - me.r).toBeGreaterThan(panel.left + panel.width);
+      expect(me.x + me.r).toBeLessThanOrEqual(w);
+      expect(me.y - me.r).toBeGreaterThan(0);
+      expect(me.y + me.r).toBeLessThanOrEqual(h);
+      expect(me.r).toBeGreaterThan(DESKTOP_LAYOUT.me.r);
+    }
   });
 });

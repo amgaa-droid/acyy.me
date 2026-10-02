@@ -81,6 +81,39 @@ export function bodyPx(body: Body, w: number, h: number, k: number): Body {
   return { ...toPx(body, w, h), r: body.r * k };
 }
 
+// ── "Today" view ────────────────────────────────────────────────────────────────────────────
+
+/** The space under "me" for its name and sign pills (px). */
+export const TODAY_CAPTION = 64;
+
+/**
+ * Home's "today" view: "me" big, my daily horoscopes beside it. Phone: me at the top centre,
+ * the cards below. Desktop: the cards in a column on the left, me large on the right.
+ * `panel` is the cards' scroll area (px from the stage's top-left; `bottom` from its bottom).
+ */
+export function todayLayout(
+  w: number,
+  h: number,
+): { me: Body; panel: { left: number; top: number; width: number; bottom: number } } {
+  if (w < DESKTOP_MIN_WIDTH) {
+    const r = Math.round(Math.max(72, Math.min(116, w * 0.27, h * 0.14)));
+    const y = 92 + r;
+    return {
+      me: { x: w / 2, y, r },
+      panel: { left: 16, top: y + r + TODAY_CAPTION, width: w - 32, bottom: 0 },
+    };
+  }
+  const left = 32;
+  const width = Math.round(Math.min(520, w * 0.42));
+  const from = left + width + 48;
+  const region = w - 32 - from;
+  const r = Math.round(Math.max(110, Math.min(240, region * 0.36, h * 0.3)));
+  return {
+    me: { x: from + region / 2, y: Math.min(h * 0.47, h - r - TODAY_CAPTION - 24), r },
+    panel: { left, top: 152, width, bottom: 32 },
+  };
+}
+
 /** Keeps a planet of radius r (plus its name below) inside the stage's free area. */
 export function clampToStage(p: Point, r: number, w: number, h: number, layout: PlanetLayout): Point {
   const { top, bottom, side } = layout.safe;
