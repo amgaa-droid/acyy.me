@@ -48,7 +48,7 @@ test("owner sees products", async ({ page }) => {
   // Two parts, each with its sub-sections.
   await expect(page.getByRole("heading", { name: "Ордны нийцэл" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Төрсөн үеийн нийцэл" })).toBeVisible();
-  await expect(page.getByText("Тохиромжтой харилцаа")).toBeVisible();
+  await expect(page.getByText("Нийцтэй харилцаа")).toBeVisible();
 });
 
 test("import: template → fill → dry-run report → import", async ({ page }) => {
