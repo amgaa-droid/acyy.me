@@ -82,7 +82,7 @@ export function BirthdayReveal({ price }: { price: number }) {
         )}
 
         <Link
-          href="/login?next=/buy/birthday"
+          href="/login"
           className="flex h-13 items-center justify-center gap-2 rounded-full bg-fg px-5 text-base font-semibold text-bg"
         >
           {t.unlock} · {formatMnt(price)}

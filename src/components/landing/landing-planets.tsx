@@ -126,7 +126,6 @@ function Glyph({ icon, className }: { icon: string; className?: string }) {
   return <Icon className={className} strokeWidth={1.8} aria-hidden />;
 }
 
-const loginTo = (next: string) => `/login?${new URLSearchParams({ next })}`;
 const INFO_W = 280;
 
 /**
@@ -353,7 +352,7 @@ export function LandingPlanets({
             </div>
             <p className="text-base leading-relaxed">{sheetProduct.hook}</p>
             <Link
-              href={loginTo(`/buy/${sheetProduct.code}`)}
+              href="/login"
               className="flex h-13 items-center justify-center gap-2 rounded-full bg-fg px-6 font-semibold text-bg"
             >
               {tp.openWith(formatMnt(sheetProduct.price))} <ArrowRight className="size-4.5" aria-hidden />
@@ -372,7 +371,7 @@ export function LandingPlanets({
             </ul>
             {synastry && (
               <Link
-                href={loginTo("/buy/synastry")}
+                href="/login"
                 className="flex h-13 items-center justify-center gap-2 rounded-full bg-fg px-6 font-semibold text-bg"
               >
                 {tp.openWith(formatMnt(synastry.price))} <ArrowRight className="size-4.5" aria-hidden />
@@ -532,7 +531,7 @@ export function LandingPlanets({
                 {l.text && <p className="text-sm leading-relaxed">{l.text}</p>}
                 {synastry && (
                   <Link
-                    href={loginTo("/buy/synastry")}
+                    href="/login"
                     className="flex h-11 items-center justify-center gap-1.5 rounded-full bg-fg px-4 text-sm font-semibold text-bg"
                   >
                     {copy.cta} · {formatMnt(synastry.price)}

@@ -18,7 +18,6 @@ import { describeBirthDate, type AstroRefs } from "@/server/astro/refs";
 import type { Product } from "@/server/catalog";
 import { bestValueIndex, type PackageOption } from "@/server/topup-packages";
 
-const loginTo = (next: string) => `/login?${new URLSearchParams({ next })}`;
 
 const primaryCta =
   "flex h-13 items-center justify-center gap-2 rounded-full bg-fg px-6 text-base font-semibold text-bg";
@@ -91,7 +90,7 @@ export function LandingView({
             return (
               <li key={p.code}>
                 <Link
-                  href={loginTo(`/buy/${p.code}`)}
+                  href="/login"
                   className="flex h-full flex-col gap-4 rounded-[28px] bg-surface p-5 transition hover:ring-2 hover:ring-border"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -143,7 +142,7 @@ export function LandingView({
           </ul>
           {c.synastry.invite && <p className="text-sm text-nav-fg">{f(c.synastry.invite)}</p>}
           <Link
-            href={loginTo("/buy/synastry")}
+            href="/login"
             className="mt-2 flex h-13 items-center justify-center gap-2 rounded-full bg-nav-active px-6 font-semibold text-nav-active-fg lg:w-fit"
           >
             {f(c.synastry.cta)} · {formatMnt(synastry.price)}
