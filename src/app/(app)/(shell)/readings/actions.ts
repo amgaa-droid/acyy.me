@@ -15,6 +15,7 @@ import {
   ContentUnavailableError,
   NotEligibleError,
   PersonsInvalidError,
+  PriceChangedError,
   ProductUnavailableError,
   purchase,
 } from "@/server/purchase";
@@ -30,22 +31,36 @@ export type PurchaseResult =
         | "product_unavailable"
         | "content_unavailable"
         | "gender_required"
+        | "price_changed"
         | "insufficient"
         | "generic";
     };
 
-export async function purchaseAction(
-  productCode: string,
-  personIds: string[],
-): Promise<PurchaseResult> {
+const purchaseInput = z.object({
+  productCode: z.string().min(1).max(32),
+  personIds: z.array(z.uuid()).min(1).max(2),
+  /** The price shown on the confirm sheet. */
+  price: z.number().int().min(0),
+});
+
+export async function purchaseAction(input: unknown): Promise<PurchaseResult> {
   const { user: u } = await requireOnboardedUser();
+  const parsed = purchaseInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "persons_invalid" };
+  const { productCode, personIds, price } = parsed.data;
   try {
-    const { purchase: p } = await purchase(db, { userId: u.id, productCode, personIds });
+    const { purchase: p } = await purchase(db, {
+      userId: u.id,
+      productCode,
+      personIds,
+      expectedPrice: price,
+    });
     revalidatePath("/readings");
     revalidatePath("/home");
     return { ok: true, id: p.id };
   } catch (err) {
     if (err instanceof InsufficientFundsError) return { ok: false, error: "insufficient" };
+    if (err instanceof PriceChangedError) return { ok: false, error: "price_changed" };
     if (err instanceof NotEligibleError) return { ok: false, error: "not_eligible" };
     if (err instanceof PersonsInvalidError) return { ok: false, error: "persons_invalid" };
     if (err instanceof ProductUnavailableError) return { ok: false, error: "product_unavailable" };

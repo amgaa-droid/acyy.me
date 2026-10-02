@@ -47,13 +47,14 @@ export function BuyConfirm({
   const confirm = () =>
     startTransition(async () => {
       setError(null);
-      const res = await purchaseAction(productCode, personIds);
+      const res = await purchaseAction({ productCode, personIds, price });
       if (res.ok) {
         router.push(`/r/${res.id}`);
         return;
       }
       setError(t.errors[res.error]);
-      if (res.error === "insufficient") router.refresh();
+      // Both mean this sheet is out of date: reload the balance / the price.
+      if (res.error === "insufficient" || res.error === "price_changed") router.refresh();
     });
 
   const trigger = (

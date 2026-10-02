@@ -28,6 +28,7 @@ import {
   ContentUnavailableError,
   NotEligibleError,
   PersonsInvalidError,
+  PriceChangedError,
   ProductUnavailableError,
   purchase,
 } from "./purchase";
@@ -188,6 +189,24 @@ describe("purchase", () => {
     expect(
       await db.select().from(walletEntries).where(eq(walletEntries.userId, userId)),
     ).toHaveLength(1);
+  });
+
+  it("charges only the price the buyer confirmed", async () => {
+    const { userId, mom } = await setup({ balance: 5_000 });
+    const [{ price }] = await db.select().from(products).where(eq(products.code, "birthday"));
+    const input = { userId, productCode: "birthday", personIds: [mom.id] };
+
+    // The Owner changed the price after the confirm sheet was shown.
+    await expect(purchase(db, { ...input, expectedPrice: price + 500 })).rejects.toBeInstanceOf(
+      PriceChangedError,
+    );
+    expect(await db.select().from(purchases).where(eq(purchases.userId, userId))).toHaveLength(0);
+    expect(await getBalance(db, userId)).toBe(5_000);
+
+    const bought = await purchase(db, { ...input, expectedPrice: price });
+    expect(bought.purchase.pricePaid).toBe(price);
+    // Already owned: opening it again never fails on a later price change.
+    expect((await purchase(db, { ...input, expectedPrice: price + 1 })).alreadyOwned).toBe(true);
   });
 
   it("refuses products not allowed for the person", async () => {

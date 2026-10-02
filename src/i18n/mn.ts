@@ -418,6 +418,7 @@ export const mn = {
       product_unavailable: "Энэ зурхай одоогоор идэвхгүй.",
       content_unavailable: "Текст түр бэлэн биш байна. Удахгүй нэмэгдэнэ.",
       gender_required: "Хүйсийг сонгоно уу.",
+      price_changed: "Үнэ өөрчлөгдсөн байна. Шинэ үнийг шалгаад дахин баталгаажуулна уу.",
       insufficient: "Үлдэгдэл хүрэлцэхгүй байна.",
       generic: "Алдаа гарлаа. Дахин оролдоно уу.",
     } as Record<string, string>,

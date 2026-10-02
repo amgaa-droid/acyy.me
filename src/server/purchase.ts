@@ -35,6 +35,12 @@ export class PersonsInvalidError extends Error {
     super("persons_invalid");
   }
 }
+/** The price changed after the buyer saw it: show the new one before charging anything. */
+export class PriceChangedError extends Error {
+  constructor(readonly price: number) {
+    super("price_changed");
+  }
+}
 export class ContentUnavailableError extends Error {
   constructor(readonly keys: string[]) {
     super("content_unavailable");
@@ -198,7 +204,13 @@ function isUniqueViolation(err: unknown): boolean {
 
 export async function purchase(
   db: AppDb,
-  input: { userId: string; productCode: string; personIds: string[] },
+  input: {
+    userId: string;
+    productCode: string;
+    personIds: string[];
+    /** The price the buyer confirmed; a different current price is refused (PriceChangedError). */
+    expectedPrice?: number;
+  },
 ): Promise<{ purchase: Purchase; alreadyOwned: boolean }> {
   const { product, people, snapshot, subject, parts } = await preparePurchase(
     db,
@@ -209,6 +221,10 @@ export async function purchase(
 
   const owned = await findPurchase(db, input.userId, product.code, subject);
   if (owned) return { purchase: owned, alreadyOwned: true };
+
+  if (input.expectedPrice !== undefined && input.expectedPrice !== product.price) {
+    throw new PriceChangedError(product.price);
+  }
 
   // Never take money for a text that isn't there.
   await assertContentPublished(db, product.code, parts, snapshot.keys);
