@@ -159,6 +159,36 @@ describe("legacy content (saved before avatars had a gender)", () => {
   });
 });
 
+describe("synastry example saved before it had dates", () => {
+  const saved = () => {
+    const c = JSON.parse(JSON.stringify(LANDING_DEFAULTS));
+    delete c.synastry.exampleTitle;
+    delete c.synastry.cautionFor;
+    c.synastry.pair.forEach((p: Record<string, unknown>) => delete p.birthDate);
+    c.synastry.pair[0].label = "Би";
+    return c;
+  };
+
+  it("gets the default headline, dates and challenging relations, keeping the edits", () => {
+    const merged = mergeLandingContent(saved());
+    const d = LANDING_DEFAULTS.synastry;
+    expect(merged.synastry.exampleTitle).toBe(d.exampleTitle);
+    expect(merged.synastry.cautionFor).toEqual(d.cautionFor);
+    expect(merged.synastry.pair.map((p) => p.birthDate)).toEqual(d.pair.map((p) => p.birthDate));
+    expect(merged.synastry.pair[0].label).toBe("Би");
+  });
+
+  it("respects a later save that cleared them", () => {
+    const c = saved();
+    c.synastry.exampleTitle = "";
+    c.synastry.cautionFor = [];
+    const merged = mergeLandingContent(c);
+    expect(merged.synastry.exampleTitle).toBe("");
+    expect(merged.synastry.cautionFor).toEqual([]);
+    expect(merged.synastry.pair.map((p) => p.birthDate)).toEqual([undefined, undefined]);
+  });
+});
+
 describe("fillTokens", () => {
   const tokens = { minPrice: "1,000₮", birthdayPrice: "2,000₮", synastryPrice: "1,500₮" };
 

@@ -56,6 +56,11 @@ const labelledAvatar = z
   .object({ label: str(LIMITS.short), ...avatar })
   .refine(fitsGender, AVATAR_GENDER_MSG);
 
+/** One side of the synastry example: shown like a real pair reading (sign and period from the date). */
+const pairPerson = z
+  .object({ label: str(LIMITS.short), birthDate: birthDate.optional(), ...avatar })
+  .refine(fitsGender, AVATAR_GENDER_MSG);
+
 const demoLink = z.object({
   id: z.string().min(1).max(40),
   a: z.string().min(1),
@@ -117,8 +122,11 @@ export const SECTION_SCHEMAS = {
     invite: optStr(LIMITS.title * 2),
     cta: str(LIMITS.short),
     example: str(LIMITS.short),
-    pair: z.tuple([labelledAvatar, labelledAvatar]),
+    /** Headline of the example reading (its pair hero). */
+    exampleTitle: optStr(LIMITS.title).default(""),
+    pair: z.tuple([pairPerson, pairPerson]),
     goodFor: strList(LIMITS.short, 6),
+    cautionFor: strList(LIMITS.short, 6).default([]),
   }),
   people: z.object({
     eyebrow: optStr(LIMITS.short * 2),
@@ -242,11 +250,13 @@ export const LANDING_DEFAULTS: LandingContent = {
     invite: l.synastry.invite,
     cta: l.synastry.cta,
     example: l.synastry.example,
+    exampleTitle: "Бие биеэ нөхдөг хос",
     pair: [
-      { label: l.synastry.pair[0], gender: "male", seed: 3 },
-      { label: l.synastry.pair[1], gender: "female", seed: 5 },
+      { label: l.synastry.pair[0], birthDate: "1994-05-21", gender: "male", seed: 3 },
+      { label: l.synastry.pair[1], birthDate: "1997-08-02", gender: "female", seed: 5 },
     ],
     goodFor: ["Гэрлэлт", "Хайр дурлал"],
+    cautionFor: ["Ажил"],
   },
   people: {
     eyebrow: l.people.eyebrow,
@@ -303,7 +313,8 @@ const isObj = (v: unknown): v is Obj => !!v && typeof v === "object" && !Array.i
 
 /**
  * Content saved before avatars had a gender (first CMS version): demo people get the gender
- * their drawing shows, plain relation labels and pair labels get the default drawings.
+ * their drawing shows, plain relation labels and pair labels get the default drawings. Content
+ * saved before the synastry example had dates gets the default ones.
  * Returns a copy; current-shape content passes through unchanged.
  */
 export function upgradeLegacy(src: Obj): Obj {
@@ -334,11 +345,18 @@ export function upgradeLegacy(src: Obj): Obj {
     };
   }
   if (isObj(src.synastry) && Array.isArray(src.synastry.pair)) {
+    // Saved before the example looked like a real pair reading (no `exampleTitle` key yet):
+    // it gets the default headline, birth dates and challenging relations.
+    const d = LANDING_DEFAULTS.synastry;
+    const before = !("exampleTitle" in src.synastry);
     out.synastry = {
       ...src.synastry,
-      pair: src.synastry.pair.map((v, i) =>
-        typeof v === "string" ? { ...LANDING_DEFAULTS.synastry.pair[i % 2], label: v } : v,
-      ),
+      ...(before && { exampleTitle: d.exampleTitle, cautionFor: d.cautionFor }),
+      pair: src.synastry.pair.map((v, i) => {
+        const def = d.pair[i % 2];
+        if (typeof v === "string") return { ...def, label: v };
+        return before && isObj(v) && !("birthDate" in v) ? { ...v, birthDate: def.birthDate } : v;
+      }),
     };
   }
   return out;

@@ -33,6 +33,7 @@ import {
   type PlanetLayout,
   type Point,
 } from "@/lib/planet-system";
+import { chipCentre, orderByLinks, ringSeats } from "@/lib/landing-seats";
 import { cn } from "@/lib/utils";
 
 const t = mn.landing;
@@ -50,8 +51,12 @@ const STARS = [
   { x: 94, y: 66, d: 0.9 },
 ];
 const LABEL_W = 112;
+/** Below this height the headline shrinks (the `short` variant in globals.css). */
+const SHORT_H = 760;
+/** Hint line + "Дэлгэрэнгүй" at the bottom of the first screen (px). */
+const HINT_ROOM = 104;
 
-/** The landing stage leaves room at the top for the headline. */
+/** Fallback seats' room for the headline; random seats use the measured headline instead. */
 const LANDING_PHONE: PlanetLayout = {
   ...PHONE_LAYOUT,
   me: { x: 50, y: 60, r: 58 },
@@ -98,8 +103,9 @@ export type PlanetsCopy = {
 };
 
 /**
- * Seats for up to 5 example people, % of the stage (phone / desktop). Neighbouring seats are
- * close together so links between them don't cross "Та"; the CMS orders people into them.
+ * Fixed seats for up to 5 example people, % of the stage (phone / desktop): the fallback when
+ * random seats don't fit (a very short screen). Neighbouring seats are close together so links
+ * between them don't cross "Та"; the CMS orders people into them.
  */
 const SEATS: { phone: Point; desktop: Point }[] = [
   { phone: { x: 20, y: 41 }, desktop: { x: 22, y: 44 } },
@@ -145,8 +151,12 @@ export function LandingPlanets({
   birthdayPrice: number;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
+  /** `titleBottom`: where the headline block ends, so the stage starts below it. */
+  const [size, setSize] = useState<{ w: number; h: number; titleBottom: number } | null>(null);
   const [places, setPlaces] = useState<Record<string, Point>>({});
+  /** People are drawn smaller when the random seats only fit that way (short screens). */
+  const [seatScale, setSeatScale] = useState(1);
   const [selected, setSelected] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -161,29 +171,82 @@ export function LandingPlanets({
   useLayoutEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    const measure = () => {
+      const title = titleRef.current;
+      const titleBottom = title ? title.offsetTop + title.offsetHeight : 0;
+      setSize({ w: el.clientWidth, h: el.clientHeight, titleBottom });
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (titleRef.current) ro.observe(titleRef.current);
     return () => ro.disconnect();
   }, []);
 
-  const layout = size && size.w >= 1024 ? LANDING_DESKTOP : LANDING_PHONE;
-  const k = size ? layoutScale(layout, size.w, size.h) : 1;
-  const radius = (i: number) => layout.sizes[Math.min(i, layout.sizes.length - 1)] * k;
+  const desktop = !!size && size.w >= 1024;
+  const short = !!size && size.h < SHORT_H;
+  const base = desktop ? LANDING_DESKTOP : LANDING_PHONE;
+  const k = size ? layoutScale(base, size.w, size.h) : 1;
+  const baseRadius = (i: number) => base.sizes[Math.min(i, base.sizes.length - 1)] * k;
+  const radius = (i: number) => baseRadius(i) * seatScale;
+  // The stage: from below the headline down to the hint line ("Та" in its middle).
+  const bandTop = size ? Math.max(size.titleBottom + 8, 72) : base.safe.top;
+  const bandBottom = size ? size.h - HINT_ROOM : 0;
+  const meR = base.me.r * k;
+  const meY = size
+    ? Math.min(size.h - HINT_ROOM - meR - 30, Math.max(bandTop + meR + 16, (bandTop + bandBottom) / 2 - 11))
+    : 0;
+  const layout: PlanetLayout = { ...base, safe: { ...base.safe, top: bandTop } };
 
-  // Fixed seats (linked people side by side), kept on stage; reset when the screen changes shape.
-  const sizeKey = size ? `${layout === LANDING_DESKTOP}` : "";
+  // Random seats round "Та" on every visit (linked people side by side); fixed seats when they
+  // don't fit. Redrawn when the screen changes shape or the headline wraps differently.
+  const sizeKey = size ? `${desktop}|${Math.round(size.titleBottom / 24)}` : "";
   useEffect(() => {
     if (!size) return;
-    const desktop = layout === LANDING_DESKTOP;
+    const { w, h } = size;
+    const index = new Map(people.map((p, i) => [p.id, i]));
+    const order = orderByLinks(
+      people.map((p) => p.id),
+      links,
+    );
+    const stage = {
+      w,
+      h,
+      top: bandTop,
+      bottom: bandBottom,
+      side: base.safe.side,
+      me: { x: w / 2, y: meY, r: meR },
+      keepOut: desktop ? 36 : 22,
+      // "Төрсөн өдрөө сонго" hangs 18px into the bottom of "Та" (see the markup below).
+      pill: { w: desktop ? 220 : 210, h: 38, dy: meR - 18 },
+    };
+    const pairs = links.map((l) => [l.a, l.b] as const);
+    // Short screens: smaller people before giving up on random seats.
+    let random: Record<string, Point> | null = null;
+    let scale = 1;
+    for (const s of [1, 0.86, 0.74]) {
+      random = ringSeats(
+        order.map((id) => ({ id, r: baseRadius(index.get(id)!) * s })),
+        stage,
+        pairs,
+      );
+      scale = s;
+      if (random) break;
+    }
+    // Last resort before the fixed seats: let link chips touch the people.
+    random ??= ringSeats(
+      order.map((id) => ({ id, r: baseRadius(index.get(id)!) * scale })),
+      stage,
+    );
     // eslint-disable-next-line react-hooks/set-state-in-effect -- places depend on the measured screen
+    setSeatScale(random ? scale : 1);
     setPlaces(
       Object.fromEntries(
         people.map((p, i) => {
+          if (random) return [p.id, toPct(random[p.id], w, h)];
           const seat = SEATS[i % SEATS.length];
-          const at = toPx(desktop ? seat.desktop : seat.phone, size.w, size.h);
-          return [p.id, toPct(clampToStage(at, radius(i), size.w, size.h, layout), size.w, size.h)];
+          const at = toPx(desktop ? seat.desktop : seat.phone, w, h);
+          return [p.id, toPct(clampToStage(at, baseRadius(i), w, h, layout), w, h)];
         }),
       ),
     );
@@ -230,26 +293,36 @@ export function LandingPlanets({
         </Link>
       </header>
 
-      <div className="pointer-events-none absolute inset-x-0 top-20 z-30 mx-auto flex max-w-3xl flex-col items-center gap-3 px-5 text-center lg:top-28">
-        <span className="flex items-center gap-1.5 rounded-full bg-surface/80 px-3 py-1.5 text-xs font-semibold text-highlight">
+      {/* Positions are also inline: with a stale stylesheet these blocks would pile up at the top. */}
+      <div
+        ref={titleRef}
+        className="pointer-events-none absolute inset-x-0 top-20 z-30 mx-auto flex max-w-3xl flex-col items-center gap-3 px-5 text-center lg:top-28 short:top-18 short:max-w-4xl lg:short:top-22"
+        style={size ? { top: desktop ? (short ? 88 : 112) : short ? 72 : 80 } : undefined}
+      >
+        {/* Short screens keep only the headline, smaller: the stage needs the height. */}
+        <span className="flex items-center gap-1.5 rounded-full bg-surface/80 px-3 py-1.5 text-xs font-semibold text-highlight short:hidden">
           <Sparkles className="size-3.5" aria-hidden /> {copy.eyebrow}
         </span>
-        <h1 className="font-heading text-[34px] leading-[1.05] font-semibold text-balance lg:text-6xl">
+        <h1 className="font-heading text-[34px] leading-[1.05] font-semibold text-balance short:text-[28px] lg:text-6xl lg:short:text-5xl">
           {copy.title}
         </h1>
         {copy.subtitle && (
-          <p className="hidden max-w-xl text-muted-foreground lg:block lg:text-lg">{copy.subtitle}</p>
+          <p className="hidden max-w-xl text-muted-foreground short:hidden lg:block lg:text-lg">{copy.subtitle}</p>
         )}
       </div>
 
       {size && renderStage()}
 
-      <p className="pointer-events-none absolute bottom-16 left-1/2 z-20 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground">
+      <p
+        className="pointer-events-none absolute bottom-16 left-1/2 z-20 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground"
+        style={{ bottom: 64 }}
+      >
         {drag?.moved && drag.target ? tp.dropOn : copy.hint}
       </p>
       <a
         href="#more"
         className="absolute bottom-3 left-1/2 z-20 flex h-11 -translate-x-1/2 items-center gap-1 rounded-full px-4 text-sm font-semibold text-highlight"
+        style={{ bottom: 12 }}
       >
         {tp.scroll} <ChevronDown className="size-4 motion-safe:animate-bounce" aria-hidden />
       </a>
@@ -309,7 +382,7 @@ export function LandingPlanets({
 
   function renderStage() {
     const { w, h } = size!;
-    const me: Body = { ...toPx(layout.me, w, h), r: layout.me.r * k };
+    const me: Body = { x: w / 2, y: meY, r: meR };
     const home = new Map<string, Body>([[YOU, me]]);
     people.forEach((p, i) => {
       if (places[p.id]) home.set(p.id, { ...toPx(places[p.id], w, h), r: radius(i) });
@@ -319,7 +392,7 @@ export function LandingPlanets({
       return drag?.moved && drag.id === id ? { x: drag.x, y: drag.y, r: b.r } : b;
     };
     const sel = selected && home.has(selected) && !drag?.moved ? selected : null;
-    const center = { x: w / 2, y: h * 0.6 };
+    const center = { x: me.x, y: me.y };
     const button = layout.ring.button * Math.min(1, k);
     const edge = button / 2 + 8;
     const ringR = sel ? home.get(sel)!.r + layout.ring.gap * Math.min(1, k) : 0;
@@ -382,7 +455,8 @@ export function LandingPlanets({
         const b = home.get(l.b);
         if (!a || !b) return null;
         const line = rimLine(a, b);
-        const mid = chainPoint(a, b);
+        // Same spot the seats were checked against (off both captions).
+        const mid = chipCentre(a, b);
         const key = l.id;
         const open = info === key;
         const pa = personOf(l.a);

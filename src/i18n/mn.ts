@@ -549,6 +549,7 @@ export const mn = {
         points: "Давуу талууд",
         invite: "Урилгын мөр",
         example: "“Жишээ” шошго",
+        exampleTitle: "Жишээ зурхайн гарчиг",
         pairA: "Жишээ хос — 1",
         pairB: "Жишээ хос — 2",
         goodFor: "Нийцтэй харилцаа",

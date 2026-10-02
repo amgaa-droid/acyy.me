@@ -1000,6 +1000,7 @@ function ProductsCard({ products }: { products: { code: string; name: string }[]
 }
 
 function SynastryCard({ suggestions }: { suggestions: string[] }) {
+  const { content, set } = useEditor();
   return (
     <Card id="synastry">
       <datalist id="relation-chips-2">
@@ -1019,19 +1020,41 @@ function SynastryCard({ suggestions }: { suggestions: string[] }) {
       <Text path={["synastry", "invite"]} label={tf.invite} max={LIMITS.title * 2} />
       <Text path={["synastry", "cta"]} label={tf.cta} max={LIMITS.short} />
       <Text path={["synastry", "example"]} label={tf.example} max={LIMITS.short} />
+      <Text path={["synastry", "exampleTitle"]} label={tf.exampleTitle} max={LIMITS.title} />
       {[0, 1].map((i) => (
         <div key={i} className="flex flex-col gap-3 rounded-2xl border border-border p-3">
-          <Text
-            path={["synastry", "pair", i, "label"]}
-            label={i === 0 ? tf.pairA : tf.pairB}
-            max={LIMITS.short}
-          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Text
+              path={["synastry", "pair", i, "label"]}
+              label={i === 0 ? tf.pairA : tf.pairB}
+              max={LIMITS.short}
+            />
+            <Field label={tf.birthDate}>
+              <input
+                type="date"
+                min="1900-01-01"
+                value={content.synastry.pair[i].birthDate ?? ""}
+                // Optional: an empty date hides the sign and period line of the example.
+                onChange={(e) => set(["synastry", "pair", i, "birthDate"], e.target.value || undefined)}
+                className={inputClass}
+              />
+              <ErrorText path={["synastry", "pair", i, "birthDate"]} />
+            </Field>
+          </div>
           <AvatarPicker path={["synastry", "pair", i]} tint={i === 0 ? "bg-tint-1" : "bg-tint-2"} />
         </div>
       ))}
       <StringList
         path={["synastry", "goodFor"]}
         label={tf.goodFor}
+        max={LIMITS.short}
+        maxItems={6}
+        list="relation-chips-2"
+        hint={t.chipsHint}
+      />
+      <StringList
+        path={["synastry", "cautionFor"]}
+        label={tf.cautionFor}
         max={LIMITS.short}
         maxItems={6}
         list="relation-chips-2"

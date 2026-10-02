@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { ConstellationArt } from "@/components/app/constellation";
 import { ArticleField, Teaser } from "@/components/readings/reading-body";
-import { PairPerson, SummaryFields } from "@/components/readings/reading-highlights";
+import { PairHero, type PairHeroPerson, SummaryFields } from "@/components/readings/reading-highlights";
 import { ScoreRing } from "@/components/readings/score-ring";
 import { SelectionShare } from "@/components/readings/selection-share";
 import { ShareCardButton } from "@/components/readings/share-card-button";
@@ -44,12 +44,14 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
   const pair = people.length === 2;
   const t = mn.reading;
 
-  const personProps = (i: number) => ({
+  const personProps = (i: number): PairHeroPerson => ({
     name: people[i].name,
     relation: live[i] ? relationText(live[i]) : null,
     birthDate: people[i].birthDate,
     avatarSeed: live[i]?.avatarSeed ?? people[i].name,
     tint: live[i] ? relationTint(live[i].relation) : "bg-subtle",
+    sign: { code: people[i].sign, name: signName(people[i].sign) },
+    period: people[i].period,
   });
 
   // Summary sub-sections (lists, chips, alerts) go next to the hero; the rest reads as an article.
@@ -84,39 +86,10 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] lg:items-start">
         <div className="flex flex-col gap-3 lg:sticky lg:top-10">
           {pair ? (
-            <section className="relative flex flex-col gap-5 overflow-hidden rounded-[32px] bg-tint-1 px-5 pt-6 pb-6 lg:px-6">
-              <ConstellationArt
-                sign={people[0].sign}
-                rings={false}
-                className="absolute -top-6 -left-8 size-44 opacity-25"
-              />
-              <ConstellationArt
-                sign={people[1].sign}
-                rings={false}
-                className="absolute -top-2 -right-8 size-44 opacity-25"
-              />
-              <h1 className="relative px-6 text-center font-serif text-[30px] leading-[1.05] font-semibold text-balance lg:text-[34px]">
-                {headline?.title ?? `${people[0].name} & ${people[1].name}`}
-              </h1>
-              <div className="relative grid grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] items-start">
-                <PairPerson {...personProps(0)} />
-                <span
-                  aria-hidden
-                  className="flex h-[72px] items-center justify-center font-serif text-[34px] font-semibold text-highlight"
-                >
-                  &amp;
-                </span>
-                <PairPerson {...personProps(1)} />
-              </div>
-              <p className="relative flex flex-wrap justify-center gap-x-2 text-xs text-muted-foreground">
-                <span>
-                  {signName(people[0].sign)} · {t.period(people[0].period)}
-                </span>
-                <span aria-hidden>×</span>
-                <span>
-                  {signName(people[1].sign)} · {t.period(people[1].period)}
-                </span>
-              </p>
+            <PairHero
+              title={headline?.title ?? `${people[0].name} & ${people[1].name}`}
+              people={[personProps(0), personProps(1)]}
+            >
               {reading.sections.some((s) => s.score !== null) && (
                 <div className="relative grid grid-cols-2 gap-2">
                   {reading.sections.map((s) =>
@@ -137,7 +110,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                   )}
                 </div>
               )}
-            </section>
+            </PairHero>
           ) : (
             <section className="relative min-h-[340px] overflow-hidden rounded-[32px] bg-tint-1 lg:min-h-[440px] lg:rounded-[36px]">
               <ConstellationArt

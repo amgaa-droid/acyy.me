@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Short viewports (landscape laptops, small phones): the landing headline shrinks. */
+@custom-variant short (@media (max-height: 759px));
+
 /* Dark mode follows the OS, except "cosmic-dark", which is always dark. */
 @custom-variant dark {
   @media (prefers-color-scheme: dark) {

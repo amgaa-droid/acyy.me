@@ -1,4 +1,4 @@
-import { ArrowRight, Check, ChevronDown, HeartHandshake } from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar } from "@/components/app/avatar";
@@ -6,6 +6,7 @@ import { ConstellationArt } from "@/components/app/constellation";
 import { LandingPlanets } from "@/components/landing/landing-planets";
 import { StickyCta } from "@/components/landing/sticky-cta";
 import { ProductIcon } from "@/components/readings/product-icon";
+import { PairHero, type PairHeroPerson, SummaryFields } from "@/components/readings/reading-highlights";
 import { APP_NAME } from "@/env";
 import { formatMnt, mn } from "@/i18n/mn";
 import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
@@ -49,6 +50,19 @@ export function LandingView({
       synastryPrice: formatMnt(synastry?.price ?? cheapest),
     });
   const override = new Map(c.products.items.map((i) => [i.code, i]));
+  const examplePerson = (i: 0 | 1): PairHeroPerson => {
+    const p = c.synastry.pair[i];
+    const astro = p.birthDate ? describeBirthDate(p.birthDate, refs) : null;
+    return {
+      name: p.label,
+      relation: null,
+      birthDate: p.birthDate,
+      avatarSeed: AVATAR_SEEDS[p.seed],
+      tint: i === 0 ? "bg-tint-2" : "bg-tint-3",
+      sign: astro ? { code: astro.sign.code, name: astro.sign.nameMn } : undefined,
+      period: astro?.period.no,
+    };
+  };
 
   const sections: Record<BodySection, React.ReactNode> = {
     stats: c.stats.items.length > 0 && (
@@ -136,39 +150,27 @@ export function LandingView({
             <ArrowRight className="size-4.5" aria-hidden />
           </Link>
         </div>
-        <div className="relative flex flex-col items-center gap-5 rounded-3xl bg-surface p-6 text-fg">
-          <span className="absolute top-4 left-4 rounded-full bg-subtle px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+        <div className="flex flex-col gap-3 text-fg">
+          <span className="self-start rounded-full bg-nav-active/10 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-nav-fg uppercase">
             {c.synastry.example}
           </span>
-          <div className="flex items-center gap-3 pt-4">
-            <PairAvatar
-              seed={AVATAR_SEEDS[c.synastry.pair[0].seed]}
-              label={c.synastry.pair[0].label}
-              tint="bg-tint-1"
-            />
-            <span className="flex size-14 items-center justify-center rounded-full bg-tint-2 text-highlight">
-              <HeartHandshake className="size-7" strokeWidth={1.7} aria-hidden />
-            </span>
-            <PairAvatar
-              seed={AVATAR_SEEDS[c.synastry.pair[1].seed]}
-              label={c.synastry.pair[1].label}
-              tint="bg-tint-2"
-            />
-          </div>
-          {c.synastry.goodFor.length > 0 && (
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs font-semibold text-muted-foreground">
-                {c.demo.goodLabel}
-              </span>
-              <div className="flex flex-wrap justify-center gap-2">
-                {c.synastry.goodFor.map((chip, i) => (
-                  <span key={i} className="rounded-full bg-tint-3 px-3 py-1.5 text-xs font-semibold">
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* The same hero and summary card as a real pair reading (/r/[purchaseId]). */}
+          <PairHero
+            headingLevel={3}
+            title={
+              f(c.synastry.exampleTitle) ||
+              `${c.synastry.pair[0].label} & ${c.synastry.pair[1].label}`
+            }
+            people={[examplePerson(0), examplePerson(1)]}
+          />
+          <SummaryFields
+            fields={[
+              { code: "good", name: c.demo.goodLabel, kind: "chips" as const, items: c.synastry.goodFor },
+              { code: "caution", name: c.demo.cautionLabel, kind: "alert" as const, items: c.synastry.cautionFor },
+            ]
+              .filter((x) => x.items.length > 0)
+              .map(({ items, ...x }) => ({ ...x, isFree: true, value: items.join("\n") }))}
+          />
         </div>
       </section>
     ),
@@ -363,14 +365,5 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
       <h2 className="font-heading text-[34px] leading-tight font-semibold lg:text-5xl">{title}</h2>
       {subtitle && <p className="text-muted-foreground lg:text-lg">{subtitle}</p>}
     </div>
-  );
-}
-
-function PairAvatar({ seed, label, tint }: { seed: string; label: string; tint: string }) {
-  return (
-    <span className="flex flex-col items-center gap-1.5">
-      <Avatar seed={seed} size={72} className={cn("border-0", tint)} />
-      <span className="text-xs font-semibold">{label}</span>
-    </span>
   );
 }
