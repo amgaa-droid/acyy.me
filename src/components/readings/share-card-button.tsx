@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Share2 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 
 import { BottomSheet } from "@/components/app/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,30 @@ import { cn } from "@/lib/utils";
 
 const t = mn.share;
 
-/** "Хуваалцах" (SPEC §8): story/square card → Web Share (as a file) → fallback: download. */
-export function ShareCardButton({ purchaseId }: { purchaseId: string }) {
+/**
+ * The share sheet (SPEC §8): story/square card → Web Share (as a file) → fallback: download.
+ * With `quote` (text selected in the reading) the card carries that text instead of the summary.
+ */
+export function ShareSheet({
+  purchaseId,
+  quote,
+  trigger,
+  open,
+  onOpenChange,
+}: {
+  purchaseId: string;
+  quote?: string;
+  trigger?: ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const [format, setFormat] = useState<"story" | "square">("story");
   const [hide, setHide] = useState(false);
   const [busy, setBusy] = useState(false);
-  const src = `/api/share/${purchaseId}?format=${format}${hide ? "&hide=1" : ""}`;
+  const query = new URLSearchParams({ format });
+  if (hide) query.set("hide", "1");
+  if (quote) query.set("quote", quote);
+  const src = `/api/share/${purchaseId}?${query}`;
 
   const fetchFile = async () => {
     const res = await fetch(src);
@@ -45,11 +63,9 @@ export function ShareCardButton({ purchaseId }: { purchaseId: string }) {
   return (
     <BottomSheet
       title={t.title}
-      trigger={
-        <Button className="rounded-full">
-          <Share2 aria-hidden /> {t.button}
-        </Button>
-      }
+      trigger={trigger}
+      open={open}
+      onOpenChange={onOpenChange}
       footer={
         <div className="grid grid-cols-2 gap-2">
           <Button
@@ -107,10 +123,24 @@ export function ShareCardButton({ purchaseId }: { purchaseId: string }) {
           alt=""
           className={cn(
             "mx-auto rounded-2xl bg-subtle",
-            format === "story" ? "h-72 w-auto" : "size-60",
+            format === "story" ? "aspect-9/16 h-72" : "size-60",
           )}
         />
       </div>
     </BottomSheet>
+  );
+}
+
+/** "Хуваалцах": the reading's summary card. */
+export function ShareCardButton({ purchaseId }: { purchaseId: string }) {
+  return (
+    <ShareSheet
+      purchaseId={purchaseId}
+      trigger={
+        <Button className="rounded-full">
+          <Share2 aria-hidden /> {t.button}
+        </Button>
+      }
+    />
   );
 }

@@ -33,7 +33,9 @@ function FieldHeading({ children, count }: { children: React.ReactNode; count?: 
     <div className="flex items-baseline justify-between gap-3 border-b border-fg pb-3">
       <h3 className="text-[28px] leading-[1.1] font-semibold lg:text-[34px]">{children}</h3>
       {count !== undefined && (
-        <span className="text-xs font-medium text-muted-foreground tabular-nums">{count}</span>
+        <span className="text-xs font-medium text-muted-foreground tabular-nums select-none">
+          {count}
+        </span>
       )}
     </div>
   );
@@ -78,7 +80,7 @@ export function ArticleField({
               >
                 <span
                   aria-hidden
-                  className="font-serif text-[22px] leading-none font-semibold text-highlight lining-nums tabular-nums lg:text-[26px]"
+                  className="font-serif text-[22px] leading-none font-semibold text-highlight lining-nums tabular-nums select-none lg:text-[26px]"
                 >
                   {String(j + 1).padStart(2, "0")}
                 </span>

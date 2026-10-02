@@ -139,7 +139,7 @@ test("A invites B by email and buys a synastry → B signs up from the link and 
   await expect(page.getByText("Энэ хүн холбоосоо салгасан")).toBeVisible();
 });
 
-test("share cards: owner gets a PNG in both formats; strangers and signed-out get nothing", async ({
+test("share cards: owner gets a PNG in both formats and of selected text; strangers and signed-out get nothing", async ({
   page,
   browser,
 }) => {
@@ -164,6 +164,29 @@ test("share cards: owner gets a PNG in both formats; strangers and signed-out ge
   }
   await page.getByRole("button", { name: "Хуваалцах" }).click();
   await expect(page.getByRole("dialog", { name: "Карт хуваалцах" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Карт хуваалцах" })).toBeHidden();
+
+  // Selecting text of the reading offers a card of that text; text that isn't in it gets none.
+  const selected = await page
+    .locator("article section p")
+    .first()
+    .evaluate((p) => {
+      const range = document.createRange();
+      range.selectNodeContents(p);
+      const selection = document.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return selection.toString();
+    });
+  await page.getByRole("button", { name: "Сонгосон хэсгийг хуваалцах" }).click();
+  await expect(page.getByRole("dialog", { name: "Карт хуваалцах" })).toBeVisible();
+  const quote = (text: string) =>
+    page.request.get(`/api/share/${id}?format=square&quote=${encodeURIComponent(text)}`);
+  const quoted = await quote(selected);
+  expect(quoted.status()).toBe(200);
+  expect(quoted.headers()["content-type"]).toBe("image/png");
+  expect((await quote("Уншлагад байхгүй зохиомол өгүүлбэр")).status()).toBe(400);
 
   const anon = await browser.newContext();
   expect((await anon.request.get(`/api/share/${id}`)).status()).toBe(401);

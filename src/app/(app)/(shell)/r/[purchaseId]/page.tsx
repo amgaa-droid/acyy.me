@@ -7,6 +7,7 @@ import { ConstellationArt } from "@/components/app/constellation";
 import { ArticleField, Teaser } from "@/components/readings/reading-body";
 import { PairPerson, SummaryFields } from "@/components/readings/reading-highlights";
 import { ScoreRing } from "@/components/readings/score-ring";
+import { SelectionShare } from "@/components/readings/selection-share";
 import { ShareCardButton } from "@/components/readings/share-card-button";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { mn } from "@/i18n/mn";
@@ -165,39 +166,41 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
         </div>
 
         <article className="flex flex-col gap-12 rounded-[32px] bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-[36px] lg:px-16 lg:pt-14 lg:pb-11">
-          {reading.sections.map((s) => {
-            const article = (s.fields ?? []).filter((f) => !isSummary(f.kind));
-            const lone = article.length === 1 && article[0].kind === "text";
-            return (
-              <section
-                key={`${s.section}|${s.key}`}
-                className="flex max-w-[640px] flex-col gap-8 lg:gap-10"
-                aria-label={multiPart ? sectionLabel(s, signNames) : reading.productName}
-              >
-                <header className="flex flex-col gap-3 lg:gap-3.5">
-                  {multiPart && (
-                    <span className="text-[11px] font-semibold tracking-[0.16em] text-highlight uppercase lg:text-xs">
-                      {sectionLabel(s, signNames)}
-                    </span>
-                  )}
-                  {s.fields === null ? (
-                    <p className="text-muted-foreground">{t.unavailable}</p>
-                  ) : s === headline ? (
-                    s.teaser && <Teaser text={s.teaser} className="mt-1" />
-                  ) : (
-                    <>
-                      <h2 className="text-[42px] leading-none font-semibold lg:text-[60px]">
-                        {s.title}
-                      </h2>
-                      {s.teaser && <Teaser text={s.teaser} className="mt-1" />}
-                    </>
-                  )}
-                </header>
-                {s.fields !== null &&
-                  article.map((f) => <ArticleField key={f.code} field={f} showHeading={!lone} />)}
-              </section>
-            );
-          })}
+          <SelectionShare purchaseId={reading.id} className="flex flex-col gap-12">
+            {reading.sections.map((s) => {
+              const article = (s.fields ?? []).filter((f) => !isSummary(f.kind));
+              const lone = article.length === 1 && article[0].kind === "text";
+              return (
+                <section
+                  key={`${s.section}|${s.key}`}
+                  className="flex max-w-[640px] flex-col gap-8 lg:gap-10"
+                  aria-label={multiPart ? sectionLabel(s, signNames) : reading.productName}
+                >
+                  <header className="flex flex-col gap-3 lg:gap-3.5">
+                    {multiPart && (
+                      <span className="text-[11px] font-semibold tracking-[0.16em] text-highlight uppercase lg:text-xs">
+                        {sectionLabel(s, signNames)}
+                      </span>
+                    )}
+                    {s.fields === null ? (
+                      <p className="text-muted-foreground">{t.unavailable}</p>
+                    ) : s === headline ? (
+                      s.teaser && <Teaser text={s.teaser} className="mt-1" />
+                    ) : (
+                      <>
+                        <h2 className="text-[42px] leading-none font-semibold lg:text-[60px]">
+                          {s.title}
+                        </h2>
+                        {s.teaser && <Teaser text={s.teaser} className="mt-1" />}
+                      </>
+                    )}
+                  </header>
+                  {s.fields !== null &&
+                    article.map((f) => <ArticleField key={f.code} field={f} showHeading={!lone} />)}
+                </section>
+              );
+            })}
+          </SelectionShare>
           <div className="flex max-w-[640px] flex-wrap items-center justify-between gap-3 border-t border-border pt-4.5 lg:pt-5">
             <p className="text-xs text-muted-foreground">
               {mn.common.entertainmentOnly} · {t.bought(dateFmt.format(reading.createdAt))}
