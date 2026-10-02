@@ -5,6 +5,7 @@ import { ImageResponse } from "next/og";
 
 import { mn } from "@/i18n/mn";
 import { STAR_PATH } from "@/lib/brand-icon";
+import { CONSTELLATIONS } from "@/lib/constellations";
 
 import type { CardList } from "./text";
 
@@ -14,8 +15,9 @@ import type { CardList } from "./text";
  * src/assets/fonts — including the cyrillic-ext subsets that contain Ө and Ү, and latin-ext for ₮.
  * Cards always use the Cosmic palette (brand images), regardless of the viewer's theme.
  *
- * A card reads as the person's own: name, avatar and what the text says about them — never the
- * zodiac sign, and no full birth date (a birthday text shows the day without the year).
+ * A card reads as the person's own: name, avatar and what the text says about them. The sign is
+ * never named — its constellation stays as artwork — and there is no full birth date (a birthday
+ * text shows the day without the year).
  */
 
 const C = {
@@ -61,7 +63,13 @@ export function loadCardFonts(): Promise<FontSpec[]> {
   return fontsPromise;
 }
 
-export type CardPerson = { name: string; relation: string | null; avatarUri: string };
+export type CardPerson = {
+  name: string;
+  relation: string | null;
+  /** `zodiac_signs.code` — picks the constellation artwork only; the sign is never named. */
+  sign: string;
+  avatarUri: string;
+};
 
 export type CardData = {
   format: "story" | "square";
@@ -74,6 +82,7 @@ export type CardData = {
   /** Two people: "Нийцтэй харилцаа". */
   chips: CardList | null;
   score: number | null;
+  /** One sentence of the text — only for one-person cards that have nothing else to show. */
   quote: string | null;
   /** Text the reader selected — the card is then the people and this text only. */
   excerpt: string | null;
@@ -95,27 +104,43 @@ function Star({ size, color = C.highlight }: { size: number; color?: string }) {
   );
 }
 
-/** Decorative orbits (the home planet system) — the same on every card, whatever the sign. */
-function Orbits({ size }: { size: number }) {
+/** The sign's constellation as artwork; `ring` adds the faint circle around a large one. */
+function Constellation({ sign, size, ring }: { sign: string; size: number; ring?: boolean }) {
+  const art = CONSTELLATIONS[sign];
+  if (!art) return null;
   return (
     <svg width={size} height={size} viewBox="0 0 100 100">
-      {[48, 34, 20].map((r) => (
+      {ring && (
         <circle
-          key={r}
           cx="50"
           cy="50"
-          r={r}
+          r="48"
           fill="none"
           stroke={C.highlight}
-          strokeOpacity="0.28"
+          strokeOpacity="0.25"
           strokeWidth="0.4"
         />
+      )}
+      {art.lines.map(([a, b]) => (
+        <line
+          key={`${a}-${b}`}
+          x1={art.stars[a][0]}
+          y1={art.stars[a][1]}
+          x2={art.stars[b][0]}
+          y2={art.stars[b][1]}
+          stroke={C.ink}
+          strokeWidth="0.6"
+        />
       ))}
-      <path d={STAR_PATH} fill={C.highlight} transform="translate(43 43) scale(0.14)" />
-      <circle cx="89.3" cy="22.5" r="2.6" fill={C.highlight} />
-      <circle cx="18.1" cy="61.6" r="1.8" fill={C.ink} />
-      <circle cx="56.8" cy="68.8" r="1.4" fill={C.ink} />
-      <circle cx="55.9" cy="16.5" r="1.2" fill={C.coral} />
+      {art.stars.map(([x, y], i) => (
+        <circle
+          key={i}
+          cx={x}
+          cy={y}
+          r={i === art.bright ? 3 : 1.4}
+          fill={i === art.bright ? C.highlight : C.ink}
+        />
+      ))}
     </svg>
   );
 }
@@ -162,8 +187,8 @@ function PairBody({ d, story }: { d: CardData; story: boolean }) {
   const title = d.title ?? d.productName;
   // A long headline wraps to two lines at a smaller size rather than shrinking to one.
   const titleScale = title.length <= 20 ? 1 : title.length <= 40 ? 0.82 : 0.66;
-  // Orbits sit in two corners, small enough to stay clear of the headline and the names.
-  const corner = story ? -110 : -90;
+  // Both constellations sit faded at the top, left and right, as in the reading's own hero.
+  const art = story ? 460 : 320;
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
       <div
@@ -180,26 +205,20 @@ function PairBody({ d, story }: { d: CardData; story: boolean }) {
           padding: story ? 72 : 44,
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: corner,
-            left: corner,
-            display: "flex",
-          }}
-        >
-          <Orbits size={story ? 360 : 300} />
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: corner,
-            right: corner,
-            display: "flex",
-          }}
-        >
-          <Orbits size={story ? 360 : 300} />
-        </div>
+        {d.people.map((p, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              top: story ? -80 : -60,
+              ...(i === 0 ? { left: -70 } : { right: -70 }),
+              display: "flex",
+              opacity: 0.3,
+            }}
+          >
+            <Constellation sign={p.sign} size={art} />
+          </div>
+        ))}
         {d.title && (
           <span style={{ ...LABEL, fontSize: story ? 28 : 24, color: C.highlight }}>
             {d.productName}
@@ -333,8 +352,6 @@ function PairBody({ d, story }: { d: CardData; story: boolean }) {
           </div>
         </div>
       )}
-
-      {d.quote && story && <Quote text={d.quote} story={story} />}
     </div>
   );
 }
@@ -359,9 +376,14 @@ function SingleBody({ d, story }: { d: CardData; story: boolean }) {
         }}
       >
         <div
-          style={{ position: "absolute", top: story ? -120 : -160, right: -180, display: "flex" }}
+          style={{
+            position: "absolute",
+            top: story ? -20 : -40,
+            right: story ? -80 : -50,
+            display: "flex",
+          }}
         >
-          <Orbits size={story ? 760 : 560} />
+          <Constellation sign={p.sign} size={story ? 620 : 460} ring />
         </div>
 
         <div
@@ -424,7 +446,7 @@ function SingleBody({ d, story }: { d: CardData; story: boolean }) {
         )}
       </div>
 
-      {d.quote && (story || !d.list) && <Quote text={d.quote} story={story} />}
+      {d.quote && <Quote text={d.quote} story={story} />}
     </div>
   );
 }
@@ -458,17 +480,20 @@ function ExcerptBody({ d, story, text }: { d: CardData; story: boolean; text: st
         padding: pad,
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          bottom: story ? -220 : -200,
-          right: -200,
-          display: "flex",
-          opacity: 0.5,
-        }}
-      >
-        <Orbits size={story ? 600 : 460} />
-      </div>
+      {d.people.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            bottom: story ? -40 : -70,
+            ...(pair && i === 0 ? { left: -70 } : { right: -70 }),
+            display: "flex",
+            opacity: 0.22,
+          }}
+        >
+          <Constellation sign={p.sign} size={story ? 460 : 340} />
+        </div>
+      ))}
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         <div style={{ display: "flex" }}>
           {d.people.map((p, i) => (

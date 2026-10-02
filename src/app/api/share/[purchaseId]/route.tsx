@@ -49,19 +49,22 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/share/[purch
   if (selection !== null && !excerpt) return new NextResponse("Bad request", { status: 400 });
 
   // Name, relation and avatar of the (possibly since-edited) people the viewer owns; else the
-  // snapshot. Never the sign or the full birth date: a card reads as the person's own.
+  // snapshot. The sign only picks the constellation artwork — it is never named, and neither is
+  // the full birth date: a card reads as the person's own.
   const live = await readingPeople(db, session.user.id, reading.personIds);
   const people = reading.snapshot.persons.map((p, i) => ({
     name: cardName(live[i]?.name ?? p.name, hide),
     relation: live[i] ? relationText(live[i]) : null,
+    sign: p.sign,
     avatarUri: avatarBase64Uri(live[i]?.avatarSeed ?? p.name),
   }));
   const pair = people.length === 2;
-  // A quote sub-section reads best on a card; otherwise the first prose text.
-  const fields = reading.sections.flatMap((s) => s.fields ?? []);
+  const byBirthday = reading.sections.some((s) => s.keyType === "month_day");
+  // A pair's card and a birthday card carry no sentence of the text; the other one-person cards
+  // quote one — a quote sub-section reads best, otherwise the first prose text.
+  const fields = pair || byBirthday ? [] : reading.sections.flatMap((s) => s.fields ?? []);
   const quoteSource =
     fields.find((f) => f.kind === "quote") ?? fields.find((f) => f.kind === "text");
-  const byBirthday = reading.sections.some((s) => s.keyType === "month_day");
 
   const image = await renderCard({
     format,
