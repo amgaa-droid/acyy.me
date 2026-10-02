@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTranslationRequest, parseTranslation } from "./translate";
+import { buildTranslationRequest, cleanTranslation, parseTranslation } from "./translate";
 
 describe("translation request", () => {
   it("puts the admin prompt first, then sign names and the JSON format", () => {
@@ -17,6 +17,8 @@ describe("translation request", () => {
     expect(req.system.startsWith("Translate well.")).toBe(true);
     expect(req.system).toContain("Aries — Хонь, Taurus — Үхэр");
     expect(req.system).toContain("JSON");
+    // No escaped newlines or "-" in the format line: models copied them into the text.
+    expect(req.system).not.toMatch(/\\n|\n-/);
     expect(req.user).toContain("daily love horoscope");
     expect(req.user).toContain('"aries": "A"');
   });
@@ -35,6 +37,18 @@ describe("parseTranslation", () => {
   it("finds the object inside chatter", () => {
     const raw = 'Here you go: {"aries": "Тийм"} Hope it helps!';
     expect(parseTranslation(raw, ["aries"], 3000).texts).toEqual({ aries: "Тийм" });
+  });
+
+  it("turns literal \\n and made-up bullets into plain paragraphs", () => {
+    // What a model wrote: "\\n" (double-escaped) and "- " at each paragraph.
+    const raw = JSON.stringify({
+      aries: "Туслах нь таатай.\\n\\n- Зүрх зөв газар нь байна.\\n\\n- Асуудалгүй.",
+    });
+    expect(parseTranslation(raw, ["aries"], 3000).texts.aries).toBe(
+      "Туслах нь таатай.\n\nЗүрх зөв газар нь байна.\n\nАсуудалгүй.",
+    );
+    // A dash inside a sentence stays.
+    expect(cleanTranslation("Энэ бол — гоё өдөр.")).toBe("Энэ бол — гоё өдөр.");
   });
 
   it("normalises paragraphs", () => {

@@ -24,11 +24,26 @@ export function buildTranslationRequest(opts: {
     `Ордны нэр: ${glossary}.`,
     [
       "Хариултын хэлбэр: зөвхөн JSON объект. Түлхүүрүүд нь оролтын түлхүүрүүд (ордны код) яг хэвээрээ,",
-      "утга нь тухайн текстийн монгол орчуулга. Догол мөрийг \\n\\n-ээр тусгаарла. Өөр юу ч бүү бич.",
+      "утга нь тухайн текстийн монгол орчуулга — эх текстийн догол мөрүүдийг хадгалсан энгийн текст",
+      "(жагсаалт, зураас, тэмдэглэгээгүй). Өөр юу ч бүү бич.",
     ].join(" "),
   ].join("\n\n");
   const user = `Today's ${opts.kindName} for each zodiac sign:\n\n${JSON.stringify(opts.texts, null, 2)}`;
   return { system, user, json: true };
+}
+
+/**
+ * Plain paragraphs: models sometimes write a newline as the two characters `\n` (double-escaped
+ * JSON) or start paragraphs with a "- " bullet the source never had.
+ */
+export function cleanTranslation(v: string): string {
+  return v
+    .replace(/\\r\\n|\\n|\\r/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim().replace(/^[-–—•*]\s+/, ""))
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export type ParsedTranslation = {
@@ -61,15 +76,7 @@ export function parseTranslation(raw: string, expected: string[], max: number): 
   const out: ParsedTranslation = { texts: {}, missing: [], tooLong: [] };
   for (const code of expected) {
     const v = (obj as Record<string, unknown>)[code];
-    const text =
-      typeof v === "string"
-        ? v
-            .replace(/\r\n/g, "\n")
-            .split(/\n\s*\n/)
-            .map((p) => p.trim())
-            .filter(Boolean)
-            .join("\n\n")
-        : "";
+    const text = typeof v === "string" ? cleanTranslation(v) : "";
     if (!text) out.missing.push(code);
     else if (text.length > max) out.tooLong.push(code);
     else out.texts[code] = text;
