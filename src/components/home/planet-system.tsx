@@ -76,7 +76,7 @@ const FACE = "dark:bg-face";
  * stylesheet predates the `--pair` tokens.
  */
 const PAIR = "var(--pair, #f06a2a)";
-const PAIR_FG = "var(--pair-fg, #ffffff)";
+const PAIR_FG = "var(--pair-fg, #1d1b3f)";
 /** Smallest gap between planets in the "+N" dock before it shows a "see all" link instead. */
 const DOCK_MIN_STEP = 60;
 /** How long the opening fly-out lasts (ms). */

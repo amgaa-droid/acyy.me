@@ -29,13 +29,17 @@
  *   --tint-1..3   pastel tiles           --ring-2       second score ring
  *   --pair        a bought pair reading: bright orange in every mode  --pair-fg on it
  *   --nav-*       floating tab bar / sidebar panel
+ *
+ * Text pairs keep WCAG AA (4.5:1) in every mode — src/lib/theme-tokens.test.ts checks them. That
+ * is why --pair-fg is dark ink (white on the orange is 3:1), and why the white mode's tints
+ * step further from its ground than the cosmic ones (grey on grey has no hue to tell it apart).
  */
 :root,
 :root[data-theme="cosmic"] {
   --bg: #f5f1eb;
   --surface: #ffffff;
   --fg: #1d1b3f;
-  --muted: #6b6880;
+  --muted: #666379;
   --border: #e9e3da;
   --subtle: #f5f1eb;
   --highlight: #4a44b5;
@@ -44,9 +48,9 @@
   --tint-2: #f9e0db;
   --tint-3: #e9ecdf;
   --face: #ffffff;
-  --ring-2: #d9705f;
+  --ring-2: #c4533f;
   --pair: #f06a2a;
-  --pair-fg: #ffffff;
+  --pair-fg: #1d1b3f;
   --nav-bg: #1d1b3f;
   --nav-fg: #bdb6d8;
   --nav-active-bg: #ffffff;
@@ -58,18 +62,18 @@
   --bg: #f5f5f5;
   --surface: #ffffff;
   --fg: #0a0a0a;
-  --muted: #6b6b6b;
+  --muted: #5c5c5c;
   --border: #e6e6e6;
   --subtle: #f0f0f0;
   --highlight: #0a0a0a;
   --highlight-fg: #ffffff;
-  --tint-1: #ececec;
-  --tint-2: #e2e2e2;
-  --tint-3: #f0f0f0;
+  --tint-1: #e6e6e6;
+  --tint-2: #d6d6d6;
+  --tint-3: #eaeaea;
   --face: #ffffff;
-  --ring-2: #8a8a8a;
+  --ring-2: #707070;
   --pair: #f97316;
-  --pair-fg: #ffffff;
+  --pair-fg: #0a0a0a;
   --nav-bg: #0a0a0a;
   --nav-fg: #a3a3a3;
   --nav-active-bg: #ffffff;
