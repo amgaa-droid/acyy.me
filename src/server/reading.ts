@@ -132,7 +132,10 @@ function readingFields(part: PartDef, stored: Record<string, string>): ReadingFi
   });
 }
 
-/** Two-person readings can be viewed free by a user linked to one of the two (SPEC §7). */
+/**
+ * Two-person readings can be viewed free by a user linked to one of the two (SPEC §7). Deleting
+ * the person ends that: the owner cut the tie, and the reading carries the owner's own data.
+ */
 async function linkedViewerPerson(
   db: AppDb,
   viewerId: string,
@@ -144,7 +147,9 @@ async function linkedViewerPerson(
   const linked = await db
     .select({ id: persons.id })
     .from(persons)
-    .where(and(inArray(persons.id, ids), eq(persons.linkedUserId, viewerId)));
+    .where(
+      and(inArray(persons.id, ids), eq(persons.linkedUserId, viewerId), isNull(persons.deletedAt)),
+    );
   return linked[0]?.id ?? null;
 }
 
@@ -252,7 +257,7 @@ export async function linkedPairReadings(
   const mine = await db
     .select({ id: persons.id })
     .from(persons)
-    .where(eq(persons.linkedUserId, viewerId));
+    .where(and(eq(persons.linkedUserId, viewerId), isNull(persons.deletedAt)));
   if (mine.length === 0) return [];
   const ids = mine.map((m) => m.id);
   const rows = await db
@@ -312,12 +317,32 @@ export async function readingNames(
   viewerId: string,
   list: Pick<typeof purchases.$inferSelect, "id" | "personAId" | "personBId" | "snapshot">[],
 ): Promise<Map<string, string[]>> {
+  const cast = await readingCast(db, viewerId, list);
+  return new Map([...cast].map(([id, people]) => [id, people.map((p) => p.name)]));
+}
+
+/**
+ * Who each purchase is about, to list it by: the name as in `readingNames`, and the avatar of
+ * a person the viewer still owns (null otherwise — a deleted or someone else's person has no
+ * face to show).
+ */
+export async function readingCast(
+  db: AppDb,
+  viewerId: string,
+  list: Pick<typeof purchases.$inferSelect, "id" | "personAId" | "personBId" | "snapshot">[],
+): Promise<Map<string, { name: string; avatarSeed: string | null }[]>> {
   const live = await readingPeople(
     db,
     viewerId,
     list.flatMap((p) => [p.personAId, p.personBId]),
   );
   return new Map(
-    list.map((p, i) => [p.id, p.snapshot.persons.map((x, j) => live[i * 2 + j]?.name ?? x.name)]),
+    list.map((p, i) => [
+      p.id,
+      p.snapshot.persons.map((x, j) => ({
+        name: live[i * 2 + j]?.name ?? x.name,
+        avatarSeed: live[i * 2 + j]?.avatarSeed ?? null,
+      })),
+    ]),
   );
 }

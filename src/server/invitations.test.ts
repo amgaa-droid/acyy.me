@@ -16,9 +16,9 @@ import {
   unlinkMe,
   viewInvitation,
 } from "./invitations";
-import { PersonNotFoundError, createPerson, createSelf } from "./persons";
+import { PersonNotFoundError, createPerson, createSelf, deletePerson } from "./persons";
 import { purchase } from "./purchase";
-import { ReadingNotFoundError, getReading } from "./reading";
+import { ReadingNotFoundError, getReading, linkedPairReadings } from "./reading";
 import { credit } from "./wallet";
 
 let db: AppDb;
@@ -234,5 +234,29 @@ describe("free view and unlinking", () => {
 
     const [p] = await db.select().from(persons).where(eq(persons.id, a.friend.id));
     expect(await personLinkState(db, a.userId, p)).toEqual({ kind: "unlinked_by_them" });
+  });
+
+  it("deleting the person ends the linked user's free view; the owner keeps the reading", async () => {
+    const a = await inviter();
+    const b = await invitee();
+    const { token } = await createInvitation(db, {
+      inviterId: a.userId,
+      personId: a.friend.id,
+      channel: "link",
+    });
+    await acceptInvitation(db, token, b);
+    const syn = await purchase(db, {
+      userId: a.userId,
+      productCode: "synastry",
+      personIds: [a.self.id, a.friend.id],
+    });
+    expect(await linkedPairReadings(db, b)).toEqual([
+      { id: syn.purchase.id, productCode: "synastry" },
+    ]);
+
+    await deletePerson(db, a.userId, a.friend.id);
+    await expect(getReading(db, b, syn.purchase.id)).rejects.toBeInstanceOf(ReadingNotFoundError);
+    expect(await linkedPairReadings(db, b)).toEqual([]);
+    expect((await getReading(db, a.userId, syn.purchase.id)).viaLink).toBe(false);
   });
 });
