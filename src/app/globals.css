@@ -164,9 +164,6 @@
   --input: var(--border);
   --ring: var(--highlight);
   --radius: 1rem;
-
-  --tabbar-h: 4rem;
-  --header-h: 4rem;
 }
 
 @theme inline {

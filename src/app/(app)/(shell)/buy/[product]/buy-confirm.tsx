@@ -63,7 +63,7 @@ export function BuyConfirm({
   );
 
   return (
-    <div className="sticky bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+1.5rem)] z-30 flex flex-col gap-2 lg:bottom-6">
+    <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] z-30 flex flex-col gap-2 lg:bottom-6">
       <BottomSheet
         open={open}
         onOpenChange={setOpen}

@@ -94,7 +94,7 @@ export function NewPersonFlow({
   ][step];
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-var(--header-h)-var(--tabbar-h)-4rem)] max-w-xl flex-col lg:min-h-0">
+    <div className="mx-auto flex min-h-[calc(100dvh-12rem)] max-w-xl flex-col lg:min-h-0">
       <div className="flex h-11 items-center gap-3">
         {step === 0 ? (
           <Link

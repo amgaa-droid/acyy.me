@@ -17,24 +17,19 @@ test.describe("signed in", () => {
     await loginWithPassword(page);
   });
 
-  test("primary nav switches between sections on full pages", async ({ page }) => {
-    // Direct visits are full pages; one nav is visible per breakpoint: floating tab bar
-    // (mobile) or sidebar (desktop).
+  test("direct links open as popups over the planets; closing goes home", async ({ page }) => {
+    // No separate full pages (no sidebar or tab bar): a shared link or a refresh shows the
+    // same popup as from home, over the planet system.
     await page.goto("/people");
-    const nav = page.getByRole("navigation", { name: "Үндсэн цэс" }).locator("visible=true");
-    await expect(nav).toHaveCount(1);
-    for (const [label, path] of [
-      ["Зурхай", "/readings"],
-      ["Би", "/me"],
-      ["Хүмүүс", "/people"],
-    ] as const) {
-      await nav.getByRole("link", { name: label }).click();
-      await expect(page).toHaveURL(new RegExp(`${path}$`));
-      await expect(page.getByRole("dialog")).toHaveCount(0);
-      await expect(nav.getByRole("link", { name: label })).toHaveAttribute("aria-current", "page");
-    }
-    await nav.getByRole("link", { name: "Нүүр" }).click();
+    const popup = page.getByRole("dialog", { name: "Хүмүүс" });
+    await expect(popup).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Үндсэн цэс" })).toHaveCount(0);
+    await popup.getByRole("link", { name: /Би ·/ }).first().click();
+    await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await page.getByRole("dialog").getByRole("link", { name: "Хаах" }).click();
     await expect(page).toHaveURL(/\/home$/);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
   test("home menu opens screens as popups over the planets", async ({ page }) => {

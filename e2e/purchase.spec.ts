@@ -15,8 +15,10 @@ async function walletBalance(page: Page) {
  */
 async function activeCatalog(page: Page): Promise<Record<string, number>> {
   await page.goto("/readings");
-  const tiles = await page
-    .locator('main a[href^="/buy/"]')
+  const sheet = page.getByRole("dialog", { name: "Зурхай" });
+  await expect(sheet.locator('a[href^="/buy/"]').first()).toBeVisible();
+  const tiles = await sheet
+    .locator('a[href^="/buy/"]')
     .evaluateAll((links) =>
       links.map((a) => [a.getAttribute("href") ?? "", a.textContent ?? ""] as const),
     );

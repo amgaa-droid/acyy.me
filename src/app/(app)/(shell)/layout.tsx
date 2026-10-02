@@ -1,30 +1,29 @@
-import { Header } from "@/components/app/header";
-import { Sidebar } from "@/components/app/sidebar";
-import { TabBar } from "@/components/app/tab-bar";
+import { ScreenSheet } from "@/components/app/screen-sheet";
+import { PlanetSystem } from "@/components/home/planet-system";
 import { APP_NAME } from "@/env";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
+import { loadPlanetSystem } from "@/server/planets";
 import { getBalance } from "@/server/wallet";
 
 /**
- * Full-page shell for the detail screens when opened directly (a shared link or a refresh).
- * From the home screen the same screens open as popups instead (see `../home/@modal`).
- * Mobile: header + floating tab bar. Desktop (lg+): floating sidebar with nav and wallet.
+ * Detail screens opened directly (a shared link, a refresh). There are no separate full pages:
+ * the screen opens as the same popup as from home (`../home/@modal`), over the planet system,
+ * which stays behind it untouchable until the popup closes to home.
  */
 export default async function ShellLayout({ children }: { children: React.ReactNode }) {
-  const { user } = await requireOnboardedUser();
-  const balance = await getBalance(db, user.id);
+  const { user, self } = await requireOnboardedUser();
+  const [data, balance] = await Promise.all([
+    loadPlanetSystem(db, user.id, self),
+    getBalance(db, user.id),
+  ]);
 
   return (
-    <div className="flex min-h-dvh">
-      <Sidebar appName={APP_NAME} balance={balance} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Header balance={balance} />
-        <main className="mx-auto w-full max-w-md flex-1 px-4 pt-2 pb-[calc(var(--tabbar-h)+env(safe-area-inset-bottom)+2.5rem)] lg:max-w-6xl lg:px-10 lg:py-10">
-          {children}
-        </main>
+    <>
+      <div inert aria-hidden>
+        <PlanetSystem data={data} balance={balance} appName={APP_NAME} />
       </div>
-      <TabBar />
-    </div>
+      <ScreenSheet>{children}</ScreenSheet>
+    </>
   );
 }
