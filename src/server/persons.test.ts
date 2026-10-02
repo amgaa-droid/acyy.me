@@ -1,9 +1,12 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 
 import { createTestDb, insertUser } from "@/test/db";
+import { persons } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
 import {
   CannotDeleteSelfError,
+  MAX_PEOPLE,
+  PeopleLimitError,
   PersonNotFoundError,
   SelfAlreadyExistsError,
   SelfRelationError,
@@ -67,6 +70,26 @@ describe("createPerson", () => {
     expect(m).toMatchObject({ isSelf: false, relation: "mother", relationLabel: null });
     const list = await listPeople(db, u.id);
     expect(list.map((p) => p.relation)).toEqual(["self", "mother"]);
+  });
+
+  it("stops at the per-account limit; deleting someone makes room again", async () => {
+    const u = await newUser();
+    const s = await createSelf(db, u.id, self);
+    await db.insert(persons).values(
+      Array.from({ length: MAX_PEOPLE - 2 }, (_, i) => ({
+        ownerUserId: u.id,
+        relation: "friend" as const,
+        name: `Найз ${i}`,
+        birthDate: "1990-01-01",
+        avatarSeed: "Nova",
+      })),
+    );
+    const last = await createPerson(db, u.id, mom);
+    await expect(createPerson(db, u.id, mom)).rejects.toBeInstanceOf(PeopleLimitError);
+    expect(s.isSelf).toBe(true);
+
+    await deletePerson(db, u.id, last.id);
+    await expect(createPerson(db, u.id, mom)).resolves.toMatchObject({ relation: "mother" });
   });
 
   it("requires a label for 'other' and drops it for other relations", async () => {

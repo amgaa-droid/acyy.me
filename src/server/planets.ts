@@ -6,7 +6,7 @@ import { relationText } from "@/lib/people";
 import { pairKey, type PairLink } from "@/lib/planet-system";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { getSign } from "@/server/astro/zodiac";
-import { loadViewer, offersForPerson, productsByCode } from "@/server/catalog";
+import { loadViewer, offersForPeople, productsByCode } from "@/server/catalog";
 import { dailyForSign, type DailyReading } from "@/server/daily";
 import type { AppDb } from "@/server/db/types";
 import { listPeople, type Person } from "@/server/persons";
@@ -115,9 +115,9 @@ export async function loadPlanetSystem(
   ]);
   const others = byCloseness(persons.filter((p) => p.id !== self.id && !p.isSelf));
   const date = todayIso();
-  const [daily, ...offers] = await Promise.all([
+  const [daily, offers] = await Promise.all([
     dailyForSign(db, getSign(self.birthDate, refs.signs).code, date),
-    ...[self, ...others].map((p) => offersForPerson(db, viewer, p)),
+    offersForPeople(db, viewer, [self, ...others]),
   ]);
   const readingsOf = (i: number): PlanetReading[] =>
     offers[i]

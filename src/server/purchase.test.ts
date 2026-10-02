@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { toIsoDate, todayYmd } from "@/lib/birth-date";
-import { offersForPerson, loadViewer } from "@/server/catalog";
+import { offersForPeople, offersForPerson, loadViewer } from "@/server/catalog";
 import { addPart, createProduct, setPartArchived } from "@/server/admin/catalog";
 import { GenderRequiredError } from "@/server/content/keys";
 import {
@@ -127,6 +127,23 @@ describe("catalog", () => {
       "dating",
     );
     await db.update(products).set({ isActive: true }).where(eq(products.code, "dating"));
+  });
+
+  it("offers for several people at once match each person's own offers, bought ones included", async () => {
+    const { userId, self, mom, partner } = await setup({ confirmed: true, balance: 5_000 });
+    const bought = await purchase(db, { userId, productCode: "birthday", personIds: [mom.id] });
+    const viewer = await loadViewer(db, userId);
+    const people = [self, mom, partner];
+
+    const together = await offersForPeople(db, viewer, people);
+    for (const [i, p] of people.entries()) {
+      expect(together[i]).toEqual(await offersForPerson(db, viewer, p));
+    }
+    expect(together[1].find((o) => o.product.code === "birthday")?.purchaseId).toBe(
+      bought.purchase.id,
+    );
+    expect(together[0].find((o) => o.product.code === "birthday")?.purchaseId).toBeNull();
+    expect(await offersForPeople(db, viewer, [])).toEqual([]);
   });
 });
 

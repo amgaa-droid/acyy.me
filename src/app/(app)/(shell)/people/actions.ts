@@ -9,6 +9,7 @@ import { db } from "@/server/db";
 import {
   CannotDeleteSelfError,
   GenderLockedError,
+  PeopleLimitError,
   PersonNotFoundError,
   SelfRelationError,
   createPerson,
@@ -16,11 +17,13 @@ import {
   updatePerson,
 } from "@/server/persons";
 
-export type PersonFormError = "name" | "birthDate" | "relationLabel" | "genderLocked" | "generic";
+export type PersonFormError =
+  "name" | "birthDate" | "relationLabel" | "genderLocked" | "limit" | "generic";
 export type PersonActionResult = { ok: true; id: string } | { ok: false; error: PersonFormError };
 
 function toFormError(err: unknown): PersonFormError {
   if (err instanceof GenderLockedError) return "genderLocked";
+  if (err instanceof PeopleLimitError) return "limit";
   if (err instanceof z.ZodError) {
     const field = err.issues[0]?.path[0];
     if (field === "name" || field === "birthDate" || field === "relationLabel") return field;
@@ -36,7 +39,8 @@ export async function createPersonAction(input: unknown): Promise<PersonActionRe
     revalidatePath("/home");
     return { ok: true, id: person.id };
   } catch (err) {
-    if (!(err instanceof z.ZodError)) console.error("[people:create]", err);
+    if (!(err instanceof z.ZodError || err instanceof PeopleLimitError))
+      console.error("[people:create]", err);
     return { ok: false, error: toFormError(err) };
   }
 }

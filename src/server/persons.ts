@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { isAvatarSeed } from "@/lib/avatar-seeds";
@@ -16,6 +16,9 @@ import { persons, productParts, purchases } from "@/server/db/schema";
  */
 
 export type Person = typeof persons.$inferSelect;
+
+/** People one account may keep (deleted ones don't count) — home loads and draws all of them. */
+export const MAX_PEOPLE = 300;
 
 export const personNameSchema = z.string().trim().min(1).max(40);
 export const avatarSeedSchema = z.string().refine(isAvatarSeed, "invalid_avatar");
@@ -86,6 +89,11 @@ export class SelfRelationError extends Error {
 export class CannotDeleteSelfError extends Error {
   constructor() {
     super("cannot_delete_self");
+  }
+}
+export class PeopleLimitError extends Error {
+  constructor() {
+    super("people_limit");
   }
 }
 export class GenderLockedError extends Error {
@@ -195,6 +203,11 @@ export async function getPerson(db: AppDb, userId: string, personId: string): Pr
 
 export async function createPerson(db: AppDb, userId: string, input: PersonInput): Promise<Person> {
   const data = personInputSchema.parse(input);
+  const [{ have }] = await db
+    .select({ have: count() })
+    .from(persons)
+    .where(and(eq(persons.ownerUserId, userId), isNull(persons.deletedAt)));
+  if (have >= MAX_PEOPLE) throw new PeopleLimitError();
   const [person] = await db
     .insert(persons)
     .values({ ownerUserId: userId, isSelf: false, ...data })

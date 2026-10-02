@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { ageOn, parseIsoDate, todayYmd, type Ymd } from "@/lib/birth-date";
 import { RELATION_GROUP, type Relation } from "@/lib/domain";
@@ -94,26 +94,52 @@ export async function offersForPerson(
   viewer: Viewer,
   person: Person,
 ): Promise<PersonOffer[]> {
+  return (await offersForPeople(db, viewer, [person]))[0];
+}
+
+/** offersForPerson for several people (same order), in two queries however many they are. */
+export async function offersForPeople(
+  db: AppDb,
+  viewer: Viewer,
+  people: readonly Person[],
+): Promise<PersonOffer[][]> {
+  if (people.length === 0) return [];
   const [all, owned] = await Promise.all([
     db.select().from(products).orderBy(asc(products.sort)),
     // Single-person purchases are keyed by the person id (pairs use "a|b").
     db
-      .select({ id: purchases.id, productCode: purchases.productCode })
+      .select({
+        id: purchases.id,
+        productCode: purchases.productCode,
+        subjectKey: purchases.subjectKey,
+      })
       .from(purchases)
-      .where(and(eq(purchases.userId, viewer.userId), eq(purchases.subjectKey, person.id))),
+      .where(
+        and(
+          eq(purchases.userId, viewer.userId),
+          inArray(
+            purchases.subjectKey,
+            people.map((p) => p.id),
+          ),
+        ),
+      ),
   ]);
-  const byCode = new Map(owned.map((o) => [o.productCode, o.id]));
   const today = todayYmd();
-  return all
-    .filter(
-      (p) =>
-        byCode.has(p.code) ||
-        (p.personCount === 1
-          ? isEligible(p, [person], viewer, today)
-          : isEligible({ ...p, personCount: 1 }, [person], viewer, today)),
-    )
-    .map((product) => ({
-      product,
-      purchaseId: product.personCount === 1 ? (byCode.get(product.code) ?? null) : null,
-    }));
+  return people.map((person) => {
+    const byCode = new Map(
+      owned.filter((o) => o.subjectKey === person.id).map((o) => [o.productCode, o.id]),
+    );
+    return all
+      .filter(
+        (p) =>
+          byCode.has(p.code) ||
+          (p.personCount === 1
+            ? isEligible(p, [person], viewer, today)
+            : isEligible({ ...p, personCount: 1 }, [person], viewer, today)),
+      )
+      .map((product) => ({
+        product,
+        purchaseId: product.personCount === 1 ? (byCode.get(product.code) ?? null) : null,
+      }));
+  });
 }
