@@ -302,6 +302,8 @@ export const mn = {
       },
       info: "Мэдээлэл",
       infoAria: (name: string) => `${name} — мэдээлэл`,
+      trayAria: (name: string) => `${name} — зурхайнууд`,
+      traySelf: (sign: string, birthDate: string) => `Би · ${sign} · ${birthDate}`,
       more: "Бусад",
       moreAria: (n: number) => `Бусад ${n} хүн`,
       closeDock: "Бусад хүмүүсийг хаах",

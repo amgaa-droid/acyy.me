@@ -81,8 +81,16 @@ test("tapping a planet shows its readings; they open as a popup over home", asyn
   await page.emulateMedia({ reducedMotion: "reduce" });
   await loginWithPassword(page);
   await showPlanets(page);
-  await page.getByRole("button", { name: /^Сарангэрэл, Ээж/ }).click();
-  const reading = page.getByRole("link", { name: /^Төрсөн өдрийн зурхай — Сарангэрэл/ });
+  // Tapping opens a tray of readings at the bottom; × closes it.
+  const planet = page.getByRole("button", { name: /^Сарангэрэл, Ээж/ });
+  await planet.click();
+  const tray = page.getByRole("region", { name: "Сарангэрэл — зурхайнууд" });
+  await expect(tray).toBeVisible();
+  await expect(tray.getByRole("link", { name: "Сарангэрэл — мэдээлэл" })).toBeVisible();
+  await tray.getByRole("button", { name: "Хаах" }).click();
+  await expect(tray).toHaveCount(0);
+  await planet.click();
+  const reading = tray.getByRole("link", { name: /^Төрсөн өдрийн зурхай — Сарангэрэл/ });
   await reading.click();
   // The first visit compiles the popup route in dev; allow for that.
   await expect(page).toHaveURL(/\/(buy|r)\//, { timeout: 20_000 });

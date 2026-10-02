@@ -15,6 +15,7 @@ import {
 import { BottomSheet } from "@/components/app/bottom-sheet";
 import { markOnboardingAction } from "@/app/actions/onboarding";
 import { Burst, DragHint, GhostPlanet, GuidePill, GuideTip, GuideToast, WelcomeCard } from "@/components/home/guide";
+import { ReadingTray, type TrayTile } from "@/components/home/reading-tray";
 import { BrandMark } from "@/components/app/brand-mark";
 import { NAV_ITEMS } from "@/components/app/nav-items";
 import { SignOutButton } from "@/components/app/sign-out-button";
@@ -33,13 +34,11 @@ import {
   chainPoint,
   clampToStage,
   dropTarget,
-  fitRing,
   initialSeating,
   layoutScale,
   pairKey,
   pickLayout,
   rimLine,
-  ringAngles,
   scatter,
   todayLayout,
   toPct,
@@ -78,8 +77,6 @@ const PAIR = "var(--pair, #f06a2a)";
 const PAIR_FG = "var(--pair-fg, #ffffff)";
 /** Smallest gap between planets in the "+N" dock before it shows a "see all" link instead. */
 const DOCK_MIN_STEP = 60;
-/** Widest a reading button's name gets (Tailwind max-w-28). */
-const LABEL_W = 112;
 /** How long the opening fly-out lasts (ms). */
 const INTRO_MS = 1600;
 /** Switching between "today" and the planets: me grows/shrinks, the planets fold in/out. */
@@ -511,7 +508,6 @@ export function PlanetSystem({
     const mine = places[layout.key];
     const me = bodyPx(layout.me, w, h, k);
     const more = hidden.length > 0 ? bodyPx(layout.more, w, h, k) : null;
-    const center = { x: w / 2, y: h / 2 };
     // "Today": me big beside my daily horoscopes; everything else folds into me.
     const tl = todayLayout(w, h);
     const meNow = today ? tl.me : me;
@@ -723,41 +719,10 @@ export function PlanetSystem({
       );
     };
 
-    // Reading buttons around the selected planet (or me).
+    // The tapped planet's readings: a tray at the bottom (see reading-tray.tsx).
     const selPerson = sel === ME ? null : sel ? byId.get(sel) : null;
     const selReadings = sel === ME ? data.me.readings : (selPerson?.readings ?? []);
     const selBody = sel ? home.get(sel)! : null;
-    const ringButton = layout.ring.button * Math.min(1, k);
-    const ringR = selBody ? selBody.r + layout.ring.gap * Math.min(1, k) : 0;
-    const ringEdge = ringButton / 2 + 8;
-    const angles = selBody
-      ? fitRing(selBody, ringR, ringAngles(selBody, center, selReadings.length + 1, sel === ME, layout.ring.step), {
-          left: ringEdge,
-          top: ringEdge + 64,
-          right: w - ringEdge,
-          bottom: h - ringEdge - 40,
-        })
-      : [];
-
-    /**
-     * A ring button's name: just outside the button, straight away from the planet, so
-     * neighbours' names point different ways; kept on screen.
-     */
-    const ringLabel = (a: number, x: number, y: number, text: string) => {
-      const labelW = Math.min(LABEL_W, text.length * 6.6 + 22);
-      const labelH = 22;
-      const reach = ringButton / 2 + 6;
-      const cx = Math.min(w - 8 - labelW / 2, Math.max(8 + labelW / 2, x + Math.cos(a) * (reach + labelW / 2)));
-      const cy = y + Math.sin(a) * (reach + labelH / 2);
-      return (
-        <span
-          className="pointer-events-none absolute max-w-28 -translate-1/2 truncate rounded-full bg-surface px-2.5 py-1 text-xs leading-none font-semibold whitespace-nowrap shadow-[0_1px_4px_rgb(0_0_0/0.08)]"
-          style={{ left: `calc(50% + ${cx - x}px)`, top: `calc(50% + ${cy - y}px)` }}
-        >
-          {text}
-        </span>
-      );
-    };
 
     // First-run guide: one tip at a time, on the next thing to do; out of the way while
     // dragging or while a sheet or the dock is open.
@@ -979,8 +944,12 @@ export function PlanetSystem({
                 drag?.target === ME && "scale-110",
               )}
               style={{
+                // Tapped (its tray open): ringed like a tapped planet.
                 boxShadow:
-                  "0 0 0 12px color-mix(in oklab, var(--highlight) 14%, transparent), 0 0 0 28px color-mix(in oklab, var(--highlight) 6%, transparent), 0 18px 44px rgb(0 0 0 / 0.16)",
+                  selected === ME
+                    ? "0 0 0 6px var(--bg), 0 0 0 10px var(--highlight), 0 0 0 30px color-mix(in oklab, var(--highlight) 10%, transparent), 0 18px 44px rgb(0 0 0 / 0.16)"
+                    : "0 0 0 12px color-mix(in oklab, var(--highlight) 14%, transparent), 0 0 0 28px color-mix(in oklab, var(--highlight) 6%, transparent), 0 18px 44px rgb(0 0 0 / 0.16)",
+                transition: "box-shadow .3s",
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
@@ -1005,71 +974,54 @@ export function PlanetSystem({
           </div>
         </div>
 
-        {/* Info button + reading buttons around the selected planet */}
-        {selBody &&
-          (() => {
-            const a = angles[0];
-            const x = Math.min(w - ringEdge, Math.max(ringEdge, selBody.x + Math.cos(a) * ringR));
-            const y = Math.min(h - ringEdge - 40, Math.max(ringEdge + 64, selBody.y + Math.sin(a) * ringR));
-            const owner = sel === ME ? data.me.name : (selPerson?.name ?? "");
-            const id = sel === ME ? data.me.id : sel!;
-            return (
-              <Link
-                key={`${sel}-info`}
-                href={`/people/${id}`}
-                scroll={false}
-                aria-label={t.infoAria(owner)}
-                className="group/r absolute z-30 -translate-1/2 animate-pop-in"
-                style={{ left: x, top: y, width: ringButton, height: ringButton }}
-              >
-                <span
-                  className={`flex size-full items-center justify-center rounded-full border-2 border-fg bg-fg text-bg shadow-[0_8px_20px_rgb(0_0_0/0.16)] transition-[scale] duration-300 ${SPRING} group-hover/r:scale-112`}
-                >
-                  <UserRound className="size-[44%]" strokeWidth={1.8} aria-hidden />
-                </span>
-                {ringLabel(a, x, y, t.info)}
-              </Link>
-            );
-          })()}
-        {selBody &&
-          selReadings.map((r, i) => {
-            const a = angles[i + 1];
-            // The fan is already turned to fit; clamping only guards a screen too small for it.
-            const x = Math.min(w - ringEdge, Math.max(ringEdge, selBody.x + Math.cos(a) * ringR));
-            const y = Math.min(h - ringEdge - 40, Math.max(ringEdge + 64, selBody.y + Math.sin(a) * ringR));
-            const product = data.products[r.code];
-            const owner = sel === ME ? data.me.name : (selPerson?.name ?? "");
-            const name = t.short[r.code] ?? product?.name.replace(/ зурхай$/u, "") ?? r.code;
-            return (
-              <Link
-                key={`${sel}-${r.code}`}
-                href={readingHref(sel!, r)}
-                scroll={false}
-                onClick={() => {
-                  if (sel !== ME) return;
-                  mark("self");
-                  // Back on home the next step takes over, so close my readings.
-                  setSelected(null);
-                }}
-                aria-label={t.reading(product?.name ?? r.code, owner, !!r.purchaseId)}
-                className="group/r absolute z-30 -translate-1/2 animate-pop-in"
-                style={{ left: x, top: y, width: ringButton, height: ringButton, animationDelay: `${(i + 1) * 0.05}s` }}
-              >
-                {guideSelf && sel === ME && r === birthday && (
-                  <span aria-hidden className="absolute inset-0 rounded-full motion-safe:animate-guide-halo" />
-                )}
-                <span
-                  className={cn(
-                    `relative flex size-full items-center justify-center rounded-full border-2 shadow-[0_8px_20px_rgb(0_0_0/0.16)] transition-[scale] duration-300 ${SPRING} group-hover/r:scale-112`,
-                    r.purchaseId ? "border-highlight bg-highlight text-highlight-fg" : "border-highlight/30 bg-surface text-highlight",
-                  )}
-                >
-                  <ProductGlyph icon={product?.icon} className="size-[46%]" />
-                </span>
-                {ringLabel(a, x, y, name)}
-              </Link>
-            );
-          })}
+        {/* The tapped planet's readings, in a tray at the bottom */}
+        {selBody && !today && (
+          <ReadingTray
+            key={sel}
+            name={sel === ME ? data.me.name : (selPerson?.name ?? "")}
+            sub={
+              sel === ME
+                ? t.traySelf(data.me.signName, data.me.birthDate)
+                : selPerson
+                  ? `${selPerson.relationText} · ${selPerson.signName}`
+                  : ""
+            }
+            avatarUri={sel === ME ? data.me.avatarUri : (selPerson?.avatarUri ?? "")}
+            faceClass={cn(FACE, sel === ME ? "border-fg bg-surface" : ["border-surface", selPerson && relationTint(selPerson.relation)])}
+            onClose={() => setSelected(null)}
+            tiles={[
+              ...selReadings.map((r): TrayTile => {
+                const product = data.products[r.code];
+                const owner = sel === ME ? data.me.name : (selPerson?.name ?? "");
+                return {
+                  key: r.code,
+                  href: readingHref(sel!, r),
+                  label: t.short[r.code] ?? product?.name.replace(/ зурхай$/u, "") ?? r.code,
+                  aria: t.reading(product?.name ?? r.code, owner, !!r.purchaseId),
+                  icon: <ProductGlyph icon={product?.icon} className="size-[22px]" />,
+                  kind: r.purchaseId ? "on" : "off",
+                  onClick:
+                    sel === ME
+                      ? () => {
+                          mark("self");
+                          // Back on home the next step takes over, so close my readings.
+                          setSelected(null);
+                        }
+                      : undefined,
+                  tip: guideSelf && sel === ME && r === birthday ? t.guide.tips.reading : undefined,
+                };
+              }),
+              {
+                key: "info",
+                href: `/people/${sel === ME ? data.me.id : sel}`,
+                label: t.info,
+                aria: t.infoAria(sel === ME ? data.me.name : (selPerson?.name ?? "")),
+                icon: <UserRound className="size-5" strokeWidth={1.8} aria-hidden />,
+                kind: "info",
+              },
+            ]}
+          />
+        )}
 
         {/* First-run guide */}
         {ghosts.map((gh, i) => (
@@ -1095,24 +1047,6 @@ export function PlanetSystem({
             sub={t.guide.tips.me.sub}
           />
         )}
-        {guideSelf &&
-          sel === ME &&
-          birthday &&
-          (() => {
-            const a = angles[selReadings.indexOf(birthday) + 1];
-            const x = Math.min(w - ringEdge, Math.max(ringEdge, me.x + Math.cos(a) * ringR));
-            const y = Math.min(h - ringEdge - 40, Math.max(ringEdge + 64, me.y + Math.sin(a) * ringR));
-            return (
-              <GuideTip
-                x={x}
-                top={y - ringButton / 2 - (Math.sin(a) < 0 ? 30 : 4)}
-                bottom={y + ringButton / 2 + (Math.sin(a) < 0 ? 4 : 30)}
-                w={w}
-                title={t.guide.tips.reading.title}
-                sub={t.guide.tips.reading.sub}
-              />
-            );
-          })()}
         {guideLinkId && guideLinkPerson && (
           <>
             <DragHint
@@ -1132,7 +1066,7 @@ export function PlanetSystem({
           </>
         )}
         {celebrate && <Burst x={me.x} y={me.y - me.r * 0.6} />}
-        {guideOn && !toast && (
+        {guideOn && !toast && !selBody && (
           <button
             type="button"
             onClick={() => mark("dismissed")}
@@ -1197,7 +1131,7 @@ export function PlanetSystem({
           aria-live="polite"
           className={cn(
             "pointer-events-none absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-5 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground transition-opacity lg:bottom-8",
-            today || (showDock && !drag?.moved) || guideOn || guide.welcome || toast ? "opacity-0" : "opacity-100",
+            today || (showDock && !drag?.moved) || guideOn || guide.welcome || toast || selBody ? "opacity-0" : "opacity-100",
           )}
         >
           {drag?.moved
