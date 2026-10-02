@@ -338,3 +338,33 @@ export function dropTarget(
   }
   return best;
 }
+
+// ── First-run guide ─────────────────────────────────────────────────────────────────────────
+
+/** Which guide steps this user has already been through (kept per browser). */
+export type CoachFlags = { add?: boolean; link?: boolean };
+
+/**
+ * The first-run guide over the planet system: first "add someone close", then "drag them onto
+ * yourself". Nothing for someone who has done it already — they have people, or a pair (bought
+ * or drawn) — or who dismissed it.
+ */
+export function coachStep(state: {
+  people: number;
+  pairs: number;
+  flags: CoachFlags;
+}): "add" | "link" | null {
+  if (state.people === 0) return state.flags.add ? null : "add";
+  if (state.pairs > 0 || state.flags.link) return null;
+  return "link";
+}
+
+/**
+ * Where a guide's caption goes next to its target: beside it toward the middle of the screen
+ * (left of a target on the right, and the reverse), or above/below one near the middle.
+ */
+export function coachCaptionSide(target: Body, w: number, h: number): "left" | "right" | "above" | "below" {
+  if (target.x > w * 0.6) return "left";
+  if (target.x < w * 0.4) return "right";
+  return target.y > h * 0.35 ? "above" : "below";
+}

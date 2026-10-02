@@ -253,6 +253,13 @@ export const mn = {
       foldedTitle: (name: string) => `${name} ба бусад`,
       bought: "Худалдаж авсан",
       notBought: "Аваагүй",
+      coach: {
+        add: "Дотны хүнээ нэмээрэй",
+        addSub: "Ээж, найз, хайртаа — төрсөн өдрөөр нь",
+        link: "Чирж өөр дээрээ авчир",
+        linkSub: "Та хоёрын нийцэл нээгдэнэ",
+        skip: "Алгасах",
+      },
       info: "Мэдээлэл",
       infoAria: (name: string) => `${name} — мэдээлэл`,
       more: "Бусад",

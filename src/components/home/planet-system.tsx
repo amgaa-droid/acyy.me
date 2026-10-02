@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { BottomSheet } from "@/components/app/bottom-sheet";
+import { CoachMark } from "@/components/home/coach-mark";
 import { BrandMark } from "@/components/app/brand-mark";
 import { NAV_ITEMS } from "@/components/app/nav-items";
 import { SignOutButton } from "@/components/app/sign-out-button";
@@ -28,6 +29,7 @@ import {
   captionBodies,
   chainPoint,
   clampToStage,
+  coachStep,
   dropTarget,
   fitRing,
   initialSeating,
@@ -40,6 +42,7 @@ import {
   toPct,
   toPx,
   type Body,
+  type CoachFlags,
   type LayoutKey,
   type PairLink,
   type Point,
@@ -103,6 +106,15 @@ function load(key: string): Partial<Stored> | null {
   }
 }
 
+function readCoach(key: string): CoachFlags {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(key) ?? "{}") as CoachFlags;
+  } catch {
+    return {};
+  }
+}
+
 function ProductGlyph({ icon, className }: { icon: string | undefined; className?: string }) {
   const Icon = PRODUCT_ICON_COMPONENTS[icon as ProductIconName] ?? Sparkles;
   return <Icon className={className} strokeWidth={1.8} aria-hidden />;
@@ -146,6 +158,10 @@ export function PlanetSystem({
   };
   const [menuOpen, setMenuOpen] = useState(false);
   const [foldedFor, setFoldedFor] = useState<string | null>(null);
+  // First-run guide: which steps this browser has been through. Only shown once measured on
+  // the client, so reading storage in the initializer can't cause a hydration mismatch.
+  const coachKey = `planets:coach:v1:${data.me.id}`;
+  const [coach, setCoach] = useState<CoachFlags>(() => readCoach(coachKey));
 
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -181,6 +197,18 @@ export function PlanetSystem({
       // Private mode or storage full: the planets just won't remember.
     }
   }, [loaded, storeKey, seating, drawn, places]);
+
+  // Someone added: step one is done for good, even if they're deleted later.
+  const hasPeople = data.people.length > 0;
+  const coachFlags: CoachFlags = { ...coach, add: coach.add || hasPeople };
+  const coachJson = JSON.stringify(coachFlags);
+  useEffect(() => {
+    try {
+      localStorage.setItem(coachKey, coachJson);
+    } catch {
+      // Private mode: the guide may show again next visit.
+    }
+  }, [coachKey, coachJson]);
 
   function radiusOf(rank: number, k: number) {
     const layout = pickLayout(size?.w ?? 0);
@@ -471,6 +499,7 @@ export function PlanetSystem({
       seat([a, b]);
       setDockOpen(false);
       setSelected(null);
+      setCoach((c) => ({ ...c, link: true }));
       if (href) router.push(href, { scroll: false });
     };
 
@@ -624,6 +653,20 @@ export function PlanetSystem({
         </span>
       );
     };
+
+    // First-run guide: add someone, then drag them onto me. Waits for the opening fly-out and
+    // steps aside while dragging or while a sheet is open.
+    const guideStep =
+      !intro && !drag?.moved && !menuOpen && !foldedFor
+        ? coachStep({
+            people: data.people.length,
+            pairs: Object.keys(data.mePairs).length + links.length,
+            flags: coachFlags,
+          })
+        : null;
+    const guideId = guideStep === "link" ? seating.seats.find((id) => home.has(id)) : undefined;
+    const guidePerson = guideId ? byId.get(guideId) : undefined;
+    const skipGuide = () => setCoach((c) => ({ ...c, [guideStep === "add" ? "add" : "link"]: true }));
 
     return (
       <>
@@ -882,11 +925,36 @@ export function PlanetSystem({
             );
           })}
 
+        {guideStep === "add" && (
+          <CoachMark
+            target={bodyPx(layout.add, w, h, k)}
+            title={t.coach.add}
+            subtitle={t.coach.addSub}
+            skipLabel={t.coach.skip}
+            onSkip={skipGuide}
+            w={w}
+            h={h}
+          />
+        )}
+        {guideStep === "link" && guideId && guidePerson && (
+          <CoachMark
+            target={home.get(guideId)!}
+            to={me}
+            ghost={{ uri: guidePerson.avatarUri, tint: relationTint(guidePerson.relation) }}
+            title={t.coach.link}
+            subtitle={t.coach.linkSub}
+            skipLabel={t.coach.skip}
+            onSkip={skipGuide}
+            w={w}
+            h={h}
+          />
+        )}
+
         <p
           aria-live="polite"
           className={cn(
             "pointer-events-none absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-5 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground transition-opacity lg:bottom-8",
-            showDock && !drag?.moved ? "opacity-0" : "opacity-100",
+            (showDock && !drag?.moved) || guideStep ? "opacity-0" : "opacity-100",
           )}
         >
           {drag?.moved
