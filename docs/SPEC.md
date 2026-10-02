@@ -201,17 +201,18 @@ interface QPayProvider {
 | Facebook | бүгд (env байвал) | Data deletion callback: `/api/fb/data-deletion` |
 | Имэйл OTP | бүгд | 6 оронтой, 10 мин, 5 оролдлого. Better Auth `emailOTP` plugin |
 
-- **Account linking:** ижил баталгаажсан имэйлтэй бол нэг данс (Google, email OTP-г trusted гэж үзнэ).
+- **Account linking:** ижил баталгаажсан имэйлтэй бол нэг данс (Google, email OTP-г trusted гэж үзнэ). **Facebook** имэйлээ баталгаажуулдаггүй тул Facebook-ээр нэвтрэхэд ижил имэйлтэй, аль хэдийн байгаа данстай автоматаар **нийлэхгүй** — эзэн нь нэвтэрсэн үедээ `/me`-ээс л холбоно (өөр имэйлтэй Facebook ч болно). Нийлж чадаагүй нэвтрэлт `/login` дээр тайлбартай буцна.
 - **In-app browser** (FBAN/FBAV/Messenger/Instagram UA): Google товчийг нууж, "Browser-т нээх" заавар (iOS: ⋯ → Safari-д нээх; Android: intent link) харуулна. FB болон OTP ажиллана.
 - Нэвтэрмэгц "Би" байхгүй бол → `/onboarding`.
 - Session: Better Auth DB session, 30 хоног.
-- **Админ эрх:** `ADMIN_OWNER_EMAILS`, `ADMIN_EDITOR_EMAILS` (таслалаар). Owner = бүх эрх; Editor = зөвхөн контент (текст, импорт, орд/үеийн муж).
+- **Админ эрх:** `ADMIN_OWNER_EMAILS`, `ADMIN_EDITOR_EMAILS` (таслалаар). Owner = бүх эрх; Editor = зөвхөн контент (текст, импорт, орд/үеийн муж). Имэйл нь **баталгаажсан** (`email_verified`) байж л эрх олгоно — нууц үгээр бүртгүүлэх нь хаягийг эзэмшдэгийг батлахгүй. Admin хуудас бүр эрхээ өөрөө шалгана (layout-д найдахгүй).
 
 ### 5.1 Хуучин acyy.me хэрэглэгчид
 Хуучин сайт (ASP.NET + MSSQL) Facebook-ээр нэвтэрдэг байсан. Шинэ сайт **ижил Facebook app**-ийг (App ID `896090567214066`) ашиглах тул Facebook-ийн app-scoped ID хэвээр ирнэ.
 - **Хамрах хүрээ:** Facebook login-тэй, зурхай төлж авсан эсвэл үлдэгдэлтэй хэрэглэгч (~24.5 мянга). Facebook ID-гүй хэрэглэгчийг алгасна (дэмжлэгээр гараар).
 - **Шилжих зүйл:** `user` (`legacy_user_id`, хуучин имэйл) + `account` (`facebook`, хуучин ID) → Better Auth Facebook ID-аар хайгаад шууд энэ данс руу нэвтрүүлнэ. Төлсөн төрсөн өдрийн / нийцлийн зурхай (`purchases.legacy_ref`, хэтэвчнээс хасалтгүй; нийцэлд ордны хэсэг ч нээгдэнэ), хүмүүс (`persons.legacy_key`), үлдэгдэл (`credit(adjust)`, түлхүүр `legacy:balance:{id}`).
 - **Хүний нэр:** хуучин сайтад нэр байгаагүй → харилцааны шошго ("Нөхөр"), эсвэл "Хүн · 1990.05.12". "Би" урьдчилан тогтоохгүй: анх нэвтрэхэд onboarding **"Та аль нь вэ?"** гэж асууж, сонгосон хүн "Би" болно (огноо өөрчлөгдөхгүй), эсвэл шинээр нэмнэ.
+- **Ижил имэйлтэй данс аль хэдийн байвал:** эзэн нь яг тэр Facebook ID-г `/me`-ээс холбосон үед л шилжүүлэлт тэр дансанд нийлнэ; үгүй бол алгасаж тайланд `email_taken` гэж гарна (хуучин сайтын имэйл юуг ч батлахгүй). Холбосны дараа script-ийг дахин ажиллуулна.
 - **Имэйлгүй Facebook:** Better Auth имэйлгүй бол ID-аар хайхаасаа өмнө татгалздаг тул `fb-{id}@facebook.invalid` орлуулна.
 - Нэвтрээгүй шилжүүлсэн данс (`legacy_claimed_at` null) админы хэрэглэгч/хүний тоонд орохгүй; хуучин худалдан авалт зарцуулалт/орлогын тоонд орохгүй.
 - Скрипт: `pnpm tsx scripts/legacy-users.ts` (dry run) → `--commit`. Дахин ажиллуулахад давхардахгүй. Шилжүүлэх өдөр шинэ dump-аар ажиллуулна.
@@ -398,6 +399,6 @@ ADMIN_OWNER_EMAILS= / ADMIN_EDITOR_EMAILS=
 ## 12. Чанарын шаардлага
 - Lighthouse (mobile) Performance ≥ 90, Accessibility ≥ 90. Эхний ачаалал < 2 сек (4G).
 - iPhone Safari, Android Chrome, FB/Messenger in-app browser дээр тестлэгдсэн.
-- Rate limit: login/OTP (5/мин/IP), invoice үүсгэх (10/цаг/хэрэглэгч), import (Owner/Editor).
+- Rate limit: login/OTP (5/мин/IP), invoice үүсгэх (10/цаг/хэрэглэгч), урилгын имэйл (20/хоног/хэрэглэгч; линк хязгааргүй), import (Owner/Editor).
 - Security headers (CSP, HSTS, X-Frame-Options), CSRF (Server Actions default), бүх ID нь UUID.
 - Хуулийн хуудсууд: Үйлчилгээний нөхцөл, Нууцлалын бодлого (Хувь хүний мэдээлэл хамгаалах тухай хууль, 2021), "зөвхөн зугаа цэнгэлийн зорилготой" анхааруулга. Claude Code ноорог бичнэ → хуульчаар шалгуулна.
