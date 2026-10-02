@@ -21,11 +21,15 @@ export type SeatStage = {
   keepOut: number;
   /** The button hanging below "Та": its size and how far below the centre its top is. */
   pill: { w: number; h: number; dy: number };
+  /** How far from "Та" a seat may be (px): about the outer orbit, so nobody drifts off. */
+  reach?: number;
 };
 
 /** Name and date caption under each person, and a link's chip (px). */
 export const SEAT_LABEL = { w: 104, h: 36 };
 export const CHIP = { w: 100, h: 26 };
+/** A seat may sit this much beyond `reach`. */
+export const REACH_SLACK = 1.08;
 const GAP = 6;
 
 /** Orders people so that linked ones are neighbours: walks each chain from one of its ends. */
@@ -158,9 +162,12 @@ export function ringSeats(
   const pairs = links
     .map(([a, b]) => [index.get(a), index.get(b)] as const)
     .filter((p): p is readonly [number, number] => p[0] !== undefined && p[1] !== undefined);
-  const rx = Math.min(me.x - stage.side, stage.w - stage.side - me.x);
-  const up = me.y - stage.top;
-  const down = stage.bottom - SEAT_LABEL.h - me.y;
+  const reach = stage.reach ?? Infinity;
+  // Seats slightly past the outer orbit at most.
+  const maxDist = reach * REACH_SLACK;
+  const rx = Math.min(me.x - stage.side, stage.w - stage.side - me.x, reach);
+  const up = Math.min(me.y - stage.top, reach);
+  const down = Math.min(stage.bottom - SEAT_LABEL.h - me.y, reach);
   if (rx <= 0 || up <= 0 || down <= 0) return null;
 
   const chipsClear = (placed: Body[]) => {
@@ -180,11 +187,15 @@ export function ringSeats(
     const placed: Body[] = [];
     for (let i = 0; i < items.length; i++) {
       const a = start + dir * i * step + (jitter ? (rand() - 0.5) * 2 * jitter * step : 0);
-      // On or beyond the band's ellipse, then pulled back inside: seats reach the corners.
-      const s = jitter ? 1.3 - rand() * 0.35 : 1.1;
+      // Round the orbit, a little inside or beyond it, then pulled back inside the band.
+      const s = jitter ? 1.15 - rand() * 0.35 : 1.05;
       const ry = Math.sin(a) < 0 ? up : down;
       const r = items[i].r;
-      let p = clampToBand({ x: me.x + Math.cos(a) * rx * s, y: me.y + Math.sin(a) * ry * s, r }, stage);
+      let x = Math.cos(a) * rx * s;
+      let y = Math.sin(a) * ry * s;
+      const far = Math.hypot(x, y);
+      if (far > maxDist) [x, y] = [(x / far) * maxDist, (y / far) * maxDist];
+      let p = clampToBand({ x: me.x + x, y: me.y + y, r }, stage);
       // Too close to "Та" (or its button): step outwards along the same ray while that helps.
       for (let n = 0; n < 16 && !seatFits(p, stage); n++) {
         const d = Math.hypot(p.x - me.x, p.y - me.y) || 1;
@@ -192,7 +203,8 @@ export function ringSeats(
         if (next.x === p.x && next.y === p.y) break;
         p = next;
       }
-      if (!seatFits(p, stage) || placed.some((q) => overlaps(boxOf(p), boxOf(q)))) return null;
+      const tooFar = Math.hypot(p.x - me.x, p.y - me.y) > maxDist + 24;
+      if (tooFar || !seatFits(p, stage) || placed.some((q) => overlaps(boxOf(p), boxOf(q)))) return null;
       placed.push(p);
     }
     return chipsClear(placed) ? placed : null;

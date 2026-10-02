@@ -51,6 +51,8 @@ const STARS = [
   { x: 94, y: 66, d: 0.9 },
 ];
 const LABEL_W = 112;
+/** The outer orbit's diameter, in "Та" radii; seats stay round it. */
+const OUTER_ORBIT = 7.8;
 /** Below this height the headline shrinks (the `short` variant in globals.css). */
 const SHORT_H = 760;
 /** Hint line + "Дэлгэрэнгүй" at the bottom of the first screen (px). */
@@ -219,25 +221,27 @@ export function LandingPlanets({
       keepOut: desktop ? 36 : 22,
       // "Төрсөн өдрөө сонго" hangs 18px into the bottom of "Та" (see the markup below).
       pill: { w: desktop ? 220 : 210, h: 38, dy: meR - 18 },
+      // People stay round the outer orbit instead of drifting to the screen edges.
+      reach: (meR * OUTER_ORBIT) / 2,
     };
     const pairs = links.map((l) => [l.a, l.b] as const);
-    // Short screens: smaller people before giving up on random seats.
+    // Tight screens: smaller people first, then a wider orbit, before giving up on random seats.
     let random: Record<string, Point> | null = null;
     let scale = 1;
-    for (const s of [1, 0.86, 0.74]) {
-      random = ringSeats(
+    const seatsAt = (s: number, reach: number, withChips: boolean) =>
+      ringSeats(
         order.map((id) => ({ id, r: baseRadius(index.get(id)!) * s })),
-        stage,
-        pairs,
+        { ...stage, reach },
+        withChips ? pairs : [],
       );
-      scale = s;
-      if (random) break;
-    }
+    search: for (const wider of [1, 1.25, 1.6])
+      for (const s of [1, 0.86, 0.74]) {
+        random = seatsAt(s, stage.reach * wider, true);
+        scale = s;
+        if (random) break search;
+      }
     // Last resort before the fixed seats: let link chips touch the people.
-    random ??= ringSeats(
-      order.map((id) => ({ id, r: baseRadius(index.get(id)!) * scale })),
-      stage,
-    );
+    random ??= seatsAt(scale, Infinity, false);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- places depend on the measured screen
     setSeatScale(random ? scale : 1);
     setPlaces(
@@ -555,7 +559,7 @@ export function LandingPlanets({
         <span
           aria-hidden
           className="pointer-events-none absolute -translate-1/2 rounded-full border border-highlight/15"
-          style={{ left: me.x, top: me.y, width: me.r * 7.8, height: me.r * 7.8 }}
+          style={{ left: me.x, top: me.y, width: me.r * OUTER_ORBIT, height: me.r * OUTER_ORBIT }}
         />
 
         {!sel && !drag?.moved && renderLinks()}

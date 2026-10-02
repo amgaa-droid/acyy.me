@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { CHIP, SEAT_LABEL, chipCentre, orderByLinks, ringSeats, seatFits, type SeatStage } from "./landing-seats";
+import {
+  CHIP,
+  REACH_SLACK,
+  SEAT_LABEL,
+  chipCentre,
+  orderByLinks,
+  ringSeats,
+  seatFits,
+  type SeatStage,
+} from "./landing-seats";
 
 /** Small deterministic PRNG (mulberry32) so the random layouts are reproducible. */
 function seeded(seed: number) {
@@ -41,6 +50,8 @@ const DESKTOP: SeatStage = {
   me: { x: 720, y: 560, r: 88 },
   keepOut: 36,
   pill: { w: 200, h: 36, dy: 70 },
+  // The outer orbit (7.8 "Та" radii across).
+  reach: 343,
 };
 
 const ORDER = orderByLinks(PEOPLE, LINKS);
@@ -90,6 +101,11 @@ describe("ringSeats", () => {
         const bodies = new Map(its.map((it) => [it.id, { ...seats![it.id], r: it.r }]));
         const list = [...bodies.values()];
         for (const b of list) expect(seatFits(b, stage), `seed ${seed}`).toBe(true);
+        if (stage.reach)
+          for (const b of list)
+            expect(Math.hypot(b.x - stage.me.x, b.y - stage.me.y), `seed ${seed}: reach`).toBeLessThanOrEqual(
+              stage.reach * REACH_SLACK + 24,
+            );
         for (let i = 0; i < list.length; i++)
           for (let j = i + 1; j < list.length; j++)
             expect(apart(personBox(list[i]), personBox(list[j])), `seed ${seed}: ${i}/${j}`).toBe(true);
