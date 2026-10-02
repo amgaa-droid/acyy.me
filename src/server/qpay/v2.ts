@@ -35,9 +35,9 @@ export class QPayApiError extends Error {
 const TIMEOUT_MS = 15_000;
 
 /**
- * When a token stops being usable (ms), a minute early. `expires_in` is a lifetime in seconds in
- * some QPay environments and an absolute Unix time (seconds) in others; a value past 10⁹ can only
- * be a date.
+ * When a token stops being usable (ms), a minute early. Despite its name, QPay's `expires_in` is
+ * an absolute Unix time in seconds (about 24 h ahead), not a lifetime; a value too small to be a
+ * date is still read as a lifetime, as the name promises.
  */
 export function tokenExpiresAt(expiresIn: number, now: number): number {
   const at = expiresIn > 1_000_000_000 ? expiresIn * 1000 : now + expiresIn * 1000;
