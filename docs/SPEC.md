@@ -400,7 +400,7 @@ ADMIN_OWNER_EMAILS= / ADMIN_EDITOR_EMAILS=
 ## 12. Чанарын шаардлага
 - Lighthouse (mobile) Performance ≥ 90, Accessibility ≥ 90. Эхний ачаалал < 2 сек (4G).
 - iPhone Safari, Android Chrome, FB/Messenger in-app browser дээр тестлэгдсэн.
-- Security headers (бүх хариунд, `next.config.ts`): `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`, `nosniff`, `Referrer-Policy`, HSTS. Script-ийн CSP (nonce) — C10.
+- Security headers (бүх хариунд, `next.config.ts`): `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`, `nosniff`, `Referrer-Policy`, HSTS. Хуудас бүрт `src/proxy.ts` nonce-тэй бүрэн CSP тавина (`script-src 'self' 'nonce-…' 'strict-dynamic'`, бусад нь `'self'`; зураг `data:`/`blob:`); гадны script, inline script ажиллахгүй.
 - Rate limit: login/OTP (5/мин/IP), invoice үүсгэх (10/цаг/хэрэглэгч), урилгын имэйл (20/хоног/хэрэглэгч; линк хязгааргүй), import (Owner/Editor).
 - Security headers (CSP, HSTS, X-Frame-Options), CSRF (Server Actions default), бүх ID нь UUID.
 - Хуулийн хуудсууд: Үйлчилгээний нөхцөл, Нууцлалын бодлого (Хувь хүний мэдээлэл хамгаалах тухай хууль, 2021), "зөвхөн зугаа цэнгэлийн зорилготой" анхааруулга. Claude Code ноорог бичнэ → хуульчаар шалгуулна.

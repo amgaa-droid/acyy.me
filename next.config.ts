@@ -3,8 +3,8 @@ import type { NextConfig } from "next";
 /**
  * Sent with every response. No page may be framed (the buy and top-up buttons must not be
  * clickjacked), forms post only to us, and referrers to other sites carry the origin alone — an
- * invitation token lives in the URL. A script-src policy needs per-request nonces and is not
- * part of this yet.
+ * invitation token lives in the URL. Pages get a fuller Content-Security-Policy with a script
+ * nonce from src/proxy.ts, which replaces the one below.
  */
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
