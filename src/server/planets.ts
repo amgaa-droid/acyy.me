@@ -8,6 +8,8 @@ import { getSign } from "@/server/astro/zodiac";
 import { loadViewer, offersForPerson, productsByCode } from "@/server/catalog";
 import type { AppDb } from "@/server/db/types";
 import { listPeople, type Person } from "@/server/persons";
+import type { OnboardingProgress } from "@/lib/onboarding";
+import { getOnboarding } from "@/server/onboarding";
 import { listPurchases } from "@/server/purchase";
 
 /** A single-person reading offered for someone: bought (purchaseId) or not yet. */
@@ -34,6 +36,8 @@ export type PlanetSystemData = {
   /** The two-person product a new pair opens, if any is on sale. */
   pairProduct: string | null;
   products: Record<string, { name: string; icon: string }>;
+  /** First-run guide progress (src/server/onboarding.ts). */
+  onboarding: OnboardingProgress;
 };
 
 const CLOSENESS: Record<RelationGroup, number> = {
@@ -97,12 +101,13 @@ export async function loadPlanetSystem(
   userId: string,
   self: Person,
 ): Promise<PlanetSystemData> {
-  const [refs, persons, viewer, purchases, products] = await Promise.all([
+  const [refs, persons, viewer, purchases, products, onboarding] = await Promise.all([
     loadAstroRefs(db),
     listPeople(db, userId),
     loadViewer(db, userId),
     listPurchases(db, userId, 500),
     productsByCode(db),
+    getOnboarding(db, userId),
   ]);
   const others = byCloseness(persons.filter((p) => p.id !== self.id && !p.isSelf));
   const offers = await Promise.all(
@@ -148,5 +153,6 @@ export async function loadPlanetSystem(
     products: Object.fromEntries(
       [...products.values()].map((p) => [p.code, { name: p.nameMn, icon: p.icon }]),
     ),
+    onboarding,
   };
 }

@@ -2,7 +2,7 @@
 
 import { Link2, Lock, Menu, Plus, Sparkles, UserRound, Wallet, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   useEffect,
   useLayoutEffect,
@@ -13,7 +13,8 @@ import {
 } from "react";
 
 import { BottomSheet } from "@/components/app/bottom-sheet";
-import { CoachMark } from "@/components/home/coach-mark";
+import { markOnboardingAction } from "@/app/actions/onboarding";
+import { Burst, DragHint, GhostPlanet, GuidePill, GuideTip, GuideToast, WelcomeCard } from "@/components/home/guide";
 import { BrandMark } from "@/components/app/brand-mark";
 import { NAV_ITEMS } from "@/components/app/nav-items";
 import { SignOutButton } from "@/components/app/sign-out-button";
@@ -21,6 +22,7 @@ import { WalletChip } from "@/components/app/wallet-chip";
 import { PRODUCT_ICON_COMPONENTS } from "@/components/readings/product-icon";
 import { mn } from "@/i18n/mn";
 import { isOffOrbit, type ProductIconName } from "@/lib/domain";
+import { guideState, type GuideStep, type OnboardingMark, type OnboardingProgress } from "@/lib/onboarding";
 import { relationTint } from "@/lib/people";
 import {
   arrangeLinks,
@@ -29,7 +31,6 @@ import {
   captionBodies,
   chainPoint,
   clampToStage,
-  coachStep,
   dropTarget,
   fitRing,
   initialSeating,
@@ -42,7 +43,6 @@ import {
   toPct,
   toPx,
   type Body,
-  type CoachFlags,
   type LayoutKey,
   type PairLink,
   type Point,
@@ -106,15 +106,6 @@ function load(key: string): Partial<Stored> | null {
   }
 }
 
-function readCoach(key: string): CoachFlags {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(localStorage.getItem(key) ?? "{}") as CoachFlags;
-  } catch {
-    return {};
-  }
-}
-
 function ProductGlyph({ icon, className }: { icon: string | undefined; className?: string }) {
   const Icon = PRODUCT_ICON_COMPONENTS[icon as ProductIconName] ?? Sparkles;
   return <Icon className={className} strokeWidth={1.8} aria-hidden />;
@@ -158,10 +149,18 @@ export function PlanetSystem({
   };
   const [menuOpen, setMenuOpen] = useState(false);
   const [foldedFor, setFoldedFor] = useState<string | null>(null);
-  // First-run guide: which steps this browser has been through. Only shown once measured on
-  // the client, so reading storage in the initializer can't cause a hydration mismatch.
-  const coachKey = `planets:coach:v1:${data.me.id}`;
-  const [coach, setCoach] = useState<CoachFlags>(() => readCoach(coachKey));
+  // First-run guide (src/lib/onboarding.ts): progress lives on the user; marked optimistically.
+  const pathname = usePathname();
+  const [progress, setProgress] = useState<OnboardingProgress>(data.onboarding);
+  const [pillOpen, setPillOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+  const [readyFlash, setReadyFlash] = useState(false);
+  const mark = (m: OnboardingMark) => {
+    if (progress[m]) return;
+    setProgress((p) => (p[m] ? p : { ...p, [m]: new Date().toISOString() }));
+    void markOnboardingAction(m);
+  };
 
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -198,17 +197,12 @@ export function PlanetSystem({
     }
   }, [loaded, storeKey, seating, drawn, places]);
 
-  // Someone added: step one is done for good, even if they're deleted later.
+  // Someone added (also outside the guide): record it, so the step stays done.
   const hasPeople = data.people.length > 0;
-  const coachFlags: CoachFlags = { ...coach, add: coach.add || hasPeople };
-  const coachJson = JSON.stringify(coachFlags);
+  const addMarked = !!data.onboarding.add;
   useEffect(() => {
-    try {
-      localStorage.setItem(coachKey, coachJson);
-    } catch {
-      // Private mode: the guide may show again next visit.
-    }
-  }, [coachKey, coachJson]);
+    if (hasPeople && !addMarked) void markOnboardingAction("add");
+  }, [hasPeople, addMarked]);
 
   function radiusOf(rank: number, k: number) {
     const layout = pickLayout(size?.w ?? 0);
@@ -268,6 +262,46 @@ export function PlanetSystem({
   // Pairs between people: bought ones, plus the ones drawn here that aren't bought yet.
   const bought = new Set(data.pairs.map((l) => pairKey(l.a, l.b)));
   const links = [...data.pairs, ...drawn.filter((l) => !bought.has(pairKey(l.a, l.b)))];
+
+  const guide = guideState(progress, {
+    people: data.people.length,
+    pairs: Object.keys(data.mePairs).length + links.length,
+  });
+  // A short cheer each time a step gets done — once back on home (popups closed).
+  const doneKey = (["self", "add", "link"] as GuideStep[]).filter((st) => guide.done[st]).join(",");
+  const cheered = useRef(doneKey);
+  const firstName = data.people[0]?.name ?? "";
+  useEffect(() => {
+    if (pathname !== "/home" || progress.dismissed) return;
+    const before = new Set(cheered.current.split(",").filter(Boolean));
+    const now = doneKey.split(",").filter(Boolean) as GuideStep[];
+    const fresh = now.filter((st) => !before.has(st));
+    if (fresh.length === 0) {
+      cheered.current = doneKey;
+      return;
+    }
+    const step = fresh[fresh.length - 1];
+    const label = step === "add" ? t.guide.done.add(firstName) : t.guide.done[step];
+    // Marked as cheered only when shown, so a re-run of this effect (dev Strict Mode) still shows it.
+    const show = window.setTimeout(() => {
+      // Still on home? (A drag or a reading may be on its way to a popup — cheer on return.)
+      if (window.location.pathname !== "/home") return;
+      cheered.current = doneKey;
+      setToast(`${label} · ${now.length}/3`);
+      if (step === "link") setCelebrate(true);
+      if (now.length === 3) setReadyFlash(true);
+    }, 700);
+    const hide = window.setTimeout(() => {
+      setToast(null);
+      setCelebrate(false);
+    }, 3600);
+    const unflash = window.setTimeout(() => setReadyFlash(false), 6000);
+    return () => {
+      window.clearTimeout(show);
+      window.clearTimeout(hide);
+      window.clearTimeout(unflash);
+    };
+  }, [doneKey, pathname, progress.dismissed, firstName]);
   const pairHref = (a: string, b: string, purchaseId: string | null) => {
     if (purchaseId) return `/r/${purchaseId}`;
     if (!data.pairProduct) return null;
@@ -340,6 +374,21 @@ export function PlanetSystem({
       <div className="absolute top-[max(env(safe-area-inset-top),1rem)] right-4 z-40 lg:top-8 lg:right-8">
         <WalletChip balance={balance} />
       </div>
+
+      {/* First-run guide: progress, welcome, cheers */}
+      {size && loaded && !intro && ((guide.active && !guide.welcome) || readyFlash) && (
+        <GuidePill
+          done={guide.done}
+          current={guide.current}
+          ready={!guide.current}
+          open={pillOpen}
+          onToggle={() => setPillOpen((o) => !o)}
+        />
+      )}
+      {size && loaded && !intro && guide.welcome && (
+        <WelcomeCard name={data.me.name} onStart={() => mark("welcome")} onLater={() => mark("welcome")} />
+      )}
+      {toast && <GuideToast text={toast} />}
 
       <BottomSheet title={t.menu} open={menuOpen} onOpenChange={setMenuOpen}>
         <nav aria-label="Үндсэн цэс" className="flex flex-col gap-2">
@@ -499,7 +548,7 @@ export function PlanetSystem({
       seat([a, b]);
       setDockOpen(false);
       setSelected(null);
-      setCoach((c) => ({ ...c, link: true }));
+      mark("link");
       if (href) router.push(href, { scroll: false });
     };
 
@@ -654,19 +703,22 @@ export function PlanetSystem({
       );
     };
 
-    // First-run guide: add someone, then drag them onto me. Waits for the opening fly-out and
-    // steps aside while dragging or while a sheet is open.
-    const guideStep =
-      !intro && !drag?.moved && !menuOpen && !foldedFor
-        ? coachStep({
-            people: data.people.length,
-            pairs: Object.keys(data.mePairs).length + links.length,
-            flags: coachFlags,
-          })
-        : null;
-    const guideId = guideStep === "link" ? seating.seats.find((id) => home.has(id)) : undefined;
-    const guidePerson = guideId ? byId.get(guideId) : undefined;
-    const skipGuide = () => setCoach((c) => ({ ...c, [guideStep === "add" ? "add" : "link"]: true }));
+    // First-run guide: one tip at a time, on the next thing to do; out of the way while
+    // dragging or while a sheet or the dock is open.
+    const guideOn =
+      guide.active && !guide.welcome && !intro && !drag?.moved && !menuOpen && !foldedFor && !showDock;
+    const birthday = data.me.readings.find((r) => r.code === "birthday") ?? data.me.readings[0];
+    const guideSelf = guideOn && guide.current === "self";
+    const guideAdd = guideOn && guide.current === "add" && data.people.length === 0;
+    const guideLinkId =
+      guideOn && guide.current === "link" ? seating.seats.find((id) => home.has(id)) : undefined;
+    const guideLinkPerson = guideLinkId ? byId.get(guideLinkId) : undefined;
+    const GHOST_AT = layout.key === "phone"
+      ? [{ x: 24, y: 30 }, { x: 78, y: 27 }, { x: 76, y: 70 }]
+      : [{ x: 32, y: 30 }, { x: 70, y: 25 }, { x: 68, y: 74 }];
+    const ghosts = guideAdd
+      ? t.guide.ghosts.map((gh, i) => ({ ...gh, body: { ...toPx(GHOST_AT[i], w, h), r: layout.sizes[i] * k } }))
+      : [];
 
     return (
       <>
@@ -840,8 +892,11 @@ export function PlanetSystem({
             aria-label={t.meAria(data.me.name, data.me.signName)}
             aria-pressed={selected === ME}
             onClick={() => setSelected((cur) => (cur === ME ? null : ME))}
-            className="group/me block size-full rounded-full motion-safe:animate-breathe"
+            className="group/me relative block size-full rounded-full motion-safe:animate-breathe"
           >
+            {guideSelf && selected !== ME && (
+              <span aria-hidden className="absolute inset-0 rounded-full motion-safe:animate-guide-halo" />
+            )}
             <span
               className={cn(
                 `block size-full overflow-hidden rounded-full border-4 border-fg bg-surface transition-[scale] duration-500 ${SPRING} group-hover/me:scale-104 dark:border-highlight dark:bg-nav`,
@@ -908,13 +963,22 @@ export function PlanetSystem({
                 key={`${sel}-${r.code}`}
                 href={readingHref(sel!, r)}
                 scroll={false}
+                onClick={() => {
+                  if (sel !== ME) return;
+                  mark("self");
+                  // Back on home the next step takes over, so close my readings.
+                  setSelected(null);
+                }}
                 aria-label={t.reading(product?.name ?? r.code, owner, !!r.purchaseId)}
                 className="group/r absolute z-30 -translate-1/2 animate-pop-in"
                 style={{ left: x, top: y, width: ringButton, height: ringButton, animationDelay: `${(i + 1) * 0.05}s` }}
               >
+                {guideSelf && sel === ME && r === birthday && (
+                  <span aria-hidden className="absolute inset-0 rounded-full motion-safe:animate-guide-halo" />
+                )}
                 <span
                   className={cn(
-                    `flex size-full items-center justify-center rounded-full border-2 shadow-[0_8px_20px_rgb(0_0_0/0.16)] transition-[scale] duration-300 ${SPRING} group-hover/r:scale-112`,
+                    `relative flex size-full items-center justify-center rounded-full border-2 shadow-[0_8px_20px_rgb(0_0_0/0.16)] transition-[scale] duration-300 ${SPRING} group-hover/r:scale-112`,
                     r.purchaseId ? "border-highlight bg-highlight text-highlight-fg" : "border-highlight/30 bg-surface text-highlight",
                   )}
                 >
@@ -925,36 +989,82 @@ export function PlanetSystem({
             );
           })}
 
-        {guideStep === "add" && (
-          <CoachMark
-            target={bodyPx(layout.add, w, h, k)}
-            title={t.coach.add}
-            subtitle={t.coach.addSub}
-            skipLabel={t.coach.skip}
-            onSkip={skipGuide}
+        {/* First-run guide */}
+        {ghosts.map((gh, i) => (
+          <GhostPlanet key={gh.relation} body={gh.body} label={gh.label} relation={gh.relation} index={i} />
+        ))}
+        {guideAdd && ghosts[0] && (
+          <GuideTip
+            x={ghosts[0].body.x}
+            top={ghosts[0].body.y - ghosts[0].body.r}
+            bottom={ghosts[0].body.y + ghosts[0].body.r + 26}
             w={w}
-            h={h}
+            title={t.guide.tips.add.title}
+            sub={t.guide.tips.add.sub}
           />
         )}
-        {guideStep === "link" && guideId && guidePerson && (
-          <CoachMark
-            target={home.get(guideId)!}
-            to={me}
-            ghost={{ uri: guidePerson.avatarUri, tint: relationTint(guidePerson.relation) }}
-            title={t.coach.link}
-            subtitle={t.coach.linkSub}
-            skipLabel={t.coach.skip}
-            onSkip={skipGuide}
+        {guideSelf && selected !== ME && (
+          <GuideTip
+            x={me.x}
+            top={me.y - me.r - 16}
+            bottom={me.y + me.r + 50}
             w={w}
-            h={h}
+            title={t.guide.tips.me.title}
+            sub={t.guide.tips.me.sub}
           />
+        )}
+        {guideSelf &&
+          sel === ME &&
+          birthday &&
+          (() => {
+            const a = angles[selReadings.indexOf(birthday) + 1];
+            const x = Math.min(w - ringEdge, Math.max(ringEdge, me.x + Math.cos(a) * ringR));
+            const y = Math.min(h - ringEdge - 40, Math.max(ringEdge + 64, me.y + Math.sin(a) * ringR));
+            return (
+              <GuideTip
+                x={x}
+                top={y - ringButton / 2 - (Math.sin(a) < 0 ? 30 : 4)}
+                bottom={y + ringButton / 2 + (Math.sin(a) < 0 ? 4 : 30)}
+                w={w}
+                title={t.guide.tips.reading.title}
+                sub={t.guide.tips.reading.sub}
+              />
+            );
+          })()}
+        {guideLinkId && guideLinkPerson && (
+          <>
+            <DragHint
+              from={home.get(guideLinkId)!}
+              to={me}
+              avatarUri={guideLinkPerson.avatarUri}
+              tint={relationTint(guideLinkPerson.relation)}
+            />
+            <GuideTip
+              x={home.get(guideLinkId)!.x}
+              top={home.get(guideLinkId)!.y - home.get(guideLinkId)!.r - 4}
+              bottom={home.get(guideLinkId)!.y + home.get(guideLinkId)!.r + 34}
+              w={w}
+              title={t.guide.tips.link.title}
+              sub={t.guide.tips.link.sub}
+            />
+          </>
+        )}
+        {celebrate && <Burst x={me.x} y={me.y - me.r * 0.6} />}
+        {guideOn && !toast && (
+          <button
+            type="button"
+            onClick={() => mark("dismissed")}
+            className="absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-[39] flex h-10 -translate-x-1/2 animate-pop-in items-center rounded-full bg-surface/80 px-4 text-[13px] font-semibold text-muted-foreground shadow-[0_4px_14px_rgb(0_0_0/0.08)] backdrop-blur lg:bottom-8"
+          >
+            {t.guide.later}
+          </button>
         )}
 
         <p
           aria-live="polite"
           className={cn(
             "pointer-events-none absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-5 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground transition-opacity lg:bottom-8",
-            (showDock && !drag?.moved) || guideStep ? "opacity-0" : "opacity-100",
+            (showDock && !drag?.moved) || guideOn || guide.welcome || toast ? "opacity-0" : "opacity-100",
           )}
         >
           {drag?.moved

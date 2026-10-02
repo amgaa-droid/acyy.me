@@ -25,13 +25,19 @@ type OtherRelation = Exclude<Relation, "self">;
 export function NewPersonFlow({
   avatars,
   returnTo,
+  initialRelation = null,
+  returnHome = false,
 }: {
   avatars: AvatarOption[];
   returnTo?: { next: string; slot: "a" | "b" } | null;
+  /** Pre-picked relation (from the home guide's ghost planets). */
+  initialRelation?: OtherRelation | null;
+  /** Go back to home after saving, to see the new planet arrive. */
+  returnHome?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [relation, setRelation] = useState<OtherRelation | null>(null);
+  const [relation, setRelation] = useState<OtherRelation | null>(initialRelation);
   const [relationLabel, setRelationLabel] = useState("");
   const [avatarSeed, setAvatarSeed] = useState("");
   const [name, setName] = useState("");
@@ -59,7 +65,8 @@ export function NewPersonFlow({
           const url = new URL(returnTo.next, window.location.origin);
           url.searchParams.set(returnTo.slot, res.id);
           router.push(`${url.pathname}${url.search}`);
-        } else router.push(`/people/${res.id}`);
+        } else if (returnHome) router.push("/home", { scroll: false });
+        else router.push(`/people/${res.id}`);
         return;
       }
       setError(t.errors[res.error]);

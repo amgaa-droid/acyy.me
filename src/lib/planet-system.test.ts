@@ -8,8 +8,6 @@ import {
   bringIn,
   captionBodies,
   chainPoint,
-  coachCaptionSide,
-  coachStep,
   clampToStage,
   dropTarget,
   fitRing,
@@ -205,26 +203,5 @@ describe("geometry", () => {
     ];
     expect(dropTarget({ x: 0, y: 0, r: 30 }, bodies)).toBe("near");
     expect(dropTarget({ x: 0, y: 300, r: 30 }, bodies)).toBeNull();
-  });
-});
-
-describe("first-run guide", () => {
-  it("asks to add someone first, then to drag them onto me", () => {
-    expect(coachStep({ people: 0, pairs: 0, flags: {} })).toBe("add");
-    expect(coachStep({ people: 1, pairs: 0, flags: { add: true } })).toBe("link");
-  });
-
-  it("stays away from someone who has done it or dismissed it", () => {
-    expect(coachStep({ people: 2, pairs: 1, flags: {} })).toBeNull();
-    expect(coachStep({ people: 1, pairs: 0, flags: { link: true } })).toBeNull();
-    // Deleted everyone after the guide: don't start over.
-    expect(coachStep({ people: 0, pairs: 0, flags: { add: true } })).toBeNull();
-  });
-
-  it("puts the caption beside the target, toward the middle", () => {
-    expect(coachCaptionSide({ x: 330, y: 680, r: 28 }, 390, 844)).toBe("left");
-    expect(coachCaptionSide({ x: 50, y: 400, r: 28 }, 390, 844)).toBe("right");
-    expect(coachCaptionSide({ x: 195, y: 600, r: 28 }, 390, 844)).toBe("above");
-    expect(coachCaptionSide({ x: 195, y: 150, r: 28 }, 390, 844)).toBe("below");
   });
 });

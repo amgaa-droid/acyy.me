@@ -72,6 +72,8 @@ export const user = pgTable("user", {
   emailVerified: boolean().notNull().default(false),
   image: text(),
   adultConfirmedAt: timestamp({ withTimezone: true }),
+  /** First-run guide progress: step → when it was done (src/server/onboarding.ts). */
+  onboarding: jsonb().$type<Record<string, string>>().notNull().default({}),
   deletedAt: timestamp({ withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: timestamp({ withTimezone: true })

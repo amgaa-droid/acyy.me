@@ -36,7 +36,7 @@ export const PHONE_LAYOUT: PlanetLayout = {
   more: { x: 11.8, y: 46, r: 28 },
   add: { x: 86.2, y: 80.6, r: 28 },
   sizes: [42, 38, 36, 34, 32, 30],
-  safe: { top: 84, bottom: 72, side: 10 },
+  safe: { top: 128, bottom: 72, side: 10 },
   dock: { y: 90.3, r: 26, step: 68 },
   ring: { gap: 60, button: 54, step: 0.8 },
   chain: 30,
@@ -49,7 +49,7 @@ export const DESKTOP_LAYOUT: PlanetLayout = {
   more: { x: 17.4, y: 48.9, r: 40 },
   add: { x: 81.9, y: 80, r: 36 },
   sizes: [60, 56, 52, 48, 44, 40],
-  safe: { top: 100, bottom: 84, side: 32 },
+  safe: { top: 140, bottom: 84, side: 32 },
   dock: { y: 90.2, r: 30, step: 96 },
   ring: { gap: 76, button: 56, step: 0.6 },
   chain: 36,
@@ -337,34 +337,4 @@ export function dropTarget(
     }
   }
   return best;
-}
-
-// ── First-run guide ─────────────────────────────────────────────────────────────────────────
-
-/** Which guide steps this user has already been through (kept per browser). */
-export type CoachFlags = { add?: boolean; link?: boolean };
-
-/**
- * The first-run guide over the planet system: first "add someone close", then "drag them onto
- * yourself". Nothing for someone who has done it already — they have people, or a pair (bought
- * or drawn) — or who dismissed it.
- */
-export function coachStep(state: {
-  people: number;
-  pairs: number;
-  flags: CoachFlags;
-}): "add" | "link" | null {
-  if (state.people === 0) return state.flags.add ? null : "add";
-  if (state.pairs > 0 || state.flags.link) return null;
-  return "link";
-}
-
-/**
- * Where a guide's caption goes next to its target: beside it toward the middle of the screen
- * (left of a target on the right, and the reverse), or above/below one near the middle.
- */
-export function coachCaptionSide(target: Body, w: number, h: number): "left" | "right" | "above" | "below" {
-  if (target.x > w * 0.6) return "left";
-  if (target.x < w * 0.4) return "right";
-  return target.y > h * 0.35 ? "above" : "below";
 }

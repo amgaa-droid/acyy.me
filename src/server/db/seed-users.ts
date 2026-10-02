@@ -49,7 +49,13 @@ export async function seedTestUsers(db: AppDb, password: string, today: Ymd): Pr
     await db.transaction(async (tx) => {
       const [u] = await tx
         .insert(user)
-        .values({ name: acc.name, email: acc.email, emailVerified: true })
+        .values({
+          name: acc.name,
+          email: acc.email,
+          emailVerified: true,
+          // Accounts that already have people skip the first-run guide, like existing users.
+          onboarding: acc.people.length > 1 ? { dismissed: new Date().toISOString() } : {},
+        })
         .returning();
       await tx
         .insert(account)

@@ -261,8 +261,10 @@
   --animate-pop-in: pop-in 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.3) both;
   --animate-rise-in: rise-in 0.4s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
   --animate-fly-in: fly-in 0.9s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
-  --animate-coach-drag: coach-drag 2.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
-  --animate-coach-spin: orbit-spin 14s linear infinite;
+  --animate-guide-drag: guide-drag 2.8s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  --animate-guide-halo: guide-halo 1.8s ease-out infinite;
+  --animate-guide-bob: guide-bob 2.4s ease-in-out infinite;
+  --animate-guide-burst: guide-burst 0.9s ease-out both;
   --animate-twinkle: twinkle 3.6s ease-in-out infinite;
   --animate-ping-soft: ping-soft 2.6s ease-out infinite;
 
@@ -323,8 +325,8 @@
       scale: 0.4;
     }
   }
-  /* First-run guide: a ghost of the planet glides onto "me" (offset in --coach-dx/-dy), again and again. */
-  @keyframes coach-drag {
+  /* First-run guide: a ghost of the planet glides onto "me" (offset in --guide-dx/-dy), again and again. */
+  @keyframes guide-drag {
     0% {
       opacity: 0;
       translate: 0 0;
@@ -336,14 +338,44 @@
     }
     66% {
       opacity: 1;
-      translate: var(--coach-dx, 0) var(--coach-dy, 0);
+      translate: var(--guide-dx, 0) var(--guide-dy, 0);
       scale: 0.9;
     }
     82%,
     100% {
       opacity: 0;
-      translate: var(--coach-dx, 0) var(--coach-dy, 0);
+      translate: var(--guide-dx, 0) var(--guide-dy, 0);
       scale: 0.8;
+    }
+  }
+  /* The guide's "tap here" pulse, its floating tooltip and the burst when a pair opens. */
+  @keyframes guide-halo {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--highlight) 45%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 24px transparent;
+    }
+  }
+  @keyframes guide-bob {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -5px;
+    }
+  }
+  @keyframes guide-burst {
+    from {
+      opacity: 1;
+      translate: 0 0;
+      scale: 1;
+    }
+    to {
+      opacity: 0;
+      translate: var(--burst-x, 0) var(--burst-y, 0);
+      scale: 0.3;
     }
   }
   /* From the centre (offset in --fly-x / --fly-y) out to the planet's place. */
