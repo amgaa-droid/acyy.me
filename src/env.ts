@@ -40,6 +40,12 @@ const serverEnvSchema = z.object({
   QPAY_BASE_URL: optional,
   QPAY_CALLBACK_SECRET: z.string().min(32, "QPAY_CALLBACK_SECRET: openssl rand -hex 32"),
   CRON_SECRET: z.string().min(16, "CRON_SECRET: openssl rand -hex 32"),
+  /** Seals API keys saved on /admin/ai. Unset → keys can't be saved (the page says so). */
+  SETTINGS_ENCRYPTION_KEY: z
+    .string()
+    .min(32, "SETTINGS_ENCRYPTION_KEY: openssl rand -hex 32")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

@@ -134,6 +134,13 @@
       "when": 1790948720365,
       "tag": "0018_daily_horoscopes",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790955597259,
+      "tag": "0019_app_settings",
+      "breakpoints": true
     }
   ]
 }

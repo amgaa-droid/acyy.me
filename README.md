@@ -32,6 +32,8 @@ pnpm dev                      # http://localhost:3000
 
 **Хэтэвч / QPay (mock):** Цэнэглэх → invoice → «Mock төлбөрийн хуудас» → Төлсөн. Cron: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/qpay-check`.
 
+**Өдрийн зурхайн sync:** `/admin/ai`-д Gemini эсвэл ChatGPT-ийн API түлхүүр оруулна (`.env`-д `SETTINGS_ENCRYPTION_KEY` хэрэгтэй) → `/admin/daily` → [Sync]. Cron: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/daily-sync`.
+
 **Админ:** `/admin` (`owner@test.local` = Owner, `editor@test.local` = Editor; `.env`-ийн `ADMIN_*_EMAILS`). Excel импорт: `/admin/import` → загвар татах → бөглөх → Шалгах → Импортлох.
 
 `/dev/ui` — компонентуудын галерей, `/dev/mail` — илгээсэн имэйлүүд (зөвхөн dev).

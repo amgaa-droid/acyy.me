@@ -217,6 +217,9 @@
 - [x] `/admin/daily`: өдөр × төрөл × 12 орд засварлах, 14 хоногийн бүрдэл, өмнөх өдрөөс хуулах; төрөл удирдах (Owner)
 - [x] Unit (`src/lib/daily.test.ts`, `src/server/daily.test.ts`, `todayLayout`) ба E2E (`e2e/daily.spec.ts`)
 - [x] Excel-ээр олон өдрийн текст импортлох: хугацааны загвар (одоо байгаа текстээр бөглөгдсөн), dry-run тайлан, импорт (`src/server/import/daily.ts`)
+- [x] Sync: astrology.com-ийн маргаашийн daily / love / work → Gemini эсвэл ChatGPT-ээр орчуулж хадгалах (`src/server/daily-sync/`), `/admin/daily` [Sync] товч, `/api/cron/daily-sync`
+- [x] `/admin/ai` (Owner): provider, модель, шифрлэгдсэн API түлхүүр (`app_settings`, migration 0019), орчуулгын заавар, автомат sync, туршилт
+- [ ] Production: `SETTINGS_ENCRYPTION_KEY` env, host crontab `0 12 * * *` → `/api/cron/daily-sync`, `/admin/ai`-д жинхэнэ API түлхүүр
 
 ---
 

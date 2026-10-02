@@ -595,3 +595,20 @@ export const dailyEntries = pgTable(
     index("daily_entries_date_idx").on(t.date),
   ],
 );
+
+// ---------- App settings ----------
+
+/**
+ * Small admin-editable settings, one JSON document per key (e.g. "ai": the translation
+ * provider for the daily sync). Secrets inside are sealed with SETTINGS_ENCRYPTION_KEY
+ * (src/server/secret-box.ts) — never stored in plain text.
+ */
+export const appSettings = pgTable("app_settings", {
+  key: text().primaryKey(),
+  value: jsonb().notNull(),
+  updatedBy: uuid().references(() => user.id, { onDelete: "set null" }),
+  updatedAt: timestamp({ withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});

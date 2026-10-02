@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ChartColumn,
   FileSpreadsheet,
+  Languages,
   LayoutTemplate,
   LayoutDashboard,
   Orbit,
@@ -36,6 +37,7 @@ const ITEMS = [
   { href: "/admin/users", label: t.users, Icon: Users, owner: true },
   { href: "/admin/topups", label: t.topups, Icon: Receipt, owner: true },
   { href: "/admin/packages", label: t.packages, Icon: Wallet, owner: true },
+  { href: "/admin/ai", label: t.ai, Icon: Languages, owner: true },
 ];
 
 /** Admin navigation: sidebar on desktop, horizontal scroller on mobile. Owner-only items hidden for Editors. */

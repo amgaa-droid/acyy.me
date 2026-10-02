@@ -139,6 +139,9 @@
 - **Нүүрний горим:** анх **Өнөөдөр** (эхлэх аялал идэвхтэй үед **Миний ертөнц**); сүүлд сонгосон горимыг cookie `home_view` санана. Өнөөдөр → Миний ертөнц: картууд бүдгэрч, том "Би" жижгэрч голд орно, бусад хүмүүс түүнээс нэг нэгээрээ гарч ирнэ. Эсрэгээрээ: хүмүүс "Би" рүү буцаж алга болж, "Би" томорч, картууд тодорно. Утас: "Би" дээр, картууд доор; desktop: картууд зүүн баганад, "Би" баруун талд том.
 - **Excel импорт** (`/admin/daily` → "Excel импорт", E/O): загвар `GET /api/admin/daily-template?from=ОООО-СС-ӨӨ&days=N` (≤ 366 өдөр) — мөр бүр өдөр × орд, багана `date`, `sign`, идэвхтэй төрөл бүрийн код; одоо байгаа текстээр бөглөгдсөн (экспорт болж бас ашиглагдана). Upload → **dry-run тайлан** (шинэ / шинэчлэгдэх / өөрчлөлтгүй, алдаатай мөр, дутуу өдрүүд) → [Импортлох] (нэг transaction, audit log `daily.import`). Толгой: код эсвэл монгол нэр; орд: монгол нэр эсвэл code; огноо: `2026-10-02`, `2026.10.2`, Excel огноо. **Хоосон нүд текстийг өөрчлөхгүй** — импорт юу ч устгахгүй. Алдаа (буруу огноо, үл мэдэгдэх орд, өдөр × орд давхардал, > 3,000 тэмдэгт, `date`/`sign`/төрлийн багана дутуу) байвал юу ч хадгалахгүй. ≤ 5,000 мөр, ≤ 10MB.
 - Dev seed: өнөөдрөөс −3…+13 өдрийн placeholder текст (production-д seed хийхгүй).
+- **Sync (astrology.com → монгол)** (`/admin/daily` → [Sync], E/O; өдөр бүр cron): astrology.com-ийн **маргаашийн** `daily` / `daily-love` / `daily-work` хуудсуудаас 12 ордны **зөвхөн гол текстийг** (`<div id="content">`; нэмэлт хэсэг — couples, finances, food… — авахгүй) татаж, `general` / `love` / `work`-д хадгална. Огноо = хуудсан дээрх огноо (`horoscopeDate`); өнөөдрөөс −1…+2 хоногийн гаднах бол бичихгүй. Төрөл бүрийн 12 ордыг **нэг AI хүсэлтээр** (JSON: орд → орчуулга) орчуулна; ордны монгол нэрийг `zodiac_signs`-ээс заавар дээр нэмнэ. Байгаа текстийг **үргэлж дарж бичнэ**. Нэг хуудас/төрөл бүтэлгүйтвэл бусад нь хадгалагдана, тайланд "алгассан" гэж гарна; AI хариу эвдэрвэл 1 удаа дахин оролдоно (4xx-д үгүй). Нэг сервер дээр зэрэг 2 sync явахгүй. Audit log `daily.sync` (тайлан бүтнээрээ; сүүлийн sync-ийг `/admin/daily`-д харуулна).
+- **AI тохиргоо** (`/admin/ai`, O): Gemini ба ChatGPT (OpenAI) — сонгосон нэг нь ашиглагдана; тус бүрт модель ба API түлхүүр; орчуулгын заавар (засагдана, "Анхны заавар"-аар буцаана); "Өдөр бүр автоматаар" (cron-ийг асаах/унтраах); [Туршиж үзэх] — жишээ өгүүлбэр (хадгалаагүй утгаар). Түлхүүр `app_settings`-д **AES-256-GCM-ээр шифрлэгдэнэ** (`SETTINGS_ENCRYPTION_KEY`), хуудсанд зөвхөн сүүлийн 4 тэмдэгт харагдана, audit log-д орохгүй. Шифрлэх түлхүүр солигдвол API түлхүүрүүдийг дахин оруулна.
+- Cron: host crontab өдөр бүр **20:00 (Монгол) = 12:00 UTC** → `/api/cron/daily-sync` (`CRON_SECRET`); "Өдөр бүр автоматаар" унтраалттай бол юу ч хийхгүй.
 
 ---
 
@@ -236,7 +239,8 @@ interface QPayProvider {
 | `/admin/business` | E/O | Бизнесийн тоо (ижил хугацааны товч, өмнөх үетэй харьцуулна): цэнэглэлт/зарцуулалтын график; цэнэглэлт (нийт дүн, тоо, төлөгч, анхны төлөгч, бонус, нэхэмжлэх→төлөлт %, зарагдсан нөхцөлөөр нь багцаар); зарцуулалт (бүтээгдэхүүнээр); үнэгүй preview → худалдан авалтын хөрвүүлэлт (`preview_views`) |
 | `/admin/packages` | O | Цэнэглэх багц: дүн, бонус, эрэмбэ, идэвхтэй эсэх. Цэнэглэлт хийгдсэн багцыг устгахгүй (идэвхгүй болгоно) |
 | `/admin/landing` | E/O | **Нүүр хуудасны CMS** (нэвтрээгүй `/`): хэсэг бүрийн текст, жишээ хүмүүс (нэр, төрсөн огноо, зураг) ба тэдний нийцлийн холбоос (тохиромжтой / анхаарах харилцаа — **оноо харуулахгүй**), бүтээгдэхүүний тайлбар/тэмдэг, FAQ, хэсгүүдийн дараалал/нуух, SEO. Засвар → **ноорог** (`page_drafts`, revision-оор зэрэг засварыг илрүүлнэ) → `/preview/landing` → **Нийтлэх** (`page_versions`, append-only, audit log) → түүхээс сэргээх (ноорог болж орно). Үнэ/багцыг каталогоос авна, текстэнд `{minPrice}` `{birthdayPrice}` `{synastryPrice}`. Хэсэг эвдэрвэл кодын анхны текст (`mn.ts`) харагдана |
-| `/admin/daily` | E/O | **Өдрийн зурхай** (3.2): өдөр сонгох (ойрын 14 хоногийн бүрдэл `36/36`), төрөл сонгох, 12 ордны текст бичих/хоослох, өмнөх өдрөөс хуулах, олон өдрийг Excel-ээр импортлох. Төрөл (нэр, дүрс, өнгө, эрэмбэ, идэвхтэй) нэмэх/засах — **Owner** |
+| `/admin/daily` | E/O | **Өдрийн зурхай** (3.2): өдөр сонгох (ойрын 14 хоногийн бүрдэл `36/36`), төрөл сонгох, 12 ордны текст бичих/хоослох, өмнөх өдрөөс хуулах, олон өдрийг Excel-ээр импортлох, **[Sync]** (astrology.com → AI орчуулга, маргаашийнх). Төрөл (нэр, дүрс, өнгө, эрэмбэ, идэвхтэй) нэмэх/засах — **Owner** |
+| `/admin/ai` | O | **AI орчуулга** (3.2): Gemini / ChatGPT сонгох, модель, API түлхүүр (шифрлэгдэнэ), орчуулгын заавар, өдөр бүрийн автомат sync, туршиж үзэх |
 | `/admin/content` | E/O | Бүтээгдэхүүн/хэсгээр текстийн жагсаалт, хайх, **дутуу түлхүүрүүд**, нэг текстийг засах, draft/published |
 | `/admin/import` | E/O | Загвар татах → Excel upload → **Dry-run тайлан** (нэмэгдэх / шинэчлэгдэх / алдаатай мөр / дутуу түлхүүр) → [Импортлох] |
 | `/admin/zodiac`, `/admin/periods` | E/O | Мужийг засах (давхцал/цоорхой шалгалттай) |
@@ -319,6 +323,9 @@ daily_kinds      code pk, name_mn, icon, tint, sort, is_active, created_at
 daily_entries    id uuid pk, kind_code → daily_kinds, date date, sign_code → zodiac_signs, text,
                  updated_by → user null, updated_at
                  UNIQUE(kind_code, date, sign_code)
+
+app_settings     key text pk ('ai'), value jsonb (API түлхүүр нь шифрлэгдсэн), updated_by → user null,
+                 updated_at
 ```
 
 **Данс устгах:** persons, invitations, session/account устгана; `purchases`, `topups`, `wallet_entries`-ийг санхүүгийн бүртгэлд үлдээж, `user` мөрийг нэр/имэйлгүй болгож (`deleted_at`) anonymize хийнэ.
@@ -370,10 +377,11 @@ QPAY_MODE=mock                           # mock | sandbox | production
 QPAY_CLIENT_ID= / QPAY_CLIENT_SECRET= / QPAY_INVOICE_CODE= / QPAY_BASE_URL=
 QPAY_CALLBACK_SECRET=
 CRON_SECRET=
+SETTINGS_ENCRYPTION_KEY=          # /admin/ai-ийн API түлхүүрийг шифрлэнэ
 ADMIN_OWNER_EMAILS= / ADMIN_EDITOR_EMAILS=
 ```
 
-**Production (сервер):** Ubuntu + Docker Compose: `app` (Next.js standalone), `db` (Postgres 16, volume), `caddy` (80/443, auto SSL). UFW: 22, 80, 443. Root биш `deploy` хэрэглэгч, SSH key only. Өдөр бүр `pg_dump` → 14 хоног хадгалах. Cron: host crontab → `curl` `/api/cron/qpay-check`. Deploy: GitHub Actions → GHCR image → SSH → `docker compose pull && up -d` → migration.
+**Production (сервер):** Ubuntu + Docker Compose: `app` (Next.js standalone), `db` (Postgres 16, volume), `caddy` (80/443, auto SSL). UFW: 22, 80, 443. Root биш `deploy` хэрэглэгч, SSH key only. Өдөр бүр `pg_dump` → 14 хоног хадгалах. Cron: host crontab → `curl` `/api/cron/qpay-check` (5 мин), `/api/cron/daily-sync` (`0 12 * * *` UTC). Deploy: GitHub Actions → GHCR image → SSH → `docker compose pull && up -d` → migration.
 
 ---
 

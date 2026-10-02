@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAdmin, requireOwner } from "@/server/admin/guard";
+import { AiSettingsError } from "@/server/ai/settings";
 import { DailyError, createDailyKind, saveDailyTexts, updateDailyKind } from "@/server/daily";
 import { db } from "@/server/db";
+import { syncWithSavedSettings } from "@/server/daily-sync";
+import { SyncError, type SyncReport } from "@/server/daily-sync/sync";
 import { runDailyImport, type DailyImportError } from "@/server/import/daily";
 
 export type DailyResult =
@@ -115,6 +118,28 @@ export async function importDailyAction(formData: FormData): Promise<DailyImport
     };
   } catch (err) {
     console.error("[admin:daily-import]", err);
+    return { ok: false, error: "generic" };
+  }
+}
+
+export type DailySyncResult =
+  | { ok: true; report: SyncReport }
+  | { ok: false; error: SyncError["code"] | AiSettingsError["code"] | "generic" };
+
+/** [Sync]: astrology.com tomorrow → AI translation → that day's texts. Editor or Owner. */
+export async function syncDailyAction(): Promise<DailySyncResult> {
+  const admin = await requireAdmin();
+  try {
+    const report = await syncWithSavedSettings(db, admin.userId, "manual");
+    if ("skipped" in report) return { ok: false, error: "generic" };
+    revalidatePath("/admin/daily");
+    revalidatePath("/home");
+    return { ok: true, report };
+  } catch (err) {
+    if (err instanceof SyncError || err instanceof AiSettingsError) {
+      return { ok: false, error: err.code };
+    }
+    console.error("[admin:daily-sync]", err);
     return { ok: false, error: "generic" };
   }
 }

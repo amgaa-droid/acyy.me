@@ -5,17 +5,25 @@ import { mn } from "@/i18n/mn";
 import { addDays, dayLabel, isoDateSchema, shortDayLabel, todayIso } from "@/lib/daily";
 import { cn } from "@/lib/utils";
 import { requireAdmin } from "@/server/admin/guard";
+import { getAiSettingsView } from "@/server/ai/settings";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { DAILY_TEXT_MAX, dailyCoverage, dailyDay, listDailyKinds } from "@/server/daily";
 import { db } from "@/server/db";
+import { lastDailySync } from "@/server/daily-sync/sync";
 import { DAILY_TEMPLATE_MAX_DAYS } from "@/server/import/daily";
 import { DailyEditor, KindsManager } from "./daily-editor";
 import { DailyImport } from "./daily-import";
+import { DailySync } from "./daily-sync";
 
 export const metadata: Metadata = { title: mn.admin.nav.daily };
 
 const t = mn.admin.daily;
 const STRIP_DAYS = 14;
+const fmtTime = new Intl.DateTimeFormat("mn-MN", {
+  timeZone: "Asia/Ulaanbaatar",
+  dateStyle: "short",
+  timeStyle: "short",
+});
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -27,12 +35,14 @@ export default async function AdminDailyPage({ searchParams }: PageProps<"/admin
   const parsedDate = isoDateSchema.safeParse(first(raw.date));
   const date = parsedDate.success ? parsedDate.data : today;
 
-  const [kinds, refs, texts, prevTexts, coverage] = await Promise.all([
+  const [kinds, refs, texts, prevTexts, coverage, ai, lastSync] = await Promise.all([
     listDailyKinds(db),
     loadAstroRefs(db),
     dailyDay(db, date),
     dailyDay(db, addDays(date, -1)),
     dailyCoverage(db, today, STRIP_DAYS),
+    getAiSettingsView(db),
+    lastDailySync(db),
   ]);
   const kind =
     kinds.find((k) => k.code === first(raw.kind)) ?? kinds.find((k) => k.isActive) ?? kinds[0];
@@ -112,6 +122,20 @@ export default async function AdminDailyPage({ searchParams }: PageProps<"/admin
           })}
         </ul>
       </section>
+
+      <DailySync
+        ready={ai.keys[ai.provider].set}
+        providerName={`${mn.admin.ai.providers[ai.provider].name} (${ai.models[ai.provider]})`}
+        autoSync={ai.autoSync}
+        isOwner={admin.role === "owner"}
+        last={
+          lastSync
+            ? `${t.sync.last(fmtTime.format(lastSync.at), lastSync.report.saved, lastSync.report.total)}${lastSync.report.trigger === "cron" ? ` (${t.sync.cron})` : ""}`
+            : null
+        }
+        kindNames={Object.fromEntries(kinds.map((k) => [k.code, k.nameMn]))}
+        signNames={Object.fromEntries(refs.signs.map((s) => [s.code, s.nameMn]))}
+      />
 
       {kind ? (
         <>
