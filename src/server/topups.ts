@@ -18,6 +18,8 @@ import { credit } from "@/server/wallet";
 
 export type Topup = typeof topups.$inferSelect;
 export const TOPUP_TTL_MS = 24 * 60 * 60 * 1000;
+/** One cron run stops starting new checks after this long (it is called every 5 minutes). */
+export const CHECK_BUDGET_MS = 4 * 60 * 1000;
 
 export class InvalidTierError extends Error {
   constructor() {
@@ -178,13 +180,29 @@ export async function settleTopup(
 /**
  * Cron (every 5 min, SPEC §4.3): re-check pending top-ups from the last 24 h;
  * older pending ones get one final check and are then marked expired.
+ * Newest first — someone who just paid is waiting — and within a time budget, so a slow QPay
+ * can't make runs pile up: what is left over (`skipped`) is checked by the next run.
  */
-export async function checkPendingTopups(db: AppDb, provider: QPayProvider, now = new Date()) {
+export async function checkPendingTopups(
+  db: AppDb,
+  provider: QPayProvider,
+  now = new Date(),
+  budgetMs = CHECK_BUDGET_MS,
+) {
   const cutoff = new Date(now.getTime() - TOPUP_TTL_MS);
-  const pending = await db.select().from(topups).where(eq(topups.status, "pending"));
-  const summary = { checked: 0, paid: 0, expired: 0, errors: 0 };
+  const pending = await db
+    .select()
+    .from(topups)
+    .where(eq(topups.status, "pending"))
+    .orderBy(desc(topups.createdAt));
+  const summary = { checked: 0, paid: 0, expired: 0, errors: 0, skipped: 0 };
+  const started = Date.now();
 
   for (const t of pending) {
+    if (Date.now() - started >= budgetMs) {
+      summary.skipped++;
+      continue;
+    }
     summary.checked++;
     try {
       const res = await settleTopup(db, provider, t.id, { source: "cron", now });

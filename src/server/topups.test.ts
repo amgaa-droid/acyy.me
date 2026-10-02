@@ -152,6 +152,21 @@ describe("checkPendingTopups (cron)", () => {
     expect((await settleTopup(db, qpay, stale.id, { source: "admin" })).status).toBe("paid");
     expect(await getBalance(db, u)).toBe(7_300);
   });
+
+  it("leaves what doesn't fit its time budget to the next run", async () => {
+    const qpay = new MockQPayProvider(APP);
+    const u = await newUser();
+    const t = await createTopup(db, qpay, await opts(u, 2_000));
+    qpay.markPaid(t.invoiceId!);
+
+    const none = await checkPendingTopups(db, qpay, new Date(), 0);
+    expect(none.checked).toBe(0);
+    expect(none.skipped).toBeGreaterThanOrEqual(1);
+    expect(await getBalance(db, u)).toBe(0);
+
+    expect((await checkPendingTopups(db, qpay)).skipped).toBe(0);
+    expect(await getBalance(db, u)).toBe(2_000);
+  });
 });
 
 describe("getTopupForUser", () => {

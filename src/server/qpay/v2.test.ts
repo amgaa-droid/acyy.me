@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { QPayApiError, QPayV2Provider } from "./v2";
+import { QPayApiError, QPayV2Provider, tokenExpiresAt } from "./v2";
 
 type Call = { url: string; init: RequestInit };
 
@@ -23,6 +23,21 @@ const cfg = {
   clientSecret: "secret",
   invoiceCode: "TEST_INVOICE",
 };
+
+describe("tokenExpiresAt", () => {
+  const now = Date.UTC(2026, 9, 3);
+
+  it("reads expires_in as a lifetime in seconds, refreshing a minute early", () => {
+    expect(tokenExpiresAt(3600, now)).toBe(now + 3_540_000);
+    expect(tokenExpiresAt(30, now)).toBe(now); // already inside the last minute
+  });
+
+  it("reads a Unix time as the moment the token expires, not as a 50-year lifetime", () => {
+    const tomorrow = now / 1000 + 86_400;
+    expect(tokenExpiresAt(tomorrow, now)).toBe(now + 86_400_000 - 60_000);
+    expect(tokenExpiresAt(now / 1000 - 5, now)).toBe(now); // already expired
+  });
+});
 
 describe("QPayV2Provider", () => {
   it("authenticates once, creates an invoice and maps deeplinks", async () => {

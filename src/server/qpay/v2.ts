@@ -31,6 +31,19 @@ export class QPayApiError extends Error {
   }
 }
 
+/** No QPay call may hang a request, or the cron that settles every pending top-up. */
+const TIMEOUT_MS = 15_000;
+
+/**
+ * When a token stops being usable (ms), a minute early. `expires_in` is a lifetime in seconds in
+ * some QPay environments and an absolute Unix time (seconds) in others; a value past 10⁹ can only
+ * be a date.
+ */
+export function tokenExpiresAt(expiresIn: number, now: number): number {
+  const at = expiresIn > 1_000_000_000 ? expiresIn * 1000 : now + expiresIn * 1000;
+  return Math.max(now, at - 60_000);
+}
+
 /** QPay Merchant API v2 (SPEC §4.4). The access token is cached in memory until it expires. */
 export class QPayV2Provider implements QPayProvider {
   readonly mode: "sandbox" | "production";
@@ -48,13 +61,13 @@ export class QPayV2Provider implements QPayProvider {
     const res = await this.http(`${this.cfg.baseUrl}/v2/auth/token`, {
       method: "POST",
       headers: { Authorization: `Basic ${basic}` },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) throw new QPayApiError(res.status, await res.text());
     const data = (await res.json()) as TokenResponse;
-    // Refresh a minute early; expires_in is in seconds.
     this.token = {
       value: data.access_token,
-      expiresAt: Date.now() + Math.max(0, data.expires_in - 60) * 1000,
+      expiresAt: tokenExpiresAt(Number(data.expires_in), Date.now()),
     };
     return this.token.value;
   }
@@ -67,6 +80,7 @@ export class QPayV2Provider implements QPayProvider {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (res.status === 401 && retry) {
       this.token = null;
