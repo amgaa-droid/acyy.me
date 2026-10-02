@@ -1,9 +1,9 @@
 import { Contrast, Moon, Sparkles } from "lucide-react";
 
 import { setTheme } from "@/app/actions/theme";
-import { HideOnScroll } from "@/components/app/hide-on-scroll";
 import { mn } from "@/i18n/mn";
 import { THEMES, type Theme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 const ICONS: Record<Theme, typeof Moon> = {
   cosmic: Sparkles,
@@ -12,29 +12,59 @@ const ICONS: Record<Theme, typeof Moon> = {
 };
 
 /**
- * Floating colour-mode button, top centre of every page (rendered by the root layout).
- * Each tap moves to the next theme. A plain form + server action, so it works without JS.
- * On the full-screen home it lines up with the menu and wallet buttons (`data-screen="home"`).
- * It slides away while the page scrolls down (HideOnScroll) so it doesn't cover the content,
- * and is gone while a popup is open: it would sit under the sheet (and /me has its own picker).
+ * Colour-mode button for the screens outside the app (landing, login) and the admin sidebar:
+ * each tap moves to the next theme. A plain form + server action, so it works without JS.
+ * It sits in the page's own layout — a button floating over every page covered content and
+ * crowded the header. Signed in, the choice is in the home menu (`ThemeSwitch`) and on /me.
  */
-export function ThemeToggle({ current }: { current: Theme }) {
+export function ThemeToggle({ current, className }: { current: Theme; className?: string }) {
   const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
   const Icon = ICONS[current];
   return (
-    <HideOnScroll className="fixed top-[max(env(safe-area-inset-top),0.625rem)] left-1/2 z-45 -translate-x-1/2 print:hidden lg:top-[1.125rem] [body:has([data-screen=home])_&]:top-[max(env(safe-area-inset-top),1rem)] lg:[body:has([data-screen=home])_&]:top-8 [body:has([role=dialog])_&]:hidden">
-      <form action={setTheme}>
-        <button
-          type="submit"
-          name="theme"
-          value={next}
-          aria-label={mn.themeToggle(mn.themes[current].name, mn.themes[next].name)}
-          title={mn.themes[next].name}
-          className="flex size-11 items-center justify-center rounded-full border border-border bg-surface/90 text-fg shadow-[0_4px_14px_rgb(0_0_0/0.08)] backdrop-blur transition-transform active:scale-95 [body:has([data-screen=home])_&]:size-12"
-        >
-          <Icon className="size-[18px]" aria-hidden />
-        </button>
-      </form>
-    </HideOnScroll>
+    <form action={setTheme} className={cn("print:hidden", className)}>
+      <button
+        type="submit"
+        name="theme"
+        value={next}
+        aria-label={mn.themeToggle(mn.themes[current].name, mn.themes[next].name)}
+        title={mn.themes[next].name}
+        className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-fg transition-transform active:scale-95"
+      >
+        <Icon className="size-[18px]" aria-hidden />
+      </button>
+    </form>
+  );
+}
+
+/** The three colour modes side by side, for a menu: the current one is ringed. */
+export function ThemeSwitch({ current }: { current: Theme }) {
+  return (
+    <form
+      action={setTheme}
+      role="group"
+      aria-label={mn.me.appearance}
+      className="grid grid-cols-3 gap-2"
+    >
+      {THEMES.map((theme) => {
+        const Icon = ICONS[theme];
+        const selected = theme === current;
+        return (
+          <button
+            key={theme}
+            type="submit"
+            name="theme"
+            value={theme}
+            aria-pressed={selected}
+            className={cn(
+              "flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl bg-subtle px-1 py-2 text-xs leading-tight font-semibold transition-shadow",
+              selected ? "ring-2 ring-highlight" : "ring-1 ring-border hover:ring-2",
+            )}
+          >
+            <Icon className="size-[18px]" aria-hidden />
+            {mn.themes[theme].name}
+          </button>
+        );
+      })}
+    </form>
   );
 }

@@ -23,6 +23,13 @@ test("add a person, see their sign, edit, then delete", async ({ page }, info) =
   await page.getByRole("textbox", { name: "Нэр", exact: true }).fill(name);
   await expect(page.getByText("Энэ огноог дараа нь өөрчлөх боломжгүй")).toBeVisible();
   await page.getByRole("button", { name: "Хадгалах" }).click();
+  // The date can't be changed later: it is read back, spelled out, before saving. "Засах"
+  // goes back to the form with nothing saved.
+  await expect(page.getByText("1990 оны 1-р сарын 1")).toBeVisible();
+  await page.getByRole("button", { name: "Засах" }).click();
+  await expect(page).toHaveURL(/\/people\/new$/);
+  await page.getByRole("button", { name: "Хадгалах", exact: true }).click();
+  await page.getByRole("button", { name: "Тийм, хадгалах" }).click();
 
   await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
   const personUrl = page.url();

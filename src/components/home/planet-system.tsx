@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2, Lock, Menu, Orbit, Plus, Sparkles, Sun, UserRound, Wallet, X } from "lucide-react";
+import { Calendar1, Link2, Lock, Menu, Orbit, Plus, Sparkles, UserRound, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -19,6 +19,7 @@ import { ReadingTray, type TrayTile } from "@/components/home/reading-tray";
 import { BrandMark } from "@/components/app/brand-mark";
 import { NAV_ITEMS } from "@/components/app/nav-items";
 import { SignOutButton } from "@/components/app/sign-out-button";
+import { ThemeSwitch } from "@/components/app/theme-toggle";
 import { WalletChip } from "@/components/app/wallet-chip";
 import { PRODUCT_ICON_COMPONENTS, PRODUCT_TINT_CLASSES } from "@/components/readings/product-icon";
 import { mn } from "@/i18n/mn";
@@ -26,6 +27,7 @@ import { HOME_VIEW_COOKIE, type HomeView } from "@/lib/daily";
 import { isOffOrbit, type ProductIconName, type ProductTint } from "@/lib/domain";
 import { guideState, type GuideStep, type OnboardingMark, type OnboardingProgress } from "@/lib/onboarding";
 import { relationTint } from "@/lib/people";
+import type { Theme } from "@/lib/theme";
 import {
   arrangeLinks,
   bodyPx,
@@ -128,11 +130,14 @@ export function PlanetSystem({
   balance,
   appName,
   initialView = "planets",
+  theme,
 }: {
   data: PlanetSystemData;
   balance: number;
   appName: string;
   initialView?: HomeView;
+  /** The colour mode in use: the menu shows the choice. */
+  theme: Theme;
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -402,7 +407,7 @@ export function PlanetSystem({
         title={today ? mn.home.view.toPlanets : mn.home.view.toToday}
         className="absolute top-[max(env(safe-area-inset-top),1rem)] left-[76px] z-40 flex size-12 items-center justify-center gap-2 rounded-full bg-surface text-highlight shadow-[0_8px_20px_rgb(0_0_0/0.12)] transition-transform active:scale-95 lg:top-24 lg:left-8 lg:w-auto lg:pr-5 lg:pl-4"
       >
-        {today ? <Orbit className="size-5.5" aria-hidden /> : <Sun className="size-5.5" aria-hidden />}
+        {today ? <Orbit className="size-5.5" aria-hidden /> : <Calendar1 className="size-5.5" aria-hidden />}
         <span className="hidden text-sm font-semibold text-fg lg:inline">
           {today ? mn.home.view.toPlanets : mn.home.view.toToday}
         </span>
@@ -442,10 +447,14 @@ export function PlanetSystem({
               {label}
             </Link>
           ))}
-          <div className="pt-2">
-            <SignOutButton />
-          </div>
         </nav>
+        <div className="flex flex-col gap-2 pt-5">
+          <span className="text-sm font-semibold text-muted-foreground">{mn.me.appearance}</span>
+          <ThemeSwitch current={theme} />
+        </div>
+        <div className="pt-5">
+          <SignOutButton />
+        </div>
       </BottomSheet>
 
       {foldedFor && (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/app/avatar";
 import { ConstellationArt } from "@/components/app/constellation";
 import { DailyTeaser } from "@/components/landing/daily-teaser";
+import { CurrentThemeToggle } from "@/components/app/current-theme-toggle";
 import { LandingPlanets } from "@/components/landing/landing-planets";
 import { StickyCta } from "@/components/landing/sticky-cta";
 import { ProductIcon } from "@/components/readings/product-icon";
@@ -322,6 +323,7 @@ export function LandingView({
       {/* ---- First screen: the planet system, as in the app ---- */}
       <LandingPlanets
         appName={APP_NAME}
+        headerAction={<CurrentThemeToggle />}
         copy={{
           eyebrow: f(c.hero.eyebrow),
           title: f(c.hero.title),

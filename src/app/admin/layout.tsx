@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AdminNav } from "@/components/admin/admin-nav";
 import { BrandMark } from "@/components/app/brand-mark";
+import { CurrentThemeToggle } from "@/components/app/current-theme-toggle";
 import { mn } from "@/i18n/mn";
 import { requireAdmin } from "@/server/admin/guard";
 
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 
 /**
  * Admin shell (SPEC §6.2): desktop-first, but usable on a phone. Non-admins get 404.
- * Phone: the menu floats at the bottom (thumb reach; the colour-mode button owns the top).
+ * Phone: the menu floats at the bottom (thumb reach). The colour-mode button is in the desktop
+ * sidebar; on a phone the mode is changed on /me.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
@@ -27,14 +29,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="scrollbar-none overflow-x-auto">
             <AdminNav isOwner={admin.role === "owner"} />
           </div>
-          <div className="mt-auto hidden px-3 text-xs text-nav-fg lg:block">
-            {admin.email}
-            <br />
-            {mn.me.roles[admin.role]}
+          <div className="mt-auto hidden items-end justify-between gap-2 px-3 text-xs text-nav-fg lg:flex">
+            <span className="min-w-0 break-words">
+              {admin.email}
+              <br />
+              {mn.me.roles[admin.role]}
+            </span>
+            <CurrentThemeToggle className="shrink-0" />
           </div>
         </aside>
       </div>
-      <main className="min-w-0 flex-1 px-4 pt-20 pb-28 lg:px-10 lg:py-10">{children}</main>
+      <main className="min-w-0 flex-1 px-4 pt-8 pb-28 lg:px-10 lg:py-10">{children}</main>
     </div>
   );
 }

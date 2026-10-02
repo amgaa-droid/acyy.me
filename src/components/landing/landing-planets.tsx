@@ -9,6 +9,7 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 
 import { BottomSheet } from "@/components/app/bottom-sheet";
@@ -145,8 +146,11 @@ export function LandingPlanets({
   products,
   synastry,
   birthdayPrice,
+  headerAction,
 }: {
   appName: string;
+  /** Sits in the header beside "Нэвтрэх" (the colour-mode button). */
+  headerAction?: ReactNode;
   copy: PlanetsCopy;
   people: DemoPerson[];
   links: DemoLink[];
@@ -299,9 +303,12 @@ export function LandingPlanets({
           <BrandMark className="size-7 text-highlight" />
           <span className="font-heading text-2xl font-semibold">{appName}</span>
         </Link>
-        <Link href="/login" className="flex h-11 items-center rounded-full bg-fg px-5 text-sm font-semibold text-bg">
-          {t.login}
-        </Link>
+        <div className="flex items-center gap-2">
+          {headerAction}
+          <Link href="/login" className="flex h-11 items-center rounded-full bg-fg px-5 text-sm font-semibold text-bg">
+            {t.login}
+          </Link>
+        </div>
       </header>
 
       {/* Positions are also inline: with a stale stylesheet these blocks would pile up at the top. */}

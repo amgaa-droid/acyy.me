@@ -114,6 +114,7 @@ test("new user: short balance → top-up → back to confirm → buys every acti
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("textbox", { name: "Нэр", exact: true }).fill("Ээж");
   await page.getByRole("button", { name: "Хадгалах" }).click();
+  await page.getByRole("button", { name: "Тийм, хадгалах" }).click();
   await expect(page).toHaveURL(/\/buy\/synastry\?a=.*&b=/);
   const momId = new URL(page.url()).searchParams.get("b")!;
   await confirmPurchase(page);

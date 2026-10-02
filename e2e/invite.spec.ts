@@ -41,6 +41,7 @@ test("A invites B by email and buys a synastry → B signs up from the link and 
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("textbox", { name: "Нэр", exact: true }).fill("Бат");
   await page.getByRole("button", { name: "Хадгалах" }).click();
+  await page.getByRole("button", { name: "Тийм, хадгалах" }).click();
   await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
   const friendId = page.url().split("/").pop()!;
 

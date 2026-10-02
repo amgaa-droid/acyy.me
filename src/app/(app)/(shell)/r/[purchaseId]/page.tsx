@@ -72,7 +72,8 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <div className="flex items-center justify-between gap-2">
+      {/* Desktop: the sheet's close button sits over the right end of this row. */}
+      <div className="flex items-center justify-between gap-2 lg:pr-10">
         <Link
           href="/readings?tab=mine"
           className="flex h-11 shrink-0 items-center gap-1 rounded-full bg-surface pr-4 pl-2 text-sm font-semibold"

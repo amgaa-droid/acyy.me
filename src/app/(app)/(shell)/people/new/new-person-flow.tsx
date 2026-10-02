@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 
+import { BottomSheet } from "@/components/app/bottom-sheet";
 import { DatePicker } from "@/components/app/date-picker";
 import { useCloseAllModals } from "@/components/app/modal-scope";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/people/pickers";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
+import { parseIsoDate } from "@/lib/birth-date";
 import type { Gender, Relation } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { createPersonAction } from "../actions";
@@ -50,10 +52,14 @@ export function NewPersonFlow({
   // after saving it stays locked while the navigation that follows takes its moment.
   const saving = useRef(false);
   const [saved, setSaved] = useState(false);
+  // The birth date can't be changed later and the wheel moves easily (a scroll over it turns
+  // it), so it is read back, spelled out, before anything is saved.
+  const [confirming, setConfirming] = useState(false);
   const closeAll = useCloseAllModals();
 
   const labelOk = relation !== "other" || relationLabel.trim().length >= 1;
   const nameOk = name.trim().length >= 1 && name.trim().length <= 40;
+  const ymd = parseIsoDate(birthDate);
 
   const save = () => {
     if (saving.current) return;
@@ -82,6 +88,7 @@ export function NewPersonFlow({
         return;
       }
       saving.current = false;
+      setConfirming(false);
       setError(t.errors[res.error]);
       if (res.error === "relationLabel") setStep(0);
     });
@@ -90,7 +97,14 @@ export function NewPersonFlow({
   const primary = [
     { label: mn.common.next, disabled: !relation || !labelOk, onClick: () => setStep(1) },
     { label: mn.common.next, disabled: !avatarSeed, onClick: () => setStep(2) },
-    { label: t.save, disabled: !nameOk || pending || saved, onClick: save },
+    {
+      label: t.save,
+      disabled: !nameOk || pending || saved,
+      onClick: () => {
+        setError(null);
+        setConfirming(true);
+      },
+    },
   ][step];
 
   return (
@@ -198,6 +212,36 @@ export function NewPersonFlow({
           {primary.label}
         </Button>
       </div>
+
+      <BottomSheet
+        title={t.confirmBirth.title}
+        description={t.confirmBirth.body}
+        open={confirming}
+        onOpenChange={(open) => !pending && setConfirming(open)}
+        footer={
+          <>
+            <Button size="lg" className="rounded-full" disabled={pending || saved} onClick={save}>
+              {t.confirmBirth.yes}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="rounded-full"
+              disabled={pending || saved}
+              onClick={() => setConfirming(false)}
+            >
+              {t.confirmBirth.fix}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center gap-1 rounded-3xl bg-subtle px-5 py-5 text-center">
+          <span className="max-w-full truncate text-sm text-muted-foreground">{name.trim()}</span>
+          <span className="font-heading text-[28px] leading-tight font-semibold text-balance">
+            {ymd ? mn.datePicker.long(ymd.y, ymd.m, ymd.d) : birthDate}
+          </span>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

@@ -11,6 +11,16 @@ export const mn = {
     back: "Буцах",
     currency: "₮",
   },
+  notFound: {
+    title: "Хуудас олдсонгүй",
+    body: "Хаяг буруу, эсвэл энэ хуудас устсан байж магадгүй.",
+    home: "Нүүр хуудас руу",
+  },
+  errorPage: {
+    title: "Алдаа гарлаа",
+    body: "Түр зуурын саатал гарлаа. Дахин оролдоно уу.",
+    retry: "Дахин оролдох",
+  },
   tabs: {
     home: "Нүүр",
     people: "Хүмүүс",
@@ -365,6 +375,12 @@ export const mn = {
     readingsTitle: "Зурхайнууд",
     compareWith: "Хэнтэй нийцэх вэ?",
     compare: "Нийцэл харах",
+    confirmBirth: {
+      title: "Төрсөн огноо зөв үү?",
+      body: "Хадгалсны дараа төрсөн огноог өөрчлөх боломжгүй.",
+      yes: "Тийм, хадгалах",
+      fix: "Засах",
+    },
     errors: {
       name: "Нэрээ 1–40 тэмдэгтээр бичнэ үү.",
       birthDate: "Огноо буруу байна.",
@@ -462,7 +478,7 @@ export const mn = {
     "cosmic-dark": { name: "Cosmic dark", description: "Үргэлж бараан" },
     white: { name: "White", description: "Цагаан хар, minimal" },
   },
-  /** Floating colour-mode button on every page (cycles through the themes). */
+  /** Colour-mode button (landing, login, admin): each tap moves to the next theme. */
   themeToggle: (current: string, next: string) => `Өнгөний горим: ${current}. ${next} болгох`,
   hero: {
     yourSign: "Таны орд",
@@ -1264,6 +1280,8 @@ export const mn = {
       "12-р сар",
     ],
     immutableWarning: "Энэ огноог дараа нь өөрчлөх боломжгүй.",
+    /** A date spelled out, to be read back before it is saved for good. */
+    long: (y: number, m: number, d: number) => `${y} оны ${m}-р сарын ${d}`,
   },
   relations: {
     self: "Би",

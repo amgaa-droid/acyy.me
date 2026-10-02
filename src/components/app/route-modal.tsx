@@ -21,7 +21,9 @@ export const SHEET = {
     "fixed inset-x-0 top-[max(env(safe-area-inset-top),2.5rem)] bottom-0 z-50 flex flex-col overflow-hidden rounded-t-[32px] bg-bg shadow-[0_-20px_60px_rgb(0_0_0/0.18)] outline-none lg:top-10 lg:left-1/2 lg:w-[min(64rem,calc(100%-4rem))] lg:-translate-x-1/2 lg:rounded-t-[40px]",
   close:
     "absolute top-3 right-3 z-10 flex size-11 items-center justify-center rounded-full bg-surface shadow-[0_4px_14px_rgb(0_0_0/0.08)] lg:top-5 lg:right-5",
-  body: "flex-1 overflow-y-auto overscroll-contain px-4 pt-16 pb-[calc(env(safe-area-inset-bottom)+2rem)] lg:px-10 lg:pt-10 lg:pb-12",
+  // `scroll-pt` matches `pt`: moving to another screen inside the sheet scrolls its top into
+  // view, and without it the content would stop right under the close button.
+  body: "flex-1 scroll-pt-16 overflow-y-auto overscroll-contain px-4 pt-16 pb-[calc(env(safe-area-inset-bottom)+2rem)] lg:scroll-pt-10 lg:px-10 lg:pt-10 lg:pb-12",
 };
 
 export function RouteModal({ label, children }: { label: string; children: ReactNode }) {

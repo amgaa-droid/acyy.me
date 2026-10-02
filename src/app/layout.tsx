@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Golos_Text } from "next/font/google";
-import { cookies } from "next/headers";
 
-import { ThemeToggle } from "@/components/app/theme-toggle";
 import { APP_NAME } from "@/env";
 import { mn } from "@/i18n/mn";
-import { THEME_COOKIE, isAlwaysDark, parseTheme } from "@/lib/theme";
+import { isAlwaysDark } from "@/lib/theme";
+import { readTheme } from "@/server/theme";
 import "./globals.css";
 
 // Mongolian Ө/ү live in the cyrillic-ext subset, not cyrillic — without it they fall back.
@@ -29,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export async function generateViewport(): Promise<Viewport> {
-  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  const theme = await readTheme();
   return {
     width: "device-width",
     initialScale: 1,
@@ -46,14 +45,11 @@ export async function generateViewport(): Promise<Viewport> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Read on the server so the first paint already has the right colours (no flash).
-  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  const theme = await readTheme();
 
   return (
     <html lang="mn" data-theme={theme} className={`${sans.variable} ${serif.variable} h-full`}>
-      <body className="min-h-full">
-        {children}
-        <ThemeToggle current={theme} />
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

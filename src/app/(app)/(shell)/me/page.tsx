@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { Avatar } from "@/components/app/avatar";
@@ -13,13 +12,13 @@ import { getSelf } from "@/server/persons";
 import { ageOn, parseIsoDate, todayYmd } from "@/lib/birth-date";
 import { ThemePicker } from "@/components/app/theme-picker";
 import { formatMnt, mn } from "@/i18n/mn";
-import { THEME_COOKIE, parseTheme } from "@/lib/theme";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { linkedProviders } from "@/server/auth/accounts";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { enabledSocialProviders } from "@/server/auth";
 import { adminRoleOf } from "@/server/auth/session";
 import { db } from "@/server/db";
+import { readTheme } from "@/server/theme";
 import { getBalance } from "@/server/wallet";
 
 export const metadata: Metadata = { title: mn.me.title };
@@ -30,7 +29,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
   const { error } = await searchParams;
   const linked = await linkedProviders(db, user.id);
   const { sign } = describeBirthDate(self.birthDate, await loadAstroRefs(db));
-  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  const theme = await readTheme();
   const role = adminRoleOf(user);
   const balance = await getBalance(db, user.id);
   const selfAge = ageOn(parseIsoDate(self.birthDate)!, todayYmd());

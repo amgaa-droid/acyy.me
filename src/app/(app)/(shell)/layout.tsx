@@ -5,6 +5,7 @@ import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
 import { readHomeView } from "@/server/home-view";
 import { loadPlanetSystem } from "@/server/planets";
+import { readTheme } from "@/server/theme";
 import { getBalance } from "@/server/wallet";
 
 /**
@@ -18,12 +19,18 @@ export default async function ShellLayout({ children }: { children: React.ReactN
     loadPlanetSystem(db, user.id, self),
     getBalance(db, user.id),
   ]);
-  const view = await readHomeView(data);
+  const [view, theme] = await Promise.all([readHomeView(data), readTheme()]);
 
   return (
     <>
       <div inert aria-hidden>
-        <PlanetSystem data={data} balance={balance} appName={APP_NAME} initialView={view} />
+        <PlanetSystem
+          data={data}
+          balance={balance}
+          appName={APP_NAME}
+          initialView={view}
+          theme={theme}
+        />
       </div>
       <ScreenSheet>{children}</ScreenSheet>
     </>

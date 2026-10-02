@@ -7,6 +7,7 @@ import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
 import { readHomeView } from "@/server/home-view";
 import { loadPlanetSystem } from "@/server/planets";
+import { readTheme } from "@/server/theme";
 import { getBalance } from "@/server/wallet";
 
 export const metadata: Metadata = { title: mn.home.title };
@@ -21,6 +22,14 @@ export default async function HomePage() {
     loadPlanetSystem(db, user.id, self),
     getBalance(db, user.id),
   ]);
-  const view = await readHomeView(data);
-  return <PlanetSystem data={data} balance={balance} appName={APP_NAME} initialView={view} />;
+  const [view, theme] = await Promise.all([readHomeView(data), readTheme()]);
+  return (
+    <PlanetSystem
+      data={data}
+      balance={balance}
+      appName={APP_NAME}
+      initialView={view}
+      theme={theme}
+    />
+  );
 }

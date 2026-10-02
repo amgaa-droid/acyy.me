@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { BrandMark } from "@/components/app/brand-mark";
+import { CurrentThemeToggle } from "@/components/app/current-theme-toggle";
 import { APP_NAME, env } from "@/env";
 import { mn } from "@/i18n/mn";
 import { safeNext } from "@/lib/safe-next";
@@ -18,7 +19,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (await getSession()) redirect(target);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
+    <main className="relative flex min-h-dvh items-center justify-center bg-bg px-4 py-10">
+      <CurrentThemeToggle
+        className="absolute top-[max(env(safe-area-inset-top),1rem)] right-4 lg:top-6 lg:right-6"
+      />
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <BrandMark className="size-10 text-highlight" />
