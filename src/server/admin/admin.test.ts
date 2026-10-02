@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ZodError } from "zod";
 
 import { buildPlaceholderPeriods } from "@/server/astro/calendar";
 import {
@@ -424,6 +425,25 @@ describe("product builder", () => {
     });
     const codes = (await loadProductDef(db, "career"))!.parts[0].fields.map((f) => f.code);
     expect(codes).not.toContain("unused");
+  });
+
+  it("rejects malformed codes on every catalog action", async () => {
+    const bad = "x'; --";
+    await expect(deleteProduct(db, actor, bad)).rejects.toBeInstanceOf(ZodError);
+    await expect(
+      deletePart(db, actor, { productCode: "career", partCode: bad }),
+    ).rejects.toBeInstanceOf(ZodError);
+    await expect(
+      deleteField(db, actor, { productCode: "career", partCode: "main", code: bad }),
+    ).rejects.toBeInstanceOf(ZodError);
+    await expect(
+      moveItem(db, actor, {
+        productCode: "career",
+        partCode: null,
+        code: "main",
+        dir: "sideways" as "up",
+      }),
+    ).rejects.toBeInstanceOf(ZodError);
   });
 
   it("a bought product's parts are archived, never deleted or re-keyed", async () => {

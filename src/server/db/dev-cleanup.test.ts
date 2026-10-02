@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSelf } from "@/server/persons";
 import { adjust, credit, getBalance } from "@/server/wallet";
 import { createTestDb, insertUser } from "@/test/db";
-import { cleanE2eUsers, e2eUserIds, isPglite, portInUse } from "./dev-cleanup";
+import { assertLocalDatabase, cleanE2eUsers, e2eUserIds, isPglite, portInUse } from "./dev-cleanup";
 import { persons, topups, user, walletEntries } from "./schema";
 import type { AppDb } from "./types";
 
@@ -69,6 +69,20 @@ describe("cleanE2eUsers", () => {
     expect(await portInUse(port)).toBe(true);
     await new Promise((r) => server.close(r));
     expect(await portInUse(port)).toBe(false);
+  });
+
+  it("only runs against a database on this machine unless forced", () => {
+    const argv = ["node", "script"];
+    expect(() => assertLocalDatabase("postgres://u:p@localhost:5432/zurkhai", argv)).not.toThrow();
+    expect(() =>
+      assertLocalDatabase("postgres://u:p@127.0.0.1:54320/postgres", argv),
+    ).not.toThrow();
+    expect(() => assertLocalDatabase("postgres://u:p@db.example.com/zurkhai", argv)).toThrow(
+      /dev-only/,
+    );
+    expect(() =>
+      assertLocalDatabase("postgres://u:p@db.example.com/zurkhai", [...argv, "--remote"]),
+    ).not.toThrow();
   });
 
   it("recognises PGlite", async () => {

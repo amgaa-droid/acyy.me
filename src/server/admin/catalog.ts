@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -177,9 +177,14 @@ export const fieldInputSchema = z.object({
 });
 export type FieldInput = z.input<typeof fieldInputSchema>;
 
-export async function listProducts(db: AppDb) {
-  return db.select().from(products).orderBy(asc(products.sort), asc(products.code));
-}
+const partRefSchema = z.object({ productCode: codeSchema, partCode: codeSchema });
+const fieldRefSchema = partRefSchema.extend({ code: codeSchema });
+const moveSchema = z.object({
+  productCode: codeSchema,
+  partCode: codeSchema.nullable(),
+  code: codeSchema,
+  dir: z.enum(["up", "down"]),
+});
 
 async function hasPurchases(db: Pick<AppDb, "select">, productCode: string) {
   const [row] = await db
@@ -324,7 +329,8 @@ export async function updateProduct(db: AppDb, actorId: string, input: ProductUp
 }
 
 /** Only a product nobody bought can be deleted (its texts go with it); otherwise deactivate. */
-export async function deleteProduct(db: AppDb, actorId: string, code: string) {
+export async function deleteProduct(db: AppDb, actorId: string, input: string) {
+  const code = codeSchema.parse(input);
   await db.transaction(async (tx) => {
     await getProductRow(tx, code);
     if (await hasPurchases(tx, code)) throw new CatalogError("has_purchases");
@@ -453,7 +459,9 @@ export async function deletePart(
   actorId: string,
   input: { productCode: string; partCode: string; confirm?: boolean },
 ) {
-  const { productCode, partCode } = input;
+  const { productCode, partCode, confirm } = partRefSchema
+    .extend({ confirm: z.boolean().default(false) })
+    .parse(input);
   await db.transaction(async (tx) => {
     await getProductRow(tx, productCode);
     const parts = await tx
@@ -465,7 +473,7 @@ export async function deletePart(
     if (await hasPurchases(tx, productCode)) throw new CatalogError("has_purchases");
     const othersActive = parts.some((p) => p.code !== partCode && p.archivedAt === null);
     if (!othersActive) throw new CatalogError("last_part");
-    const real = await assertConfirmed(tx, productCode, partCode, input.confirm ?? false);
+    const real = await assertConfirmed(tx, productCode, partCode, confirm);
     await tx.delete(contentEntries).where(partTextsWhere(productCode, partCode));
     await tx.delete(productParts).where(partWhere(productCode, partCode));
     await logAudit(tx, {
@@ -487,7 +495,9 @@ export async function setPartArchived(
   actorId: string,
   input: { productCode: string; partCode: string; archived: boolean },
 ) {
-  const { productCode, partCode, archived } = input;
+  const { productCode, partCode, archived } = partRefSchema
+    .extend({ archived: z.boolean() })
+    .parse(input);
   await db.transaction(async (tx) => {
     await getProductRow(tx, productCode);
     const parts = await tx
@@ -600,8 +610,9 @@ export async function updateField(db: AppDb, actorId: string, input: FieldInput)
 export async function setFieldArchived(
   db: AppDb,
   actorId: string,
-  input: { productCode: string; partCode: string; code: string; archived: boolean },
+  raw: { productCode: string; partCode: string; code: string; archived: boolean },
 ) {
+  const input = fieldRefSchema.extend({ archived: z.boolean() }).parse(raw);
   await db.transaction(async (tx) => {
     const fields = await getPartFields(tx, input.productCode, input.partCode);
     if (!fields.some((f) => f.code === input.code)) throw new CatalogError("not_found");
@@ -628,8 +639,9 @@ export async function setFieldArchived(
 export async function deleteField(
   db: AppDb,
   actorId: string,
-  input: { productCode: string; partCode: string; code: string },
+  raw: { productCode: string; partCode: string; code: string },
 ) {
+  const input = fieldRefSchema.parse(raw);
   await db.transaction(async (tx) => {
     const fields = await getPartFields(tx, input.productCode, input.partCode);
     if (!fields.some((f) => f.code === input.code)) throw new CatalogError("not_found");
@@ -657,8 +669,9 @@ export async function deleteField(
 export async function moveItem(
   db: AppDb,
   actorId: string,
-  input: { productCode: string; partCode: string | null; code: string; dir: "up" | "down" },
+  raw: { productCode: string; partCode: string | null; code: string; dir: "up" | "down" },
 ) {
+  const input = moveSchema.parse(raw);
   await db.transaction(async (tx) => {
     const isPart = input.partCode === null;
     const rows = isPart

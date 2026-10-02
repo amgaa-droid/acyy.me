@@ -291,8 +291,6 @@ async function periodNumbers(db: AppDb, since: Date, until: Date) {
   return { topup, spend, conversion, signups };
 }
 
-export type PeriodNumbers = Awaited<ReturnType<typeof periodNumbers>>;
-
 export async function dashboardStats(db: AppDb, range: Range, now = new Date()) {
   const { since, until, prevSince } = rangeWindow(range, now);
   const [cur, prev, chart, [liability], packages] = await Promise.all([
@@ -317,5 +315,3 @@ export async function dashboardStats(db: AppDb, range: Range, now = new Date()) 
     packages,
   };
 }
-
-export type DashboardStats = Awaited<ReturnType<typeof dashboardStats>>;

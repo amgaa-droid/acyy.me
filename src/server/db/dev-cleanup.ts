@@ -70,6 +70,18 @@ export async function cleanE2eUsers(db: AppDb): Promise<number> {
   return deleteUsersAndData(db, await e2eUserIds(db));
 }
 
+/**
+ * Dev scripts delete or invent users and money records, and NODE_ENV says nothing when a script
+ * is run by hand: they only talk to a database on this machine (`--remote` overrides).
+ */
+export function assertLocalDatabase(url: string, argv = process.argv) {
+  if (argv.includes("--remote")) return;
+  const host = new URL(url).hostname;
+  if (!["localhost", "127.0.0.1", "[::1]", "::1"].includes(host)) {
+    throw new Error(`Refusing to run a dev-only script against ${host} (pass --remote to force).`);
+  }
+}
+
 /** Whether something accepts TCP connections on localhost:`port`. */
 export function portInUse(port: number, timeoutMs = 1000): Promise<boolean> {
   return new Promise((resolve) => {

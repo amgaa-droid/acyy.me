@@ -7,11 +7,3 @@ export function PageTitle({ children }: { children: ReactNode }) {
     </h1>
   );
 }
-
-export function EmptyState({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-3xl bg-surface px-6 py-12 text-center text-muted-foreground">
-      {children}
-    </div>
-  );
-}

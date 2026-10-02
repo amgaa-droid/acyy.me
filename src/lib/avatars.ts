@@ -6,12 +6,15 @@ import { AVATAR_SEEDS } from "./avatar-seeds";
 export { AVATAR_SEEDS, isAvatarSeed, type AvatarSeed } from "./avatar-seeds";
 
 const cache = new Map<string, string>();
+/** Seeds are normally the ~30 pickable ones, but a deleted person's reading falls back to a name. */
+const CACHE_MAX = 500;
 
 /** SVG data URI for a seed. Black line art on transparent background. */
 export function avatarDataUri(seed: string): string {
   let uri = cache.get(seed);
   if (!uri) {
     uri = createAvatar(notionists, { seed }).toDataUri();
+    if (cache.size >= CACHE_MAX) cache.clear();
     cache.set(seed, uri);
   }
   return uri;

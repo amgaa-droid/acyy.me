@@ -26,11 +26,10 @@ export async function runImport(
     fileName: string;
     actorId: string;
     commit: boolean;
-    columnOverrides?: Record<string, string>;
   },
 ): Promise<RunImportResult> {
   const { spec } = opts;
-  const parsed = await parseWorkbook(opts.file, spec, opts.columnOverrides);
+  const parsed = await parseWorkbook(opts.file, spec);
   const base = { missingColumns: parsed.missingColumns, mapping: parsed.mapping, committed: false };
 
   if (parsed.missingColumns.length) {
@@ -49,7 +48,8 @@ export async function runImport(
   }
 
   const astro = await loadAstroRefs(db);
-  const refs = { signs: astro.signs, periodCount: 48 };
+  // Content keys follow the periods table (as coverage does); the table's own import defines all 48.
+  const refs = { signs: astro.signs, periodCount: spec.target ? astro.periods.length : 48 };
   const existing = spec.target
     ? new Set(
         (

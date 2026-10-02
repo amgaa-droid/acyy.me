@@ -2,7 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireOnboardedUser } from "@/server/auth/current";
@@ -10,7 +10,7 @@ import { viewerIsAdult } from "@/server/catalog";
 import { db } from "@/server/db";
 import { GenderRequiredError } from "@/server/content/keys";
 import { user } from "@/server/db/schema";
-import { updatePerson } from "@/server/persons";
+import { GenderLockedError, PersonNotFoundError, updatePerson } from "@/server/persons";
 import {
   ContentUnavailableError,
   NotEligibleError,
@@ -95,8 +95,16 @@ const genderForm = z.object({
  */
 export async function setGenderForPurchaseAction(formData: FormData): Promise<void> {
   const { user: u } = await requireOnboardedUser();
-  const input = genderForm.parse(Object.fromEntries(formData));
-  await updatePerson(db, u.id, input.personId, { gender: input.gender });
+  const parsed = genderForm.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) notFound();
+  const input = parsed.data;
+  try {
+    await updatePerson(db, u.id, input.personId, { gender: input.gender });
+  } catch (err) {
+    // Not the user's person, or a gender a bought reading already depends on.
+    if (err instanceof PersonNotFoundError || err instanceof GenderLockedError) notFound();
+    throw err;
+  }
   revalidatePath(`/people/${input.personId}`);
   redirect(input.returnTo);
 }

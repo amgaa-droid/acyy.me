@@ -147,7 +147,7 @@ export async function deletePartAction(input: {
   partCode: string;
   confirm?: boolean;
 }): Promise<CatalogResult> {
-  return catalogAction((actor) => deletePart(db, actor, input), input.productCode);
+  return catalogAction((actor) => deletePart(db, actor, input), productOf(input));
 }
 
 export async function archivePartAction(input: {
@@ -155,7 +155,7 @@ export async function archivePartAction(input: {
   partCode: string;
   archived: boolean;
 }): Promise<CatalogResult> {
-  return catalogAction((actor) => setPartArchived(db, actor, input), input.productCode);
+  return catalogAction((actor) => setPartArchived(db, actor, input), productOf(input));
 }
 
 export async function deleteFieldAction(input: {
@@ -163,7 +163,7 @@ export async function deleteFieldAction(input: {
   partCode: string;
   code: string;
 }): Promise<CatalogResult> {
-  return catalogAction((actor) => deleteField(db, actor, input), input.productCode);
+  return catalogAction((actor) => deleteField(db, actor, input), productOf(input));
 }
 
 export async function addFieldAction(input: unknown): Promise<CatalogResult> {
@@ -180,7 +180,7 @@ export async function archiveFieldAction(input: {
   code: string;
   archived: boolean;
 }): Promise<CatalogResult> {
-  return catalogAction((actor) => setFieldArchived(db, actor, input), input.productCode);
+  return catalogAction((actor) => setFieldArchived(db, actor, input), productOf(input));
 }
 
 export async function moveItemAction(input: {
@@ -189,7 +189,7 @@ export async function moveItemAction(input: {
   code: string;
   dir: "up" | "down";
 }): Promise<CatalogResult> {
-  return catalogAction((actor) => moveItem(db, actor, input), input.productCode);
+  return catalogAction((actor) => moveItem(db, actor, input), productOf(input));
 }
 
 // ---------- Import ----------

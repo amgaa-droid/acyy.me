@@ -1,18 +1,10 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { NextResponse, type NextRequest } from "next/server";
 
-import { env } from "@/env";
 import { AiSettingsError } from "@/server/ai/settings";
+import { isCronRequest } from "@/server/cron-auth";
 import { db } from "@/server/db";
 import { autoSyncIfDue } from "@/server/daily-sync";
 import { SyncError } from "@/server/daily-sync/sync";
-
-function authorized(req: NextRequest): boolean {
-  const given = Buffer.from(req.headers.get("authorization") ?? "");
-  const expected = Buffer.from(`Bearer ${env().CRON_SECRET}`);
-  return given.length === expected.length && timingSafeEqual(given, expected);
-}
 
 /**
  * Host crontab every 5 min: `curl -H "Authorization: Bearer $CRON_SECRET" …/api/cron/daily-sync`.
@@ -20,7 +12,7 @@ function authorized(req: NextRequest): boolean {
  * 3 tries); otherwise answers `{ skipped }` without touching astrology.com or the AI.
  */
 async function handle(req: NextRequest) {
-  if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isCronRequest(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
     const res = await autoSyncIfDue(db);
     if ("skipped" in res) return NextResponse.json(res);

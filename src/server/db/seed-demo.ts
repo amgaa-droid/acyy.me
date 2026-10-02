@@ -7,7 +7,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import { demoUserCount, resetDemoActivity, seedDemoActivity } from "./demo-activity";
-import { assertNoDevServerOnPglite } from "./dev-cleanup";
+import { assertLocalDatabase, assertNoDevServerOnPglite } from "./dev-cleanup";
 import * as schema from "./schema";
 import type { AppDb } from "./types";
 
@@ -20,6 +20,7 @@ try {
 if (process.env.NODE_ENV === "production") throw new Error("db:seed:demo is dev-only.");
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");
+assertLocalDatabase(url);
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1];
 const client = postgres(url, { max: 1, onnotice: () => {} });

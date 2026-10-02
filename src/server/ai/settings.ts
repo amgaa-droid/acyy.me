@@ -33,12 +33,14 @@ export const DEFAULT_TRANSLATION_PROMPT = `Чи англи хэлнээс мон
 
 const sealedKey = z.object({ sealed: z.string(), hint: z.string() }).nullable();
 
+const keysSchema = z
+  .object({ gemini: sealedKey.default(null), openai: sealedKey.default(null) })
+  .default({ gemini: null, openai: null });
+
 const storedSchema = z.object({
   provider: z.enum(AI_PROVIDERS).default("gemini"),
   models: z.object({ gemini: z.string(), openai: z.string() }).default({ ...DEFAULT_MODELS }),
-  keys: z
-    .object({ gemini: sealedKey.default(null), openai: sealedKey.default(null) })
-    .default({ gemini: null, openai: null }),
+  keys: keysSchema,
   /** "" = the default prompt. */
   prompt: z.string().default(""),
   autoSync: z.boolean().default(false),
@@ -67,7 +69,15 @@ export class AiSettingsError extends Error {
 async function loadStored(db: AppDb): Promise<Stored> {
   const [row] = await db.select().from(appSettings).where(eq(appSettings.key, KEY));
   const parsed = storedSchema.safeParse(row?.value ?? {});
-  const s = parsed.success ? parsed.data : storedSchema.parse({});
+  let s: Stored;
+  if (parsed.success) s = parsed.data;
+  else {
+    // A stored field no longer fits (an older shape): fall back to defaults but keep the sealed
+    // keys, so the next save doesn't silently throw them away.
+    console.error("[ai:settings] stored settings don't match the schema; using defaults");
+    const keys = keysSchema.safeParse((row?.value as { keys?: unknown } | undefined)?.keys);
+    s = storedSchema.parse(keys.success ? { keys: keys.data } : {});
+  }
   return {
     ...s,
     models: {

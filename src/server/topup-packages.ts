@@ -31,7 +31,6 @@ export const packageInputSchema = z.object({
   sort: z.coerce.number().int().min(0).max(1000).default(0),
 });
 export const packageUpdateSchema = packageInputSchema.extend({ id: z.uuid() });
-export type PackageInput = z.input<typeof packageInputSchema>;
 
 const order = [asc(topupPackages.sort), asc(topupPackages.amount)];
 

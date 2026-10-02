@@ -13,7 +13,7 @@
 - **Zod** (бүх оролтын шалгалт), **exceljs** (Excel импорт/экспорт), **@dicebear/core** (avatar, локалд render)
 - **next/og** (хуваалцах карт), **Resend** (prod имэйл), **Mailpit** (локал имэйл)
 - **Vitest** (unit), **Playwright** (E2E), **pnpm**, **Docker Compose**, **Caddy** (reverse proxy + SSL)
-- AI/LLM, queue, Redis **ашиглахгүй**. Нэг Next.js app (monorepo биш).
+- Queue, Redis **ашиглахгүй**. AI/LLM-ийг зөвхөн өдрийн зурхайн орчуулгад (SPEC §3.2, `/admin/ai`, `src/server/ai` — SDK-гүй, `fetch`) ашиглана; зурхайн текст үүсгэхэд **үгүй**. Нэг Next.js app (monorepo биш).
 - Next.js 16: `middleware` → `proxy.ts`, request API-ууд async. Код бичихээс өмнө `node_modules/next/dist/docs/`-ийг шалга ([AGENTS.md](AGENTS.md)).
 
 ## Командууд

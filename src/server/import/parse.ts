@@ -36,11 +36,10 @@ export function cellText(value: ExcelJS.CellValue): string {
   return String(value).trim();
 }
 
-/** Finds each spec column in the header row by canonical name, alias or explicit override. */
+/** Finds each spec column in the header row by canonical name or alias. */
 export function mapColumns(
   headers: string[],
   columns: ColumnSpec[],
-  overrides: Record<string, string> = {},
 ): { mapping: Record<string, number>; found: Record<string, string>; missing: string[] } {
   const normalized = headers.map(normalizeHeader);
   const mapping: Record<string, number> = {};
@@ -48,9 +47,7 @@ export function mapColumns(
   const missing: string[] = [];
 
   for (const c of columns) {
-    const candidates = [overrides[c.name], c.name, ...c.aliases]
-      .filter((x): x is string => Boolean(x))
-      .map(normalizeHeader);
+    const candidates = [c.name, ...c.aliases].map(normalizeHeader);
     const index = normalized.findIndex((h) => h && candidates.includes(h));
     if (index >= 0) {
       mapping[c.name] = index;
@@ -66,7 +63,6 @@ export function mapColumns(
 export async function parseWorkbook(
   buffer: ArrayBuffer | Buffer,
   spec: ImportKindSpec,
-  overrides?: Record<string, string>,
 ): Promise<ParseResult> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer as ArrayBuffer);
@@ -86,7 +82,7 @@ export async function parseWorkbook(
     headers.push(cellText(headerRow.getCell(i).value));
   }
 
-  const { mapping, found, missing } = mapColumns(headers, columns, overrides);
+  const { mapping, found, missing } = mapColumns(headers, columns);
   // Without a legacy `body` column, the required sub-section columns must be there.
   if (spec.target && !("body" in mapping)) {
     for (const f of spec.target.fields) {

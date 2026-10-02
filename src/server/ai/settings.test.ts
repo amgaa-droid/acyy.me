@@ -157,6 +157,24 @@ describe("AI settings", () => {
     expect(rt.model).toBe("gemini-3.8-flash");
   });
 
+  it("keeps the sealed keys when another stored field no longer fits the schema", async () => {
+    await saveAiSettings(
+      db,
+      actor,
+      { ...base, keys: { ...noKeys, gemini: { apiKey: "AIza-secret-9999" } } },
+      SECRET,
+    );
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, "ai"));
+    await db
+      .update(appSettings)
+      .set({ value: { ...(row.value as object), autoSyncTime: "25:99" } })
+      .where(eq(appSettings.key, "ai"));
+
+    const view = await getAiSettingsView(db);
+    expect(view.keys.gemini).toEqual({ set: true, hint: "…9999" });
+    expect((await loadAiRuntime(db, SECRET)).apiKey).toBe("AIza-secret-9999");
+  });
+
   it("validates input", async () => {
     await expect(
       saveAiSettings(db, actor, { ...base, models: { gemini: "", openai: "x" } }, SECRET),

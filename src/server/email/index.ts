@@ -35,6 +35,9 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
       return;
     }
     case "console":
+      if (process.env.NODE_ENV === "production") {
+        console.warn("[email] EMAIL_TRANSPORT=console: nothing is sent, messages are only logged");
+      }
       console.info(`[email] to=${message.to} subject=${message.subject}\n${message.text}`);
       return;
   }

@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { isUniqueViolation } from "@/server/db/errors";
 import type { AppDb } from "@/server/db/types";
 import { walletEntries, wallets } from "@/server/db/schema";
 
@@ -42,14 +43,6 @@ type Movement = {
   note?: string | null;
   createdBy?: string | null;
 };
-
-/** Postgres unique_violation, possibly wrapped by Drizzle. */
-function isUniqueViolation(err: unknown): boolean {
-  for (let e = err as { code?: string; cause?: unknown } | undefined; e; e = e.cause as typeof e) {
-    if (e.code === "23505") return true;
-  }
-  return false;
-}
 
 async function findByKey(db: AppDb, key: string): Promise<WalletEntry | undefined> {
   const [entry] = await db
@@ -174,7 +167,8 @@ export async function adjust(
   const m = {
     userId: a.userId,
     amount: Math.abs(a.amount),
-    idempotencyKey: a.idempotencyKey,
+    // Its own namespace: a hand-typed key can never stand in for a payment's or a purchase's.
+    idempotencyKey: `adjust:${a.idempotencyKey}`,
     refType: "admin",
     refId: a.createdBy,
     note: a.reason,

@@ -73,11 +73,6 @@ export async function productsByCode(db: AppDb): Promise<Map<string, Product>> {
   return new Map(rows.map((p) => [p.code, p]));
 }
 
-export async function getProduct(db: AppDb, code: string): Promise<Product | null> {
-  const [p] = await db.select().from(products).where(eq(products.code, code));
-  return p ?? null;
-}
-
 export type PersonOffer = {
   product: Product;
   /** Single-person products: the existing purchase id, if already bought. */

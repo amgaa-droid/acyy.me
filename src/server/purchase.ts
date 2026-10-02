@@ -6,6 +6,7 @@ import { describeBirthDate, loadAstroRefs, type AstroRefs } from "@/server/astro
 import { monthDayOf } from "@/server/astro/zodiac";
 import { isEligible, loadViewer } from "@/server/catalog";
 import { partKeyFor, shownKeys, type KeyPerson, type PartKeySpec } from "@/server/content/keys";
+import { isUniqueViolation } from "@/server/db/errors";
 import type { AppDb } from "@/server/db/types";
 import { contentEntries, persons, purchases, type PurchaseSnapshot } from "@/server/db/schema";
 import { activeParts, loadProductDef } from "@/server/products";
@@ -193,13 +194,6 @@ async function assertContentPublished(
     .filter(([s, k]) => !rows.some((r) => r.section === s && r.key === k))
     .map(([, k]) => k);
   if (missing.length) throw new ContentUnavailableError(missing);
-}
-
-function isUniqueViolation(err: unknown): boolean {
-  for (let e = err as { code?: string; cause?: unknown } | undefined; e; e = e.cause as typeof e) {
-    if (e.code === "23505") return true;
-  }
-  return false;
 }
 
 export async function purchase(

@@ -181,8 +181,6 @@ export const landingContentSchema = z.object({
 
 export type LandingContent = z.infer<typeof landingContentSchema>;
 export type SectionKey = keyof typeof SECTION_SCHEMAS;
-export type DemoPersonContent = LandingContent["demo"]["people"][number];
-export type DemoLinkContent = LandingContent["demo"]["links"][number];
 
 const l = mn.landing;
 
