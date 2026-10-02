@@ -440,6 +440,7 @@ export const mn = {
     backToApp: "Апп руу буцах",
     nav: {
       dashboard: "Хяналт",
+      business: "Бизнесийн тоо",
       content: "Текстүүд",
       import: "Excel импорт",
       zodiac: "Ордны муж",

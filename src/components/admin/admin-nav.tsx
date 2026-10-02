@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  ChartColumn,
   FileSpreadsheet,
   LayoutTemplate,
   LayoutDashboard,
@@ -23,6 +24,7 @@ const t = mn.admin.nav;
 
 const ITEMS = [
   { href: "/admin", label: t.dashboard, Icon: LayoutDashboard, owner: false, exact: true },
+  { href: "/admin/business", label: t.business, Icon: ChartColumn, owner: false },
   { href: "/admin/landing", label: t.landing, Icon: LayoutTemplate, owner: false },
   { href: "/admin/content", label: t.content, Icon: Text, owner: false },
   { href: "/admin/import", label: t.import, Icon: FileSpreadsheet, owner: false },
