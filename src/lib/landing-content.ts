@@ -27,7 +27,7 @@ const birthDate = z
   .string()
   .refine((v) => parseIsoDate(v) !== null && v >= "1900-01-01", { message: "invalid_date" });
 
-export const AVATAR_GENDERS = ["female", "male"] as const;
+const AVATAR_GENDERS = ["female", "male"] as const;
 
 /** An example avatar: gender + seed index; the drawing must suit the gender. */
 const avatar = {
@@ -70,7 +70,7 @@ const demoLink = z.object({
   text: optStr(LIMITS.text),
 });
 
-export const SECTION_SCHEMAS = {
+const SECTION_SCHEMAS = {
   seo: z.object({ title: str(LIMITS.title), description: str(300) }),
   hero: z.object({
     eyebrow: optStr(LIMITS.short * 2),
@@ -180,7 +180,7 @@ export const landingContentSchema = z.object({
 });
 
 export type LandingContent = z.infer<typeof landingContentSchema>;
-export type SectionKey = keyof typeof SECTION_SCHEMAS;
+type SectionKey = keyof typeof SECTION_SCHEMAS;
 
 const l = mn.landing;
 
@@ -336,7 +336,7 @@ const isObj = (v: unknown): v is Obj => !!v && typeof v === "object" && !Array.i
  * saved before the synastry example had dates gets the default ones.
  * Returns a copy; current-shape content passes through unchanged.
  */
-export function upgradeLegacy(src: Obj): Obj {
+function upgradeLegacy(src: Obj): Obj {
   const out: Obj = { ...src };
   if (isObj(src.demo) && Array.isArray(src.demo.people)) {
     out.demo = {
@@ -381,7 +381,7 @@ export function upgradeLegacy(src: Obj): Obj {
   return out;
 }
 
-export type PriceTokens = { minPrice: string; birthdayPrice: string; synastryPrice: string };
+type PriceTokens = { minPrice: string; birthdayPrice: string; synastryPrice: string };
 
 /** "{minPrice}-өөс" → "1,000₮-өөс". Unknown tokens are left as typed. */
 export function fillTokens(text: string, tokens: PriceTokens): string {

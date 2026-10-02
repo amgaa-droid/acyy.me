@@ -115,7 +115,3 @@ export function shownKeys(keyType: KeyType, key: string): string[] {
   const [a, b] = key.split("|");
   return a === b ? [key] : [key, orderedPairKey(b, a)];
 }
-
-export function needsGender(parts: readonly PartKeySpec[]): boolean {
-  return parts.some((p) => p.byGender && KEY_TYPE_ARITY[p.keyType] === 1);
-}

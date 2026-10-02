@@ -30,7 +30,7 @@ export type PersonPlan = {
   birthDate: string;
 };
 
-export type PurchasePlan = {
+type PurchasePlan = {
   product: "birthday" | "synastry";
   personKeys: string[];
   pricePaid: number;
@@ -49,10 +49,10 @@ export type UserPlan = {
   purchases: PurchasePlan[];
 };
 
-export type SkipReason =
+type SkipReason =
   "no_facebook" | "duplicate_facebook_id" | "duplicate_email" | "invalid_birth_date";
 
-export type LegacyPlan = {
+type LegacyPlan = {
   users: UserPlan[];
   skipped: { reason: SkipReason; legacyUserId: number; ref?: string }[];
 };
@@ -180,7 +180,7 @@ export function legacyPerson(action: SqlRow, today: string): PersonPlan | null {
   };
 }
 
-export const normalizeEmail = (raw: unknown) => str(raw).trim().toLowerCase();
+const normalizeEmail = (raw: unknown) => str(raw).trim().toLowerCase();
 
 /** Placeholder address for a Facebook account that has no email (see src/server/auth). */
 export const facebookPlaceholderEmail = (facebookId: string) => `fb-${facebookId}@facebook.invalid`;

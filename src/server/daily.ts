@@ -118,7 +118,7 @@ export async function dailyCoverage(
   });
 }
 
-export const saveDailyTextsSchema = z.object({
+const saveDailyTextsSchema = z.object({
   date: isoDateSchema,
   kind: z.string().min(1).max(32),
   /** Sign code → text. An empty text deletes that sign's text for the day. */
@@ -197,12 +197,12 @@ const kindFields = {
   sort: z.number().int().min(0).max(9999),
 };
 
-export const createDailyKindSchema = z.object({
+const createDailyKindSchema = z.object({
   code: z.string().regex(/^[a-z][a-z0-9_]{1,31}$/),
   ...kindFields,
 });
 
-export const updateDailyKindSchema = z.object({
+const updateDailyKindSchema = z.object({
   code: z.string().min(1).max(32),
   ...kindFields,
   isActive: z.boolean(),

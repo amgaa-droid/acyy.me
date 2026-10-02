@@ -7,7 +7,7 @@ import type { Body, Point } from "./planet-system";
  * people with their captions, "Та" with its "pick your birthday" button, the link chips.
  */
 
-export type SeatItem = { id: string; r: number };
+type SeatItem = { id: string; r: number };
 
 export type SeatStage = {
   w: number;

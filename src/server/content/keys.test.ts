@@ -4,7 +4,6 @@ import { PRODUCTS, ZODIAC_SIGNS } from "@/server/db/seed-data";
 import {
   GenderRequiredError,
   expectedPartKeys,
-  needsGender,
   orderedSignPairKeys,
   partKeyFor,
   periodPairKey,
@@ -107,7 +106,5 @@ describe("partKeyFor", () => {
     expect(shownKeys("sign_pair_ordered", "leo|aries")).toEqual(["leo|aries", "aries|leo"]);
     expect(shownKeys("sign_pair_ordered", "leo|leo")).toEqual(["leo|leo"]);
     expect(shownKeys("sign_pair", "aries|leo")).toEqual(["aries|leo"]);
-    expect(needsGender([{ keyType: "sign", byGender: true }])).toBe(true);
-    expect(needsGender([{ keyType: "sign_pair", byGender: true }])).toBe(false);
   });
 });

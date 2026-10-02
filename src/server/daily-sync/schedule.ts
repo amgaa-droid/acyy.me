@@ -8,8 +8,8 @@ import { todayIso } from "@/lib/daily";
 
 export const AUTO_SYNC_DEFAULT_TIME = "20:00";
 export const AUTO_SYNC_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-export const AUTO_SYNC_MAX_RUNS = 3;
-export const AUTO_SYNC_RETRY_GAP_MS = 60 * 60_000;
+const AUTO_SYNC_MAX_RUNS = 3;
+const AUTO_SYNC_RETRY_GAP_MS = 60 * 60_000;
 /**
  * astrology.com's "tomorrow" turns over at US Eastern midnight = 12:00–13:00 in Mongolia; a sync
  * earlier in the day gets today's horoscopes, not tomorrow's.

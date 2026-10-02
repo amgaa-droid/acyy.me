@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
 import type { AppDb } from "@/server/db/types";
-import { topups } from "@/server/db/schema";
+import { auditLogs, topups } from "@/server/db/schema";
 import { signTopup } from "@/server/qpay/signature";
 import { findActivePackage } from "@/server/topup-packages";
 import type { QPayProvider } from "@/server/qpay/types";
@@ -17,9 +17,9 @@ import { credit } from "@/server/wallet";
  */
 
 export type Topup = typeof topups.$inferSelect;
-export const TOPUP_TTL_MS = 24 * 60 * 60 * 1000;
+const TOPUP_TTL_MS = 24 * 60 * 60 * 1000;
 /** One cron run stops starting new checks after this long (it is called every 5 minutes). */
-export const CHECK_BUDGET_MS = 4 * 60 * 1000;
+const CHECK_BUDGET_MS = 4 * 60 * 1000;
 
 export class InvalidTierError extends Error {
   constructor() {
@@ -99,7 +99,7 @@ export async function createTopup(
   }
 }
 
-export type SettleResult =
+type SettleResult =
   | { status: "paid"; credited: boolean }
   | { status: "pending" | "expired" | "failed"; credited: false };
 
@@ -222,6 +222,30 @@ export async function checkPendingTopups(
     }
   }
   return summary;
+}
+
+/**
+ * What QPay reports as paid for top-ups that failed because the amount didn't match the invoice
+ * (a double or partial payment): topup id → the amount received. Nothing was credited for these,
+ * so the Owner settles each by hand (adjust) — /admin/topups shows them.
+ */
+export async function paidAmountMismatches(
+  db: AppDb,
+  topupIds: string[],
+): Promise<Map<string, number>> {
+  if (topupIds.length === 0) return new Map();
+  const rows = await db
+    .select({ id: auditLogs.entityId, data: auditLogs.data })
+    .from(auditLogs)
+    .where(
+      and(eq(auditLogs.action, "topup.amount_mismatch"), inArray(auditLogs.entityId, topupIds)),
+    );
+  const out = new Map<string, number>();
+  for (const r of rows) {
+    const paid = (r.data as { paid?: unknown } | null)?.paid;
+    if (r.id && typeof paid === "number") out.set(r.id, paid);
+  }
+  return out;
 }
 
 export async function getTopupForUser(db: AppDb, userId: string, topupId: string): Promise<Topup> {

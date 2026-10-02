@@ -19,11 +19,11 @@ import { resolveSign } from "./validate";
  * already written, so it doubles as an export.
  */
 
-export const DAILY_MAX_ROWS = 5000;
+const DAILY_MAX_ROWS = 5000;
 /** Longest range a template covers. */
 export const DAILY_TEMPLATE_MAX_DAYS = 366;
 
-export type DailyImportErrorCode =
+type DailyImportErrorCode =
   | "missing_column"
   | "no_kind_columns"
   | "empty_file"
@@ -43,9 +43,9 @@ export type DailyImportError = {
   detail?: string;
 };
 
-export type DailyImportEntry = { date: string; signCode: string; kindCode: string; text: string };
+type DailyImportEntry = { date: string; signCode: string; kindCode: string; text: string };
 
-export type DailyImportReport = {
+type DailyImportReport = {
   rows: number;
   /** Kind codes found as columns. */
   kinds: string[];
@@ -64,7 +64,7 @@ export type DailyImportReport = {
   ok: boolean;
 };
 
-export type DailyParsedRow = {
+type DailyParsedRow = {
   row: number;
   date: string;
   sign: string;
@@ -97,7 +97,7 @@ export function normalizeDate(value: ExcelJS.CellValue): string | null {
 }
 
 /** Reads the first worksheet: row 1 = header (date, sign, then kind columns). */
-export async function parseDailyWorkbook(
+async function parseDailyWorkbook(
   buffer: ArrayBuffer | Buffer,
   kinds: readonly { code: string; nameMn: string }[],
 ): Promise<{
@@ -147,7 +147,7 @@ const keyOf = (date: string, signCode: string, kindCode: string) =>
  * Checks parsed rows: valid date, known sign, one row per day × sign, texts ≤ the limit. Every
  * non-empty text becomes an entry unless it equals what's stored (`existing`: key → text).
  */
-export function validateDailyRows(
+function validateDailyRows(
   rows: readonly DailyParsedRow[],
   ctx: {
     kinds: readonly string[];

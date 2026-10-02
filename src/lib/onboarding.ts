@@ -5,16 +5,16 @@ import { z } from "zod";
  * teaser, add someone close, drag them onto yourself to open your pair reading. Progress is kept
  * on the user (`user.onboarding`: mark → ISO time), so it follows them across devices.
  */
-export const GUIDE_STEPS = ["self", "add", "link"] as const;
+const GUIDE_STEPS = ["self", "add", "link"] as const;
 export type GuideStep = (typeof GUIDE_STEPS)[number];
 
-export const ONBOARDING_MARKS = ["welcome", ...GUIDE_STEPS, "dismissed"] as const;
+const ONBOARDING_MARKS = ["welcome", ...GUIDE_STEPS, "dismissed"] as const;
 export type OnboardingMark = (typeof ONBOARDING_MARKS)[number];
 export type OnboardingProgress = Partial<Record<OnboardingMark, string>>;
 
 export const onboardingMarkSchema = z.enum(ONBOARDING_MARKS);
 
-export type GuideState = {
+type GuideState = {
   /** The guide is on: not dismissed and not finished. */
   active: boolean;
   /** Show the welcome card (first visit, guide on). */

@@ -7,7 +7,7 @@
  * Each becomes its own sub-section column.
  */
 
-export type LegacySection = { key: number; name: string; isFree: boolean; html: string };
+type LegacySection = { key: number; name: string; isFree: boolean; html: string };
 export type LegacyBirthday = {
   month: number;
   day: number;
@@ -27,12 +27,9 @@ export type LegacyPair = {
 };
 
 /** Column = sub-section code (src/server/db/seed-data.ts, birthday / synastry.period_pair). */
-export type BirthdayRow = { month_day: string; title: string } & Record<string, string>;
-export type PeriodPairRow = { period_a: string; period_b: string; title: string } & Record<
-  string,
-  string
->;
-export type PeriodRow = { no: string; start: string; end: string };
+type BirthdayRow = { month_day: string; title: string } & Record<string, string>;
+type PeriodPairRow = { period_a: string; period_b: string; title: string } & Record<string, string>;
+type PeriodRow = { no: string; start: string; end: string };
 
 /** Legacy section ids (acyyTitle) → birthday sub-sections. 1/8 are keyword lists (free). */
 const KEYWORD_FIELDS: [number, string][] = [
@@ -114,7 +111,7 @@ export function htmlToText(html: string): string {
 }
 
 /** "ХУВИЙН ЗОХИОН БАЙГУУЛАЛТТАЙ" → "Хувийн зохион байгуулалттай". */
-export function sentenceCase(s: string): string {
+function sentenceCase(s: string): string {
   const t = s.trim().toLocaleLowerCase("mn");
   return t ? t[0].toLocaleUpperCase("mn") + t.slice(1) : t;
 }

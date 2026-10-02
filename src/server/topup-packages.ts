@@ -24,13 +24,13 @@ export class PackageError extends Error {
 
 const moneySchema = z.coerce.number().int();
 
-export const packageInputSchema = z.object({
+const packageInputSchema = z.object({
   amount: moneySchema.min(100).max(10_000_000),
   bonus: moneySchema.min(0).max(10_000_000),
   isActive: z.boolean().default(true),
   sort: z.coerce.number().int().min(0).max(1000).default(0),
 });
-export const packageUpdateSchema = packageInputSchema.extend({ id: z.uuid() });
+const packageUpdateSchema = packageInputSchema.extend({ id: z.uuid() });
 
 const order = [asc(topupPackages.sort), asc(topupPackages.amount)];
 

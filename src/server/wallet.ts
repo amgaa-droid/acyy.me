@@ -15,11 +15,11 @@ import { walletEntries, wallets } from "@/server/db/schema";
  * Amounts are whole MNT (integers). The DB also enforces balance ≥ 0.
  */
 
-export type WalletEntry = typeof walletEntries.$inferSelect;
-export type CreditType = "topup" | "bonus" | "refund" | "adjust";
-export type DebitType = "purchase" | "adjust";
+type WalletEntry = typeof walletEntries.$inferSelect;
+type CreditType = "topup" | "bonus" | "refund" | "adjust";
+type DebitType = "purchase" | "adjust";
 
-export const MAX_AMOUNT = 10_000_000;
+const MAX_AMOUNT = 10_000_000;
 const amountSchema = z.number().int().positive().max(MAX_AMOUNT);
 const keySchema = z.string().min(1).max(200);
 
@@ -32,7 +32,7 @@ export class InsufficientFundsError extends Error {
   }
 }
 
-export type LedgerResult = { entry: WalletEntry; balance: number; duplicate: boolean };
+type LedgerResult = { entry: WalletEntry; balance: number; duplicate: boolean };
 
 type Movement = {
   userId: string;
@@ -148,7 +148,7 @@ export async function listEntries(db: AppDb, userId: string, limit = 50): Promis
 }
 
 /** Owner correction (SPEC §4.1): signed amount, reason required; credit or debit with type=adjust. */
-export const adjustSchema = z.object({
+const adjustSchema = z.object({
   userId: z.uuid(),
   amount: z
     .number()

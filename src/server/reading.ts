@@ -70,7 +70,7 @@ type Loaded = { part: PartDef; key: string; row: typeof contentEntries.$inferSel
  * it was bought with them — plus active parts added later, keyed from the snapshot's people
  * (free for earlier buyers). A later gender-split part needs a known gender, else it's skipped.
  */
-export function readingKeys(
+function readingKeys(
   product: Pick<ProductDef, "parts">,
   snapshot: PurchaseSnapshot,
 ): Record<string, string> {
@@ -193,7 +193,7 @@ export async function getReading(
   };
 }
 
-export type PreviewSection = {
+type PreviewSection = {
   section: string;
   keyType: KeyType;
   key: string;
@@ -268,7 +268,7 @@ export async function linkedPairReadings(
   return rows;
 }
 
-export type ReadingPerson = {
+type ReadingPerson = {
   id: string;
   name: string;
   relation: Relation;

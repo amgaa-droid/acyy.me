@@ -16,7 +16,7 @@ import type { AppDb } from "@/server/db/types";
  * Saves carry the draft revision they were based on; a stale one is rejected (two admins at once).
  */
 
-export const LANDING_PAGE = "landing";
+const LANDING_PAGE = "landing";
 
 export class DraftConflictError extends Error {
   constructor() {
@@ -34,7 +34,7 @@ export class VersionNotFoundError extends Error {
   }
 }
 
-export type Published = { content: LandingContent; version: number | null; publishedAt: Date | null };
+type Published = { content: LandingContent; version: number | null; publishedAt: Date | null };
 
 /** What visitors see: the newest published version, or the built-in defaults if none yet. */
 export async function getPublishedLanding(db: AppDb): Promise<Published> {
@@ -197,7 +197,7 @@ export async function restoreIntoDraft(
   return saved;
 }
 
-export type VersionRow = {
+type VersionRow = {
   id: string;
   version: number;
   note: string | null;

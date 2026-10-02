@@ -25,7 +25,7 @@ import { buildTranslationRequest, parseTranslation } from "./translate";
 
 export type SyncTrigger = "manual" | "cron";
 
-export type SyncIssueCode =
+type SyncIssueCode =
   "fetch" | "parse" | "wrong_sign" | "stale_date" | "ai" | "bad_answer" | "missing" | "too_long";
 
 export type SyncIssue = { kind: string; sign?: string; code: SyncIssueCode; detail?: string };
@@ -76,7 +76,7 @@ async function pool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): P
 }
 
 /** Waits before the 2nd and 3rd try when the AI is busy (429 / 5xx / network). */
-export const AI_RETRY_DELAYS_MS = [5_000, 20_000];
+const AI_RETRY_DELAYS_MS = [5_000, 20_000];
 /** Longest wait a provider's own "retry after" may ask for. */
 const MAX_WAIT_MS = 60_000;
 
@@ -248,7 +248,7 @@ export async function runDailySyncOnce(db: AppDb, opts: SyncOptions): Promise<Sy
   }
 }
 
-export type SyncRun = { at: Date; trigger: SyncTrigger; saved: number; total: number };
+type SyncRun = { at: Date; trigger: SyncTrigger; saved: number; total: number };
 
 /** Syncs logged since `since`, oldest first (for the daily cron's schedule). */
 export async function syncRunsSince(db: AppDb, since: Date): Promise<SyncRun[]> {

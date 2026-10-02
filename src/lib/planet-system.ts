@@ -56,7 +56,7 @@ export const DESKTOP_LAYOUT: PlanetLayout = {
 };
 
 /** Desktop layout from this width up (Tailwind `lg`). */
-export const DESKTOP_MIN_WIDTH = 1024;
+const DESKTOP_MIN_WIDTH = 1024;
 
 export function pickLayout(w: number): PlanetLayout {
   return w >= DESKTOP_MIN_WIDTH ? DESKTOP_LAYOUT : PHONE_LAYOUT;
@@ -84,7 +84,7 @@ export function bodyPx(body: Body, w: number, h: number, k: number): Body {
 // ── "Today" view ────────────────────────────────────────────────────────────────────────────
 
 /** The space under "me" for its name and sign pills (px). */
-export const TODAY_CAPTION = 64;
+const TODAY_CAPTION = 64;
 
 /**
  * Home's "today" view: "me" big, my daily horoscopes beside it. Phone: me at the top centre,

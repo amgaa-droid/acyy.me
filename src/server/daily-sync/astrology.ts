@@ -23,7 +23,7 @@ export function sourceUrl(kind: string, sign: string): string {
   return `https://www.astrology.com/horoscope/${path}/tomorrow/${sign}.html`;
 }
 
-export type SourcePage = { date: string; sign: string | null; text: string };
+type SourcePage = { date: string; sign: string | null; text: string };
 
 export class SourceError extends Error {
   constructor(readonly code: "fetch" | "parse" | "wrong_sign") {

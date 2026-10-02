@@ -1,5 +1,5 @@
 /** Dev-only in-memory copy of sent emails, shown at /dev/mail (useful without Mailpit). */
-export type OutboxEntry = { id: number; to: string; subject: string; text: string; at: Date };
+type OutboxEntry = { id: number; to: string; subject: string; text: string; at: Date };
 
 const MAX = 50;
 const store = globalThis as unknown as { __outbox?: OutboxEntry[]; __outboxSeq?: number };

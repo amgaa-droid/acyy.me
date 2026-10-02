@@ -36,7 +36,7 @@ export type ImportKindSpec = {
 
 export const PERIODS_KIND = "periods48";
 
-export const PERIODS_SPEC: ImportKindSpec = {
+const PERIODS_SPEC: ImportKindSpec = {
   kind: PERIODS_KIND,
   label: "48 үеийн муж",
   file: "periods48.xlsx",
@@ -52,7 +52,7 @@ export const PERIODS_SPEC: ImportKindSpec = {
 const SIGN_ALIASES = ["орд", "zodiac", "sign_code"];
 const PERIOD_ALIASES = ["үе", "period_no"];
 
-export const KEY_COLUMNS: Record<KeyType, ColumnSpec[]> = {
+const KEY_COLUMNS: Record<KeyType, ColumnSpec[]> = {
   month_day: [col("month_day", ["огноо", "сар_өдөр", "сар-өдөр", "date", "md"])],
   sign: [col("sign", SIGN_ALIASES)],
   period: [col("period", PERIOD_ALIASES)],
@@ -70,15 +70,15 @@ export const KEY_COLUMNS: Record<KeyType, ColumnSpec[]> = {
   ],
 };
 
-export const GENDER_COLUMN = col("gender", ["хүйс", "sex"]);
+const GENDER_COLUMN = col("gender", ["хүйс", "sex"]);
 export const TITLE_COLUMN = col("title", ["гарчиг", "нэр", "heading"]);
 /**
  * Legacy single-text column: "## Heading" sections are matched to sub-sections by name,
  * the rest goes to "general". Explicit sub-section columns win.
  */
-export const BODY_COLUMN = col("body", ["текст", "агуулга", "бичвэр", "text", "content"], false);
-export const TEASER_COLUMN = col("teaser", ["тизер", "үнэгүй", "free"], false);
-export const SCORE_COLUMN = col("score", ["оноо", "хувь", "percent"], false);
+const BODY_COLUMN = col("body", ["текст", "агуулга", "бичвэр", "text", "content"], false);
+const TEASER_COLUMN = col("teaser", ["тизер", "үнэгүй", "free"], false);
+const SCORE_COLUMN = col("score", ["оноо", "хувь", "percent"], false);
 
 /** Sub-section columns: header = field code, its Mongolian name also accepted. */
 function fieldColumn(f: FieldRow): ColumnSpec {
@@ -90,7 +90,7 @@ export function kindFor(product: ProductDef, partCode: string): string {
 }
 
 /** The content import kind of each product part. */
-export function contentKinds(products: ProductDef[]): ImportKindSpec[] {
+function contentKinds(products: ProductDef[]): ImportKindSpec[] {
   return products.flatMap((product) =>
     activeParts(product).map((part) => {
       const kind = kindFor(product, part.code);

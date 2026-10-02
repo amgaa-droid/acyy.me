@@ -23,7 +23,7 @@ import type { AppDb } from "./types";
  * Everything belongs to `demo-*@demo.test` users, so `resetDemoActivity` can remove it.
  */
 
-export const DEMO_EMAIL_DOMAIN = "demo.test";
+const DEMO_EMAIL_DOMAIN = "demo.test";
 const DEMO_EMAIL_LIKE = `demo-%@${DEMO_EMAIL_DOMAIN}`;
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -94,8 +94,8 @@ const birthDate = (r: Rng, minAge: number, maxAge: number, now: Date) =>
 const packageWeights = (n: number) =>
   Array.from({ length: n }, (_, i) => (n <= 2 ? 1 : i === 0 ? 2 : i === n - 1 ? 1.5 : 3.5));
 
-export type DemoOptions = { users?: number; days?: number; seed?: number; now?: Date };
-export type DemoSummary = {
+type DemoOptions = { users?: number; days?: number; seed?: number; now?: Date };
+type DemoSummary = {
   users: number;
   topups: number;
   abandoned: number;

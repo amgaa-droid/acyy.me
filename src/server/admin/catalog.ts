@@ -38,7 +38,7 @@ export class CoverageError extends Error {
 
 // ---------- Sign ranges (Editor/Owner) ----------
 
-export const signRangesSchema = z
+const signRangesSchema = z
   .array(z.object({ code: z.string().min(1), startMd: md, endMd: md }))
   .min(1);
 
@@ -73,7 +73,7 @@ export async function saveSignRanges(db: AppDb, actorId: string, input: unknown)
 
 // ---------- 48 periods (Editor/Owner) ----------
 
-export const periodRangesSchema = z
+const periodRangesSchema = z
   .array(
     z.object({
       no: z.number().int().min(1).max(48),
@@ -131,7 +131,7 @@ const codeSchema = z.string().trim().regex(CODE_PATTERN);
 const nameSchema = z.string().trim().min(1).max(80);
 const priceSchema = z.coerce.number().int().min(0).max(1_000_000);
 
-export const productCreateSchema = z.object({
+const productCreateSchema = z.object({
   code: codeSchema,
   nameMn: nameSchema,
   personCount: z.coerce.number().pipe(z.union([z.literal(1), z.literal(2)])),
@@ -139,9 +139,9 @@ export const productCreateSchema = z.object({
   keyType: z.enum(KEY_TYPES),
   byGender: z.boolean().default(false),
 });
-export type ProductCreate = z.input<typeof productCreateSchema>;
+type ProductCreate = z.input<typeof productCreateSchema>;
 
-export const productUpdateSchema = z.object({
+const productUpdateSchema = z.object({
   code: codeSchema,
   nameMn: nameSchema,
   description: z.string().trim().max(300).default(""),
@@ -153,9 +153,9 @@ export const productUpdateSchema = z.object({
   icon: z.enum(PRODUCT_ICONS),
   tint: z.enum(PRODUCT_TINTS),
 });
-export type ProductUpdate = z.input<typeof productUpdateSchema>;
+type ProductUpdate = z.input<typeof productUpdateSchema>;
 
-export const partInputSchema = z.object({
+const partInputSchema = z.object({
   productCode: codeSchema,
   code: codeSchema,
   nameMn: nameSchema,
@@ -164,9 +164,9 @@ export const partInputSchema = z.object({
   /** The admin agreed to delete / convert the part's real texts (see updatePart). */
   confirm: z.boolean().default(false),
 });
-export type PartInput = z.input<typeof partInputSchema>;
+type PartInput = z.input<typeof partInputSchema>;
 
-export const fieldInputSchema = z.object({
+const fieldInputSchema = z.object({
   productCode: codeSchema,
   partCode: codeSchema,
   code: codeSchema,
@@ -175,7 +175,7 @@ export const fieldInputSchema = z.object({
   isFree: z.boolean().default(false),
   required: z.boolean().default(false),
 });
-export type FieldInput = z.input<typeof fieldInputSchema>;
+type FieldInput = z.input<typeof fieldInputSchema>;
 
 const partRefSchema = z.object({ productCode: codeSchema, partCode: codeSchema });
 const fieldRefSchema = partRefSchema.extend({ code: codeSchema });

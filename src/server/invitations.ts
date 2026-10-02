@@ -16,7 +16,7 @@ import { getPerson, getSelf, PersonNotFoundError } from "@/server/persons";
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Email invitations one user may send in 24 h — the app must not become a way to mail strangers. */
 export const EMAIL_INVITES_PER_DAY = 20;
-export type Invitation = typeof invitations.$inferSelect;
+type Invitation = typeof invitations.$inferSelect;
 
 export class InvitationError extends Error {
   constructor(
@@ -98,7 +98,7 @@ export async function createInvitation(
   return { invitation, token };
 }
 
-export type InvitationView = {
+type InvitationView = {
   id: string;
   inviterName: string;
   personName: string;
@@ -205,7 +205,7 @@ export async function revokeInvitation(
 }
 
 /** Latest invitation for a person (inviter's view on the person page). */
-export async function latestInvitation(db: AppDb, inviterId: string, personId: string) {
+async function latestInvitation(db: AppDb, inviterId: string, personId: string) {
   const [inv] = await db
     .select()
     .from(invitations)
@@ -237,7 +237,7 @@ export async function unlinkMe(db: AppDb, userId: string, personId: string): Pro
   if (res.length === 0) throw new PersonNotFoundError();
 }
 
-export type PersonLinkState =
+type PersonLinkState =
   | { kind: "linked" }
   | {
       kind: "pending";

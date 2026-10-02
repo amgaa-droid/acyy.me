@@ -110,7 +110,7 @@ const keyInput = z.object({
   clear: z.boolean().default(false),
 });
 
-export const saveAiSettingsSchema = z.object({
+const saveAiSettingsSchema = z.object({
   provider: z.enum(AI_PROVIDERS),
   models: z.object({
     gemini: z.string().trim().min(1).max(100),
@@ -182,7 +182,7 @@ export async function saveAiSettings(
   return getAiSettingsView(db);
 }
 
-export type AiRuntime = AiConfig & { prompt: string };
+type AiRuntime = AiConfig & { prompt: string };
 
 /**
  * The provider the sync should use right now, with its key opened. `override` lets the

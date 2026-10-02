@@ -8,7 +8,7 @@ import type { ImportKindSpec } from "./kinds";
 import { parseWorkbook } from "./parse";
 import { validateImport, type ImportReport } from "./validate";
 
-export type RunImportResult = ImportReport & {
+type RunImportResult = ImportReport & {
   missingColumns: string[];
   mapping: Record<string, string>;
   committed: boolean;

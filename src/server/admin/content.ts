@@ -17,7 +17,7 @@ import {
   type ProductDef,
 } from "@/server/products";
 
-export type CoverageRow = {
+type CoverageRow = {
   product: string;
   productName: string;
   /** Part code and name; the name is shown only for multi-part products. */
@@ -112,7 +112,7 @@ export const listQuerySchema = z.object({
   status: z.enum(["all", "draft", "published"]).default("all"),
   page: z.coerce.number().int().min(1).default(1),
 });
-export type ListQuery = z.infer<typeof listQuerySchema>;
+type ListQuery = z.infer<typeof listQuerySchema>;
 
 export const PAGE_SIZE = 50;
 
@@ -159,7 +159,7 @@ export async function getContentEntry(db: AppDb, id: string) {
   return row ?? null;
 }
 
-export const entryInputSchema = z.object({
+const entryInputSchema = z.object({
   product: z.string().trim().min(1).max(32),
   section: z.string().trim().min(1).max(32),
   key: z.string().trim().min(1).max(40),
@@ -176,7 +176,7 @@ export const entryInputSchema = z.object({
     .transform((v) => (v === "" ? null : v)),
   status: z.enum(["draft", "published"]),
 });
-export type EntryInput = z.input<typeof entryInputSchema>;
+type EntryInput = z.input<typeof entryInputSchema>;
 
 export class UnknownContentKeyError extends Error {
   constructor() {
@@ -195,7 +195,7 @@ export class MissingFieldsError extends Error {
  * Keeps only the part's active fields (trimmed, non-empty) and checks required ones.
  * Values of archived fields are carried over from `previous` so restoring a field brings them back.
  */
-export function cleanFields(
+function cleanFields(
   part: PartDef,
   input: Record<string, string>,
   previous: Record<string, string> = {},

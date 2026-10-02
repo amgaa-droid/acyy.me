@@ -14,7 +14,7 @@ const FIELD_KIND_HINTS: Record<FieldKind, string> = {
   alert: "анхааруулга (мөр/таслалаар)",
 };
 
-export type TemplateRefs = {
+type TemplateRefs = {
   signs: { code: string; nameMn: string }[];
   periods: (MonthDayRange & { no: number; label: string | null })[];
 };

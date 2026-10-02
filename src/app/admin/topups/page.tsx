@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { requireOwner } from "@/server/admin/guard";
 import { db } from "@/server/db";
 import { user } from "@/server/db/schema";
-import { listTopups, type Topup } from "@/server/topups";
+import { listTopups, paidAmountMismatches, type Topup } from "@/server/topups";
 import { RecheckButton } from "./recheck-button";
 import { inArray } from "drizzle-orm";
 
@@ -39,6 +39,10 @@ export default async function AdminTopupsPage({ searchParams }: PageProps<"/admi
         ).map((u) => [u.id, u.email]),
       )
     : {};
+  const mismatches = await paidAmountMismatches(
+    db,
+    rows.filter((r) => r.status === "failed").map((r) => r.id),
+  );
   const t = mn.admin.topups;
 
   return (
@@ -90,6 +94,11 @@ export default async function AdminTopupsPage({ searchParams }: PageProps<"/admi
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {t.status[r.status]} · {r.provider}
+                  {mismatches.has(r.id) && (
+                    <span className="mt-0.5 block text-xs font-semibold text-destructive">
+                      {t.mismatch(formatMnt(mismatches.get(r.id)!))}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {r.status !== "paid" && r.invoiceId && <RecheckButton id={r.id} />}

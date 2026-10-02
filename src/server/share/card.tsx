@@ -37,7 +37,7 @@ const SANS = SUBSETS.map((s) => `"Sans-${s}"`).join(", ");
 type FontSpec = { name: string; data: ArrayBuffer; weight: 400 | 500 | 600; style: "normal" };
 let fontsPromise: Promise<FontSpec[]> | undefined;
 
-export function loadCardFonts(): Promise<FontSpec[]> {
+function loadCardFonts(): Promise<FontSpec[]> {
   fontsPromise ??= (async () => {
     const dir = path.join(process.cwd(), "src/assets/fonts");
     // One family name per subset: satori keeps only the first font per (name, weight), so
@@ -62,7 +62,7 @@ export function loadCardFonts(): Promise<FontSpec[]> {
   return fontsPromise;
 }
 
-export type CardPerson = {
+type CardPerson = {
   name: string;
   relation: string | null;
   /** `zodiac_signs.code` — picks the constellation artwork only; the sign is never named. */
@@ -70,7 +70,7 @@ export type CardPerson = {
   avatarUri: string;
 };
 
-export type CardData = {
+type CardData = {
   format: "story" | "square";
   productName: string;
   people: CardPerson[];

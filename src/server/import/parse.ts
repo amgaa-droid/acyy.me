@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { uploadColumns, type ColumnSpec, type ImportKindSpec } from "./kinds";
 
 export type ParsedRow = { row: number; values: Record<string, string> };
-export type ParseResult = {
+type ParseResult = {
   rows: ParsedRow[];
   /** canonical column → header text found in the file */
   mapping: Record<string, string>;

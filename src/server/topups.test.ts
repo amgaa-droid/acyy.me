@@ -13,6 +13,7 @@ import {
   checkPendingTopups,
   createTopup,
   getTopupForUser,
+  paidAmountMismatches,
   settleTopup,
 } from "./topups";
 import { getBalance } from "./wallet";
@@ -112,6 +113,11 @@ describe("settleTopup", () => {
     expect(await getBalance(db, u)).toBe(0);
     const logs = await db.select().from(auditLogs).where(eq(auditLogs.entityId, t.id));
     expect(logs[0]).toMatchObject({ action: "topup.amount_mismatch" });
+    // The Owner sees what was actually received, to settle it by hand.
+    expect(await paidAmountMismatches(db, [t.id, crypto.randomUUID()])).toEqual(
+      new Map([[t.id, 2_000]]),
+    );
+    expect(await paidAmountMismatches(db, [])).toEqual(new Map());
   });
 
   it("unknown or malformed ids are not found", async () => {

@@ -7,7 +7,7 @@ import type { AiRequest } from "@/server/ai/providers";
  * so an edited prompt can't break parsing.
  */
 
-export type SignName = { code: string; nameMn: string };
+type SignName = { code: string; nameMn: string };
 
 const capitalize = (s: string) => s[0].toUpperCase() + s.slice(1);
 
@@ -46,7 +46,7 @@ export function cleanTranslation(v: string): string {
     .join("\n\n");
 }
 
-export type ParsedTranslation = {
+type ParsedTranslation = {
   texts: Record<string, string>;
   /** Signs the answer left out or left empty. */
   missing: string[];

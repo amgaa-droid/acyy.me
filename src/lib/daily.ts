@@ -8,7 +8,7 @@ import { parseIsoDate, toIsoDate, todayYmd } from "@/lib/birth-date";
  */
 
 /** Home shows either the account owner's day ("today") or the planet system. */
-export const HOME_VIEWS = ["today", "planets"] as const;
+const HOME_VIEWS = ["today", "planets"] as const;
 export type HomeView = (typeof HOME_VIEWS)[number];
 export const HOME_VIEW_COOKIE = "home_view";
 

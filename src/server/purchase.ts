@@ -19,7 +19,7 @@ import { debit } from "@/server/wallet";
  * existing purchase without charging.
  */
 
-export type Purchase = typeof purchases.$inferSelect;
+type Purchase = typeof purchases.$inferSelect;
 
 export class ProductUnavailableError extends Error {
   constructor() {
@@ -61,7 +61,7 @@ export function subjectKey(personIds: string[]): string {
 type PartSpec = PartKeySpec & { code: string };
 
 /** Content keys per part for a product's people (what the reading will show). */
-export function contentKeysFor(
+function contentKeysFor(
   parts: readonly PartSpec[],
   people: Pick<SubjectPerson, "birthDate" | "gender">[],
   refs: AstroRefs,
@@ -98,7 +98,7 @@ export function buildSnapshot(
   };
 }
 
-export async function loadOwnPeople(
+async function loadOwnPeople(
   db: AppDb,
   userId: string,
   personIds: string[],

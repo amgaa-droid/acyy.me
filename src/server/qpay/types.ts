@@ -1,5 +1,5 @@
 /** All QPay traffic goes through this interface (CLAUDE.md rule 6; SPEC §4.4). */
-export type Deeplink = { name: string; logo: string; link: string };
+type Deeplink = { name: string; logo: string; link: string };
 
 export type Invoice = {
   invoiceId: string;

@@ -5,7 +5,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { env } from "@/env";
 import { recordEmail } from "./outbox";
 
-export type EmailMessage = { to: string; subject: string; text: string; html?: string };
+type EmailMessage = { to: string; subject: string; text: string; html?: string };
 
 let smtp: Transporter | undefined;
 

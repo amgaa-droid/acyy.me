@@ -3,7 +3,7 @@
  * starting with "## " is a sub-heading. Nothing else is interpreted (no HTML, no Markdown).
  * Sub-sections with their own look are separate fields (product_fields), not headings.
  */
-export type BodyBlock = { type: "heading"; text: string } | { type: "paragraph"; text: string };
+type BodyBlock = { type: "heading"; text: string } | { type: "paragraph"; text: string };
 
 const HEADING = /^##\s+(.+)$/;
 

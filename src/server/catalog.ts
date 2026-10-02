@@ -17,7 +17,7 @@ import { getSelf, type Person } from "@/server/persons";
 
 export type Product = typeof products.$inferSelect;
 
-export type Viewer = {
+type Viewer = {
   userId: string;
   selfBirthDate: string | null;
   adultConfirmedAt: Date | null;
@@ -73,7 +73,7 @@ export async function productsByCode(db: AppDb): Promise<Map<string, Product>> {
   return new Map(rows.map((p) => [p.code, p]));
 }
 
-export type PersonOffer = {
+type PersonOffer = {
   product: Product;
   /** Single-person products: the existing purchase id, if already bought. */
   purchaseId: string | null;

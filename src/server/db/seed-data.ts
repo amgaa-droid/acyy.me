@@ -21,21 +21,21 @@ export const ZODIAC_SIGNS = [
 
 const ALL_GROUPS: RelationGroup[] = ["self", "family", "romantic", "friend", "other"];
 
-export type SeedField = {
+type SeedField = {
   code: string;
   nameMn: string;
   kind: FieldKind;
   isFree?: boolean;
   required?: boolean;
 };
-export type SeedPart = {
+type SeedPart = {
   code: string;
   nameMn: string;
   keyType: KeyType;
   byGender?: boolean;
   fields: SeedField[];
 };
-export type SeedProduct = {
+type SeedProduct = {
   code: string;
   nameMn: string;
   description: string;
@@ -274,7 +274,7 @@ export function seedProductDefs(list: SeedProduct[] = PRODUCTS): ProductDef[] {
 }
 
 /** Multi-sentence placeholder so the 2-sentence preview can be exercised before real texts arrive. */
-export function placeholderEntry(productName: string, key: string) {
+function placeholderEntry(productName: string, key: string) {
   return {
     title: `[Placeholder] ${productName} — ${key}`,
     fields: {

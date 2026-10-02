@@ -9,8 +9,8 @@ import { productFields, productParts, products } from "@/server/db/schema";
  * is derived from this.
  */
 
-export type ProductRow = typeof products.$inferSelect;
-export type PartRow = typeof productParts.$inferSelect;
+type ProductRow = typeof products.$inferSelect;
+type PartRow = typeof productParts.$inferSelect;
 export type FieldRow = typeof productFields.$inferSelect;
 
 export type PartDef = PartRow & { fields: FieldRow[] };

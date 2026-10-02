@@ -937,6 +937,8 @@ export const mn = {
       provider: "Горим",
       recheck: "QPay-ээс дахин шалгах",
       recheckResult: (s: string) => `Үр дүн: ${s}`,
+      mismatch: (paid: string) =>
+        `QPay-д ${paid} төлөгдсөн — дүн зөрсөн тул хэтэвчинд ороогүй. Хэрэглэгчийн хуудаснаас гараар засна.`,
       empty: "Цэнэглэлт алга.",
     },
     fieldKinds: {

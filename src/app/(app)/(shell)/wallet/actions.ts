@@ -17,9 +17,12 @@ import {
   getTopupForUser,
   settleTopup,
 } from "@/server/topups";
+import { createThrottle } from "@/server/throttle";
 import { getBalance } from "@/server/wallet";
 
 const INVOICES_PER_HOUR = 10; // SPEC §12
+/** "Төлсөн, шалгах" asks QPay at most this often per user; in between it answers from the DB. */
+const mayAskQPay = createThrottle(3_000);
 
 const offerSchema = z.object({
   packageId: z.uuid(),
@@ -27,12 +30,16 @@ const offerSchema = z.object({
   bonus: z.number().int().min(0),
 });
 
-export async function createTopupAction(
-  input: unknown,
-): Promise<
+export async function createTopupAction(input: unknown): Promise<
   | {
       ok: true;
-      topup: { id: string; amount: number; bonus: number; status: string; invoice: InvoiceData | null };
+      topup: {
+        id: string;
+        amount: number;
+        bonus: number;
+        status: string;
+        invoice: InvoiceData | null;
+      };
       balance: number;
       mockPayUrl: string | null;
     }
@@ -60,7 +67,13 @@ export async function createTopupAction(
     });
     return {
       ok: true,
-      topup: { id: t.id, amount: t.amount, bonus: t.bonus, status: t.status, invoice: t.invoiceData },
+      topup: {
+        id: t.id,
+        amount: t.amount,
+        bonus: t.bonus,
+        status: t.status,
+        invoice: t.invoiceData,
+      },
       balance: await getBalance(db, user.id),
       mockPayUrl: mockQPay() && t.invoiceId ? `/dev/qpay/${t.invoiceId}` : null,
     };
@@ -76,7 +89,8 @@ export async function createTopupAction(
 export async function checkTopupAction(id: string): Promise<{ status: string }> {
   const { user } = await requireOnboardedUser();
   try {
-    await getTopupForUser(db, user.id, id);
+    const topup = await getTopupForUser(db, user.id, id);
+    if (!mayAskQPay(user.id)) return { status: topup.status };
     return await settleTopup(db, qpay(), id, { source: "user", actorId: user.id });
   } catch (err) {
     if (err instanceof TopupNotFoundError) return { status: "not_found" };

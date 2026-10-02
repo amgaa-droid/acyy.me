@@ -13,7 +13,7 @@ import type { FieldRow } from "@/server/products";
 import { PERIODS_KIND, type ImportKindSpec, type ImportTarget } from "./kinds";
 import type { ParsedRow } from "./parse";
 
-export type ImportErrorCode =
+type ImportErrorCode =
   | "missing_column"
   | "required"
   | "invalid_month_day"
@@ -39,14 +39,14 @@ export type ImportError = {
   detail?: string;
 };
 
-export type ContentEntryInput = {
+type ContentEntryInput = {
   key: string;
   title: string;
   fields: Record<string, string>;
   teaser: string | null;
   score: number | null;
 };
-export type RangeInput = { no: number; startMd: MonthDay; endMd: MonthDay; label: string | null };
+type RangeInput = { no: number; startMd: MonthDay; endMd: MonthDay; label: string | null };
 
 export type ImportReport = {
   kind: ImportKindSpec["kind"];
@@ -63,7 +63,7 @@ export type ImportReport = {
   ok: boolean;
 };
 
-export type ImportRefs = {
+type ImportRefs = {
   signs: { code: string; nameMn: string }[];
   periodCount: number;
 };

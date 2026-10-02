@@ -6,7 +6,7 @@ import { createReadStream } from "node:fs";
  * Values: N'…' / '…' (with '' escapes), NULL, numbers, CAST(0x… AS DateTime).
  */
 
-export type SqlValue = string | number | null;
+type SqlValue = string | number | null;
 export type SqlRow = Record<string, SqlValue>;
 
 const HEAD = /^INSERT \[dbo\]\.\[(\w+)\] \((.*?)\) VALUES \(/;

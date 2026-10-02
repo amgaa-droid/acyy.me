@@ -20,8 +20,8 @@ export type Person = typeof persons.$inferSelect;
 /** People one account may keep (deleted ones don't count) — home loads and draws all of them. */
 export const MAX_PEOPLE = 300;
 
-export const personNameSchema = z.string().trim().min(1).max(40);
-export const avatarSeedSchema = z.string().refine(isAvatarSeed, "invalid_avatar");
+const personNameSchema = z.string().trim().min(1).max(40);
+const avatarSeedSchema = z.string().refine(isAvatarSeed, "invalid_avatar");
 const relationLabelSchema = z.string().trim().min(1).max(20);
 const otherRelations = RELATIONS.filter((r) => r !== "self") as [
   Exclude<(typeof RELATIONS)[number], "self">,
@@ -34,7 +34,7 @@ export const selfInputSchema = z.object({
   gender: z.enum(GENDERS).default("unspecified"),
   avatarSeed: avatarSeedSchema,
 });
-export type SelfInput = z.input<typeof selfInputSchema>;
+type SelfInput = z.input<typeof selfInputSchema>;
 
 /** `relation_label` is required for "other" and dropped for every other relation. */
 function withRelationLabel<T extends { relation?: string; relationLabel?: string | null }>(
@@ -46,7 +46,7 @@ function withRelationLabel<T extends { relation?: string; relationLabel?: string
   }
 }
 
-export const personInputSchema = z
+const personInputSchema = z
   .object({
     name: personNameSchema,
     birthDate: birthDateSchema,
@@ -57,10 +57,10 @@ export const personInputSchema = z
   })
   .superRefine(withRelationLabel)
   .transform((d) => ({ ...d, relationLabel: d.relation === "other" ? d.relationLabel! : null }));
-export type PersonInput = z.input<typeof personInputSchema>;
+type PersonInput = z.input<typeof personInputSchema>;
 
 /** Editable fields only. `strictObject` rejects anything else — notably `birthDate`. */
-export const personUpdateSchema = z
+const personUpdateSchema = z
   .strictObject({
     name: personNameSchema.optional(),
     gender: z.enum(GENDERS).optional(),
@@ -69,7 +69,7 @@ export const personUpdateSchema = z
     relationLabel: relationLabelSchema.nullish(),
   })
   .superRefine(withRelationLabel);
-export type PersonUpdate = z.input<typeof personUpdateSchema>;
+type PersonUpdate = z.input<typeof personUpdateSchema>;
 
 export class SelfAlreadyExistsError extends Error {
   constructor() {
@@ -154,7 +154,7 @@ export const promoteSelfSchema = z.object({
   gender: z.enum(GENDERS).default("unspecified"),
   avatarSeed: avatarSeedSchema,
 });
-export type PromoteSelfInput = z.input<typeof promoteSelfSchema>;
+type PromoteSelfInput = z.input<typeof promoteSelfSchema>;
 
 /**
  * Makes an existing person the user's "Би" (onboarding of a migrated account). The birth date
