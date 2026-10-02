@@ -109,8 +109,7 @@ test("new user: short balance → top-up → back to confirm → buys every acti
   await page.goto(`/buy/synastry?a=${selfId}`);
   await page.getByRole("link", { name: "Шинэ хүн нэмэх" }).click();
   await page.getByRole("radio", { name: "Ээж" }).click();
-  await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
-  await page.getByRole("radio", { name: "Iris" }).click();
+  await page.getByRole("radio", { name: "Дүрс 9", exact: true }).click();
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("textbox", { name: "Нэр", exact: true }).fill("Ээж");
   await page.getByRole("button", { name: "Хадгалах" }).click();

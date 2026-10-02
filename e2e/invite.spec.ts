@@ -36,8 +36,7 @@ test("A invites B by email and buys a synastry → B signs up from the link and 
   await signUpFresh(page, "inviter");
   await page.goto("/people/new");
   await page.getByRole("radio", { name: "Найз" }).click();
-  await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
-  await page.getByRole("radio", { name: "Sage" }).click();
+  await page.getByRole("radio", { name: "Дүрс 19", exact: true }).click();
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("textbox", { name: "Нэр", exact: true }).fill("Бат");
   await page.getByRole("button", { name: "Хадгалах" }).click();
@@ -104,7 +103,7 @@ test("A invites B by email and buys a synastry → B signs up from the link and 
   await expect(b.getByText("Урилгаар ирсэн мэдээллийг бөглөлөө")).toBeVisible();
   await b.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await b.getByRole("button", { name: "Алгасах" }).click();
-  await b.getByRole("radio", { name: "Nova" }).click();
+  await b.getByRole("radio", { name: "Дүрс 14", exact: true }).click();
   await b.getByRole("button", { name: "Дуусгах" }).click();
   await b.getByRole("button", { name: "Ертөнц рүүгээ орох" }).click();
 

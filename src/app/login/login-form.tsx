@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { FacebookLogo, GoogleLogo } from "@/components/app/brand-logos";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
 import { authClient } from "@/lib/auth-client";
@@ -120,6 +121,11 @@ export function LoginForm({
             })
           }
         >
+          {p === "google" ? (
+            <GoogleLogo className="size-4.5" />
+          ) : (
+            <FacebookLogo className="size-5" />
+          )}
           {p === "google" ? mn.login.google : mn.login.facebook}
         </Button>
       ))}

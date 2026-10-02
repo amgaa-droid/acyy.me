@@ -25,7 +25,7 @@ export function OfferList({ personId, offers }: { personId: string; offers: Offe
     <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
       {offers.map((o) => {
         const bought = o.purchaseId !== null;
-        const href = bought ? `/r/${o.purchaseId}` : `/buy/${o.code}?a=${personId}`;
+        const href = bought ? `/r/${o.purchaseId}` : `/buy/${o.code}?a=${personId}&from=p`;
         return (
           <li key={o.code}>
             <Link
@@ -39,7 +39,7 @@ export function OfferList({ personId, offers }: { personId: string; offers: Offe
             >
               <ProductIcon product={o} muted={!bought} />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-semibold">{o.name}</span>
+                <span className="leading-tight font-semibold text-balance">{o.name}</span>
                 {bought ? (
                   <span className="flex items-center gap-1 text-sm font-semibold text-highlight">
                     <Check className="size-3.5" strokeWidth={2.5} aria-hidden />

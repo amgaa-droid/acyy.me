@@ -75,8 +75,6 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
             {person.name}
           </h1>
           <div className="relative mt-4 flex flex-wrap gap-2">
-            <Chip>{sign.nameMn}</Chip>
-            <Chip>{mn.people.periodValue(period.no)}</Chip>
             <Chip>
               <Lock className="size-3.5" aria-label={mn.people.birthDateLocked} />
               {formatBirthDate(person.birthDate)}

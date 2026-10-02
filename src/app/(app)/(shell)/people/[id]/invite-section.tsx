@@ -122,7 +122,7 @@ export function InviteSection({
           </button>
         </p>
       )}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <Button variant="outline" className="rounded-full" disabled={pending} onClick={shareLink}>
           <Share2 aria-hidden />
           {t.copyLink}

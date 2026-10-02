@@ -58,12 +58,24 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
   const b = product.personCount === 2 ? one(sp.b) : undefined;
   const chosenA = a ? eligible.find((p) => p.id === a) : undefined;
   const chosenB = b ? eligible.find((p) => p.id === b && p.id !== a) : undefined;
-  const here = (extra: Record<string, string>) => `/buy/${code}?${new URLSearchParams(extra)}`;
+  // Where the buyer came from — a person's page ("p") or home ("h") — so "back" returns there
+  // rather than to the person picker. It rides along through the steps of this page.
+  const from = sp.from === "p" || sp.from === "h" ? sp.from : undefined;
+  const here = (extra: Record<string, string>) =>
+    `/buy/${code}?${new URLSearchParams({ ...extra, ...(from ? { from } : {}) })}`;
+  const backHref =
+    from === "h"
+      ? "/home"
+      : from === "p" && chosenA
+        ? `/people/${chosenA.id}`
+        : chosenA
+          ? `/buy/${code}`
+          : "/readings";
 
   const header = (
     <div className="flex items-center gap-3">
       <Link
-        href={chosenA ? `/buy/${code}` : "/readings"}
+        href={backHref}
         aria-label={mn.common.back}
         className="flex size-11 items-center justify-center rounded-full bg-surface"
       >

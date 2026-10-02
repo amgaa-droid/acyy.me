@@ -64,7 +64,9 @@ export function BuyConfirm({
   );
 
   return (
-    <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] z-30 flex flex-col gap-2 lg:bottom-6">
+    // The page ground fades in behind the button, so the text scrolling under it doesn't read
+    // as covered (and doesn't show again below it).
+    <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] z-30 flex flex-col gap-2 before:pointer-events-none before:absolute before:-inset-x-4 before:-top-8 before:-bottom-14 before:-z-10 before:bg-linear-to-t before:from-bg before:from-60% before:to-transparent lg:bottom-6">
       <BottomSheet
         open={open}
         onOpenChange={setOpen}

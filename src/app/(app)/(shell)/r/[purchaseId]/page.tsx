@@ -4,8 +4,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ConstellationArt } from "@/components/app/constellation";
+import { OfferList } from "@/components/readings/offer-list";
 import { ArticleField, Teaser } from "@/components/readings/reading-body";
-import { PairHero, type PairHeroPerson, SummaryFields } from "@/components/readings/reading-highlights";
+import {
+  PairHero,
+  type PairHeroPerson,
+  SummaryFields,
+} from "@/components/readings/reading-highlights";
 import { ScoreRing } from "@/components/readings/score-ring";
 import { SelectionShare } from "@/components/readings/selection-share";
 import { ShareCardButton } from "@/components/readings/share-card-button";
@@ -17,7 +22,9 @@ import { SUMMARY_FIELD_KINDS } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
+import { loadViewer, offersForPerson } from "@/server/catalog";
 import { db } from "@/server/db";
+import { getPerson } from "@/server/persons";
 import { ReadingNotFoundError, getReading, readingPeople } from "@/server/reading";
 
 export const metadata: Metadata = { title: mn.reading.pageTitle };
@@ -41,6 +48,15 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
   const people = reading.snapshot.persons.map((p, i) => ({ ...p, name: live[i]?.name ?? p.name }));
   const pair = people.length === 2;
   const t = mn.reading;
+  // After the text: what else there is to read about the same person — the owner's own person,
+  // and only what isn't bought yet. (A pair, or someone else's reading, ends with the text.)
+  const subject =
+    !pair && live[0] ? await getPerson(db, user.id, live[0].id).catch(() => null) : null;
+  const more = subject
+    ? (await offersForPerson(db, await loadViewer(db, user.id), subject))
+        .filter((o) => o.purchaseId === null)
+        .slice(0, 3)
+    : [];
 
   const personProps = (i: number): PairHeroPerson => ({
     name: people[i].name,
@@ -140,47 +156,77 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
           {summary.length > 0 && <SummaryFields fields={summary} />}
         </div>
 
-        <article className="flex flex-col gap-12 rounded-3xl bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-4xl lg:px-16 lg:pt-14 lg:pb-11">
-          <SelectionShare purchaseId={reading.id} className="flex flex-col gap-12">
-            {reading.sections.map((s) => {
-              const article = (s.fields ?? []).filter((f) => !isSummary(f.kind));
-              const lone = article.length === 1 && article[0].kind === "text";
-              return (
-                <section
-                  key={`${s.section}|${s.key}`}
-                  className="flex max-w-[640px] flex-col gap-8 lg:gap-10"
-                  aria-label={multiPart ? sectionLabel(s, signNames) : reading.productName}
-                >
-                  <header className="flex flex-col gap-3 lg:gap-3.5">
-                    {multiPart && (
-                      <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
-                        {sectionLabel(s, signNames)}
-                      </span>
-                    )}
-                    {s.fields === null ? (
-                      <p className="text-muted-foreground">{t.unavailable}</p>
-                    ) : s === headline ? (
-                      s.teaser && <Teaser text={s.teaser} className="mt-1" />
-                    ) : (
-                      <>
-                        <h2 className="text-[44px] leading-none font-semibold lg:text-[60px]">
-                          {s.title}
-                        </h2>
-                        {s.teaser && <Teaser text={s.teaser} className="mt-1" />}
-                      </>
-                    )}
-                  </header>
-                  {s.fields !== null &&
-                    article.map((f) => <ArticleField key={f.code} field={f} showHeading={!lone} />)}
-                </section>
-              );
-            })}
-          </SelectionShare>
-          <div className="flex max-w-[640px] flex-wrap items-center justify-between gap-3 border-t border-border pt-4.5 lg:pt-5">
-            <p className="text-xs text-muted-foreground">{t.bought(formatDate(reading.createdAt))}</p>
-            {reading.linkedPersonId && <UnlinkButton personId={reading.linkedPersonId} />}
-          </div>
-        </article>
+        <div className="flex min-w-0 flex-col gap-5">
+          <article className="flex flex-col gap-12 rounded-3xl bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-4xl lg:px-16 lg:pt-14 lg:pb-11">
+            <SelectionShare purchaseId={reading.id} className="flex flex-col gap-12">
+              {reading.sections.map((s) => {
+                const article = (s.fields ?? []).filter((f) => !isSummary(f.kind));
+                const lone = article.length === 1 && article[0].kind === "text";
+                return (
+                  <section
+                    key={`${s.section}|${s.key}`}
+                    className="flex max-w-[640px] flex-col gap-8 lg:gap-10"
+                    aria-label={multiPart ? sectionLabel(s, signNames) : reading.productName}
+                  >
+                    <header className="flex flex-col gap-3 lg:gap-3.5">
+                      {multiPart && (
+                        <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
+                          {sectionLabel(s, signNames)}
+                        </span>
+                      )}
+                      {s.fields === null ? (
+                        <p className="text-muted-foreground">{t.unavailable}</p>
+                      ) : s === headline ? (
+                        s.teaser && <Teaser text={s.teaser} className="mt-1" />
+                      ) : (
+                        <>
+                          <h2 className="text-[44px] leading-none font-semibold lg:text-[60px]">
+                            {s.title}
+                          </h2>
+                          {s.teaser && <Teaser text={s.teaser} className="mt-1" />}
+                        </>
+                      )}
+                    </header>
+                    {s.fields !== null &&
+                      article.map((f) => (
+                        <ArticleField key={f.code} field={f} showHeading={!lone} />
+                      ))}
+                  </section>
+                );
+              })}
+            </SelectionShare>
+            <div className="flex max-w-[640px] flex-wrap items-center justify-between gap-3 border-t border-border pt-4.5 lg:pt-5">
+              <p className="text-xs text-muted-foreground">
+                {t.bought(formatDate(reading.createdAt))}
+              </p>
+              {reading.linkedPersonId && <UnlinkButton personId={reading.linkedPersonId} />}
+            </div>
+          </article>
+          {/* Phones: the share button again, where the reading ends (on desktop the one beside
+            the text stays in view). */}
+          {SHARE_CARD.has(reading.productCode) && (
+            <div className="lg:hidden">
+              <ShareCardButton purchaseId={reading.id} />
+            </div>
+          )}
+          {subject && more.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <h2 className="text-2xl font-semibold">{t.next}</h2>
+              <OfferList
+                personId={subject.id}
+                offers={more.map((o) => ({
+                  code: o.product.code,
+                  name: o.product.nameMn,
+                  icon: o.product.icon,
+                  tint: o.product.tint,
+                  price: o.product.price,
+                  personCount: o.product.personCount,
+                  purchaseId: o.purchaseId,
+                }))}
+              />
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -114,6 +114,31 @@ export function todayLayout(
   };
 }
 
+/** The round top-bar buttons on home: 48px, 16px from the top. */
+const TOP_BAR = { y: 40, bottom: 64 };
+
+/**
+ * Phone "today", scrolled: the cards slide up over the big "me", which shrinks into the top
+ * bar (between the buttons) as they come, so the text gets the screen. `me` is where it ends
+ * up, `top` the top of the cards' scroll area, and `distance` how far the cards scroll to get
+ * there — "me" and its caption shrink in step with it, so the first card never covers them.
+ * Null on desktop: there the cards sit beside "me".
+ */
+export function todayCompact(
+  w: number,
+  h: number,
+): { me: Body; top: number; distance: number } | null {
+  if (w < DESKTOP_MIN_WIDTH) {
+    const top = TOP_BAR.bottom + 12;
+    return {
+      me: { x: w / 2, y: TOP_BAR.y, r: 22 },
+      top,
+      distance: todayLayout(w, h).panel.top - top,
+    };
+  }
+  return null;
+}
+
 /** Keeps a planet of radius r (plus its name below) inside the stage's free area. */
 export function clampToStage(p: Point, r: number, w: number, h: number, layout: PlanetLayout): Point {
   const { top, bottom, side } = layout.safe;

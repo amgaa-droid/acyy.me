@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Pencil, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -49,22 +49,34 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <section className="flex items-center gap-4 self-start rounded-3xl bg-surface p-5">
           <Avatar seed={self.avatarSeed} size={72} />
-          <div className="flex min-w-0 flex-col">
-            <span className="text-xl font-semibold">{self.name}</span>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-xl font-semibold">{self.name}</span>
             <span className="truncate text-sm text-muted-foreground">{user.email}</span>
             <span className="mt-1 text-sm">
               {sign.nameMn} · {formatBirthDate(self.birthDate)}
             </span>
-            {role && (
-              <Link
-                href="/admin"
-                className="mt-2 flex h-9 items-center gap-1.5 self-start rounded-full bg-tint-1 px-3 text-xs font-semibold text-highlight"
-              >
-                {mn.me.admin} · {mn.me.roles[role]}
-              </Link>
-            )}
           </div>
+          {/* My own page: the name and avatar are edited there. */}
+          <Link
+            href={`/people/${self.id}`}
+            aria-label={mn.people.edit}
+            className="flex size-11 shrink-0 items-center justify-center self-start rounded-full bg-subtle"
+          >
+            <Pencil className="size-4.5" aria-hidden />
+          </Link>
         </section>
+        {role && (
+          <Link
+            href="/admin"
+            className="flex h-14 w-full items-center gap-3 self-start rounded-3xl bg-tint-1 px-5 font-semibold text-highlight lg:col-start-1"
+          >
+            <ShieldCheck className="size-5" aria-hidden />
+            <span className="flex-1">
+              {mn.me.admin} · {mn.me.roles[role]}
+            </span>
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        )}
         <Link
           href="/wallet"
           className="flex w-full items-center justify-between self-start rounded-3xl bg-surface p-5 lg:col-start-1"
@@ -104,7 +116,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             error={typeof error === "string" ? error : undefined}
           />
         </div>
-        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-5 lg:row-start-1">
+        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-6 lg:row-start-1">
           <div>
             <h2 className="text-2xl font-semibold">{mn.me.appearance}</h2>
             <p className="text-sm text-muted-foreground">{mn.me.appearanceHint}</p>

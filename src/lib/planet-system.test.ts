@@ -18,6 +18,7 @@ import {
   ringAngles,
   scatter,
   seatCount,
+  todayCompact,
   todayLayout,
   toPx,
 } from "./planet-system";
@@ -236,5 +237,27 @@ describe("todayLayout", () => {
       expect(me.y + me.r).toBeLessThanOrEqual(h);
       expect(me.r).toBeGreaterThan(DESKTOP_LAYOUT.me.r);
     }
+  });
+});
+
+describe("todayCompact", () => {
+  it("phone: me ends in the top bar, the cards' area starts just under it", () => {
+    for (const [w, h] of [[360, 640], [390, 844], [430, 932]] as const) {
+      const full = todayLayout(w, h);
+      const c = todayCompact(w, h)!;
+      expect(c.me.x).toBe(w / 2);
+      expect(c.me.r).toBeLessThan(full.me.r);
+      // Inside the 48px bar, clear of the 16px gutter buttons on both sides.
+      expect(c.me.y - c.me.r).toBeGreaterThanOrEqual(16);
+      expect(c.me.y + c.me.r).toBeLessThanOrEqual(64);
+      expect(c.top).toBeGreaterThan(c.me.y + c.me.r);
+      // The cards travel exactly from under the big me to the new top.
+      expect(c.distance).toBe(full.panel.top - c.top);
+      expect(c.distance).toBeGreaterThan(0);
+    }
+  });
+
+  it("desktop: none — the cards sit beside me", () => {
+    expect(todayCompact(1440, 900)).toBeNull();
   });
 });

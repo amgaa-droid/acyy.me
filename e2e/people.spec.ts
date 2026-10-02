@@ -16,7 +16,7 @@ test("add a person, see their sign, edit, then delete", async ({ page }, info) =
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
 
   // 2. avatar
-  await page.getByRole("radio", { name: "Sage" }).click();
+  await page.getByRole("radio", { name: "Дүрс 19", exact: true }).click();
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
 
   // 3. info — default picker date 1990-01-01 → Матар

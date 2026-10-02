@@ -1,7 +1,7 @@
-import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Avatar } from "@/components/app/avatar";
 import { PageTitle } from "@/components/app/empty-state";
 import { PriceAction } from "@/components/readings/price-action";
 import { ProductIcon } from "@/components/readings/product-icon";
@@ -18,10 +18,14 @@ import {
 } from "@/server/catalog";
 import { db } from "@/server/db";
 import { listPurchases } from "@/server/purchase";
-import { linkedPairReadings, readingNames } from "@/server/reading";
+import { linkedPairReadings, readingCast } from "@/server/reading";
 
-export async function generateMetadata({ searchParams }: PageProps<"/readings">): Promise<Metadata> {
-  return { title: (await searchParams).tab === "mine" ? mn.readings.mine : mn.readings.catalogTitle };
+export async function generateMetadata({
+  searchParams,
+}: PageProps<"/readings">): Promise<Metadata> {
+  return {
+    title: (await searchParams).tab === "mine" ? mn.readings.mine : mn.readings.catalogTitle,
+  };
 }
 
 export default async function ReadingsPage({ searchParams }: PageProps<"/readings">) {
@@ -108,7 +112,7 @@ async function MyReadings({
     linkedPairReadings(db, userId),
   ]);
   const list = product ? all.filter((p) => p.productCode === product) : all;
-  const names = await readingNames(db, userId, list);
+  const cast = await readingCast(db, userId, list);
   const codes = [...new Set(all.map((p) => p.productCode))];
 
   if (all.length === 0 && linked.length === 0) {
@@ -147,10 +151,29 @@ async function MyReadings({
                   {catalog.get(p.productCode)?.nameMn ?? p.productCode}
                 </span>
                 <span className="truncate text-sm text-muted-foreground">
-                  {names.get(p.id)?.join(" × ")} · {formatDate(p.createdAt)}
+                  {cast
+                    .get(p.id)
+                    ?.map((c) => c.name)
+                    .join(" × ")}{" "}
+                  · {formatDate(p.createdAt)}
                 </span>
               </span>
-              <ChevronRight className="size-5 text-muted-foreground" aria-hidden />
+              {/* Whose it is, by face (people the viewer still has). */}
+              <span className="flex shrink-0 -space-x-2">
+                {cast
+                  .get(p.id)
+                  ?.map(
+                    (c, i) =>
+                      c.avatarSeed && (
+                        <Avatar
+                          key={i}
+                          seed={c.avatarSeed}
+                          size={32}
+                          className="border-2 border-surface bg-subtle"
+                        />
+                      ),
+                  )}
+              </span>
             </Link>
           </li>
         ))}
@@ -193,7 +216,7 @@ function FilterChip({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold whitespace-nowrap",
+        "flex h-11 shrink-0 items-center rounded-full px-4 text-sm font-semibold whitespace-nowrap",
         active ? "bg-primary text-primary-foreground" : "bg-surface",
       )}
     >

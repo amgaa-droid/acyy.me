@@ -51,6 +51,12 @@ export function formatDate(at: Date): string {
   return `${p.year}.${p.month}.${p.day}`;
 }
 
+/** A moment as the time of day in Mongolia, "18:27". */
+export function formatTime(at: Date): string {
+  const p = partsOf(at);
+  return `${p.hour}:${p.minute}`;
+}
+
 /** A moment as date and time in Mongolia, "2026.10.02 18:27". */
 export function formatDateTime(at: Date): string {
   const p = partsOf(at);

@@ -3,7 +3,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { useCloseAllModals } from "@/components/app/modal-scope";
 import { mn } from "@/i18n/mn";
@@ -29,6 +29,17 @@ export const SHEET = {
 export function RouteModal({ label, children }: { label: string; children: ReactNode }) {
   const router = useRouter();
   const closeAll = useCloseAllModals();
+
+  // The tab's title: home keeps its own while a popup is open (a slot's page has no say in the
+  // metadata), so the popup puts its screen's name there and takes it back on closing.
+  useEffect(() => {
+    const before = document.title;
+    const at = before.lastIndexOf(" · ");
+    document.title = `${label}${at < 0 ? "" : before.slice(at)}`;
+    return () => {
+      document.title = before;
+    };
+  }, [label]);
 
   return (
     <DialogPrimitive.Root

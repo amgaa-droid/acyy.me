@@ -8,6 +8,7 @@ import {
   formatDate,
   formatDateTime,
   formatMonthDay,
+  formatTime,
   isLeapYear,
   parseIsoDate,
   todayYmd,
@@ -95,6 +96,7 @@ describe("date formats", () => {
     const at = new Date("2026-12-31T17:05:00Z");
     expect(formatDate(at)).toBe("2027.01.01");
     expect(formatDateTime(at)).toBe("2027.01.01 01:05");
+    expect(formatTime(at)).toBe("01:05");
     // Midnight is 00, not 24.
     expect(formatDateTime(new Date("2026-10-02T16:00:00Z"))).toBe("2026.10.03 00:00");
   });

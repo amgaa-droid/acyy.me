@@ -24,6 +24,9 @@ import { createPersonAction } from "../actions";
 const t = mn.people;
 type OtherRelation = Exclude<Relation, "self">;
 
+/** One of the list, by chance. Only ever called from an event handler (a tap), never in render. */
+const anyOf = <T,>(list: readonly T[]): T | undefined => list[Math.floor(Math.random() * list.length)];
+
 /** /people/new: relation → avatar → name, birth date, gender (SPEC §6.1). */
 export function NewPersonFlow({
   avatars,
@@ -56,6 +59,12 @@ export function NewPersonFlow({
   // it), so it is read back, spelled out, before anything is saved.
   const [confirming, setConfirming] = useState(false);
   const closeAll = useCloseAllModals();
+
+  /** On to the avatars, with one already picked (a different one each time) so the step can be passed. */
+  const toAvatars = () => {
+    if (!avatarSeed) setAvatarSeed(anyOf(avatars)?.seed ?? "");
+    setStep(1);
+  };
 
   const labelOk = relation !== "other" || relationLabel.trim().length >= 1;
   const nameOk = name.trim().length >= 1 && name.trim().length <= 40;
@@ -95,7 +104,7 @@ export function NewPersonFlow({
   };
 
   const primary = [
-    { label: mn.common.next, disabled: !relation || !labelOk, onClick: () => setStep(1) },
+    { label: mn.common.next, disabled: !relation || !labelOk, onClick: toAvatars },
     { label: mn.common.next, disabled: !avatarSeed, onClick: () => setStep(2) },
     {
       label: t.save,
@@ -146,7 +155,11 @@ export function NewPersonFlow({
             <RelationPicker
               value={relation}
               label={relationLabel}
-              onChange={setRelation}
+              // A tap is the answer: move on. "Бусад" stays, it needs its own name typed.
+              onChange={(r) => {
+                setRelation(r);
+                if (r !== "other") toAvatars();
+              }}
               onLabelChange={setRelationLabel}
             />
           </Section>

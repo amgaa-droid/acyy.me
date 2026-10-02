@@ -194,6 +194,7 @@ export const mn = {
   login: {
     title: "Нэвтрэх",
     subtitle: "Имэйлээ оруулаад код авна уу. Шинэ бол автоматаар бүртгэгдэнэ.",
+    home: "Нүүр хуудас руу буцах",
     google: "Google-ээр нэвтрэх",
     facebook: "Facebook-ээр нэвтрэх",
     email: "Имэйл",
@@ -353,6 +354,8 @@ export const mn = {
     relationLabel: "Өөрөө нэрлэх",
     relationLabelPlaceholder: "Жишээ: Багш",
     avatarTitle: "Дүрс сонгох",
+    /** An avatar's name for a screen reader: they have no names of their own. */
+    avatarOption: (n: number) => `Дүрс ${n}`,
     infoTitle: "Мэдээлэл",
     name: "Нэр",
     birthDate: "Төрсөн огноо",
@@ -445,6 +448,8 @@ export const mn = {
     unavailable: "Энэ хэсгийн текст түр засварлагдаж байна.",
     score: "Оноо",
     freeView: "Танд хуваалцсан нийцэл",
+    /** After the text: other readings for the same person. */
+    next: "Дараагийн зурхай",
     /** Browser tab title of an opened reading. */
     pageTitle: "Миний зурхай",
     bought: (date: string) => `Авсан: ${date}`,

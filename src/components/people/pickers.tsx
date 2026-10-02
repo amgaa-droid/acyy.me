@@ -20,13 +20,13 @@ export function AvatarPicker({
 }) {
   return (
     <div className="grid grid-cols-5 gap-2.5 sm:grid-cols-6" role="radiogroup" aria-label={label}>
-      {avatars.map((a) => (
+      {avatars.map((a, i) => (
         <button
           key={a.seed}
           type="button"
           role="radio"
           aria-checked={value === a.seed}
-          aria-label={a.seed}
+          aria-label={mn.people.avatarOption(i + 1)}
           onClick={() => onChange(a.seed)}
           className={cn(
             "aspect-square overflow-hidden rounded-full bg-surface dark:bg-face ring-offset-2 ring-offset-bg transition-shadow",

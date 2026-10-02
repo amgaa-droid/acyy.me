@@ -335,7 +335,7 @@ export function LandingPlanets({
       {size && renderStage()}
 
       <p
-        className="pointer-events-none absolute bottom-16 left-1/2 z-20 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground"
+        className="pointer-events-none absolute bottom-16 left-1/2 z-20 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-surface/70 px-4 py-2 text-center text-[13px] leading-snug text-balance text-muted-foreground"
         style={{ bottom: 64 }}
       >
         {drag?.moved && drag.target ? tp.dropOn : copy.hint}

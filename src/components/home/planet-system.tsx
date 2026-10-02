@@ -42,6 +42,7 @@ import {
   pickLayout,
   rimLine,
   scatter,
+  todayCompact,
   todayLayout,
   toPct,
   toPx,
@@ -151,6 +152,16 @@ export function PlanetSystem({
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<HomeView>(initialView);
   const today = view === "today";
+  // Phone "today": once "me" has settled at the top, it follows the cards' scroll (it shrinks
+  // into the top bar as they slide up over it — see `todayCompact`). The scroll writes `--tp`
+  // (0 → 1) on the stage, so nothing re-renders while a finger is moving.
+  const todayPanel = useRef<HTMLElement>(null);
+  const [todayLive, setTodayLive] = useState(false);
+  useEffect(() => {
+    if (!today) return;
+    const timer = setTimeout(() => setTodayLive(true), 1000);
+    return () => clearTimeout(timer);
+  }, [today]);
   // The opening fly-out belongs to the planets; opening on "today" has nothing to fly.
   const [intro, setIntro] = useState(initialView === "planets");
   const [selected, setSelected] = useState<string | null>(null);
@@ -182,6 +193,10 @@ export function PlanetSystem({
     setDockOpen(false);
     setDrag(null);
     setView(next);
+    // "Me" travels between the views by its own transition, from wherever the scroll left it.
+    setTodayLive(false);
+    rootRef.current?.style.setProperty("--tp", "0");
+    if (todayPanel.current) todayPanel.current.scrollTop = 0;
     try {
       document.cookie = `${HOME_VIEW_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
     } catch {
@@ -334,10 +349,10 @@ export function PlanetSystem({
     if (!data.pairProduct) return null;
     const pa = a === ME ? data.me.id : a;
     const pb = b === ME ? data.me.id : b;
-    return `/buy/${data.pairProduct}?a=${pa}&b=${pb}`;
+    return `/buy/${data.pairProduct}?a=${pa}&b=${pb}&from=h`;
   };
   const readingHref = (personId: string, r: PlanetReading) =>
-    r.purchaseId ? `/r/${r.purchaseId}` : `/buy/${r.code}?a=${personId === ME ? data.me.id : personId}`;
+    r.purchaseId ? `/r/${r.purchaseId}` : `/buy/${r.code}?a=${personId === ME ? data.me.id : personId}&from=h`;
 
   /** Seats people (never "Хэн ч биш"); a newcomer takes over the place of whoever left. */
   const seat = (ids: string[], extra?: Partial<Record<LayoutKey, Record<string, Point>>>) => {
@@ -520,6 +535,14 @@ export function PlanetSystem({
     // "Today": me big beside my daily horoscopes; everything else folds into me.
     const tl = todayLayout(w, h);
     const meNow = today ? tl.me : me;
+    const tc = today ? todayCompact(w, h) : null;
+    /** Following the cards' scroll (see `todayLive`): sizes are `calc()`s of `--tp`, untransitioned. */
+    const live = tc !== null && todayLive;
+    /** `from` at rest, `to` once the cards have scrolled all the way up over "me". */
+    const shrink = (from: number, to: number, unit: "px" | "" = "px") =>
+      live ? `calc(${from}${unit} - var(--tp, 0) * ${from - to}${unit})` : unit ? from : String(from);
+    const meTop = shrink(meNow.y, tc?.me.y ?? meNow.y);
+    const meSize = (k: number) => shrink(meNow.r * k, (tc?.me.r ?? meNow.r) * k);
     // To "today": the planets fold in first. To the planets: me goes first, they follow.
     const meDelay = today ? "250ms" : "100ms";
 
@@ -761,13 +784,18 @@ export function PlanetSystem({
         */}
         <span
           aria-hidden
-          className={`pointer-events-none absolute -translate-1/2 transition-[left,top,scale] duration-700 ${SWAP_EASE} motion-reduce:transition-none`}
+          className={cn(
+            `pointer-events-none absolute -translate-1/2 transition-[left,top,scale] duration-700 ${SWAP_EASE} motion-reduce:transition-none`,
+            live && "transition-none!",
+          )}
           style={{
             left: meNow.x,
-            top: meNow.y,
+            top: meTop,
             width: me.r * 4.6,
             height: me.r * 4.6,
-            scale: String(today ? (meNow.r * 2.5) / (me.r * 4.6) : 1),
+            scale: today
+              ? shrink((meNow.r * 2.5) / (me.r * 4.6), ((tc?.me.r ?? meNow.r) * 2.5) / (me.r * 4.6), "")
+              : "1",
             transitionDelay: meDelay,
           }}
         >
@@ -778,8 +806,11 @@ export function PlanetSystem({
         </span>
         <span
           aria-hidden
-          className={`pointer-events-none absolute -translate-1/2 rounded-full border border-highlight/15 transition-[left,top,width,height] duration-700 ${SWAP_EASE} motion-reduce:transition-none`}
-          style={{ left: meNow.x, top: meNow.y, width: meNow.r * (today ? 3.2 : 7.8), height: meNow.r * (today ? 3.2 : 7.8), transitionDelay: meDelay }}
+          className={cn(
+            `pointer-events-none absolute -translate-1/2 rounded-full border border-highlight/15 transition-[left,top,width,height] duration-700 ${SWAP_EASE} motion-reduce:transition-none`,
+            live && "transition-none!",
+          )}
+          style={{ left: meNow.x, top: meTop, width: meSize(today ? 3.2 : 7.8), height: meSize(today ? 3.2 : 7.8), transitionDelay: meDelay }}
         />
 
         {/* Links of the tapped planet, rim to rim, with the chain in the middle. */}
@@ -943,13 +974,14 @@ export function PlanetSystem({
         <div
           className={cn(
             `absolute z-[16] -translate-1/2 transition-[left,top,width,height,opacity] duration-700 ${SWAP_EASE} motion-reduce:transition-none`,
+            live && "transition-none!",
             dim(ME),
           )}
           style={{
             left: meNow.x,
-            top: meNow.y,
-            width: meNow.r * 2,
-            height: meNow.r * 2,
+            top: meTop,
+            width: meSize(2),
+            height: meSize(2),
             transitionDelay: meDelay,
           }}
         >
@@ -987,7 +1019,7 @@ export function PlanetSystem({
               `pointer-events-none absolute top-full left-1/2 flex origin-top -translate-x-1/2 -translate-y-[18px] flex-col items-center gap-1 transition-[scale] duration-700 ${SWAP_EASE}`,
               today ? "scale-115 lg:scale-135" : "scale-100",
             )}
-            style={{ transitionDelay: meDelay }}
+            style={{ transitionDelay: meDelay, opacity: live ? "calc(1 - var(--tp, 0) * 3)" : undefined }}
           >
             <h1 className="max-w-48 truncate rounded-full bg-fg px-4 py-1 font-heading text-xl leading-tight font-semibold text-bg lg:text-2xl">
               {data.me.name}
@@ -1110,9 +1142,24 @@ export function PlanetSystem({
             "absolute z-20 flex touch-pan-y flex-col overflow-y-auto overscroll-contain transition-opacity duration-500 [scrollbar-width:none] max-lg:[mask-image:linear-gradient(to_bottom,transparent,black_14px)]",
             today ? "opacity-100 delay-[650ms]" : "pointer-events-none opacity-0 delay-0",
           )}
-          style={{ left: tl.panel.left, top: tl.panel.top, width: tl.panel.width, bottom: tl.panel.bottom }}
+          ref={todayPanel}
+          // Phone: the area reaches up to the top bar and its content starts under the big
+          // "me" (the padding below), so the cards can slide up over it as it shrinks.
+          onScroll={
+            tc
+              ? (e) =>
+                  rootRef.current?.style.setProperty(
+                    "--tp",
+                    String(Math.min(1, e.currentTarget.scrollTop / tc.distance)),
+                  )
+              : undefined
+          }
+          style={{ left: tl.panel.left, top: tc ? tc.top : tl.panel.top, width: tl.panel.width, bottom: tl.panel.bottom }}
         >
-          <div className="my-auto flex flex-col gap-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:gap-4 lg:py-2">
+          <div
+            className="my-auto flex flex-col gap-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:gap-4 lg:py-2"
+            style={tc ? { paddingTop: tc.distance + 12 } : undefined}
+          >
             <p className="px-1 text-center text-[13px] font-semibold text-highlight lg:text-left lg:text-sm">
               {mn.home.today.eyebrow(data.today.label, data.me.signName)}
             </p>

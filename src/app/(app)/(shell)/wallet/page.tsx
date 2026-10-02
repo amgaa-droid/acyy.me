@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { TopUpSheet } from "@/components/app/top-up-sheet";
 import { Button } from "@/components/ui/button";
 import { formatMnt, mn } from "@/i18n/mn";
-import { formatDateTime } from "@/lib/birth-date";
+import { formatDate, formatTime } from "@/lib/birth-date";
 import { cn } from "@/lib/utils";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
@@ -19,6 +19,14 @@ export default async function WalletPage() {
     listEntries(db, user.id, 100),
   ]);
   const t = mn.wallet;
+  // Newest first, a heading per day (Mongolia's calendar day).
+  const days: { day: string; entries: typeof entries }[] = [];
+  for (const e of entries) {
+    const day = formatDate(e.createdAt);
+    const last = days.at(-1);
+    if (last?.day === day) last.entries.push(e);
+    else days.push({ day, entries: [e] });
+  }
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:items-start">
@@ -53,33 +61,46 @@ export default async function WalletPage() {
             {t.historyEmpty}
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-3xl bg-surface">
-            {entries.map((e) => (
-              <li key={e.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                <span className="flex min-w-0 flex-col">
-                  <span className="font-medium">{t.types[e.type]}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {formatDateTime(e.createdAt)}
-                    {e.note && ` · ${e.note}`}
-                  </span>
-                </span>
-                <span className="flex flex-col items-end">
-                  <span
-                    className={cn(
-                      "font-semibold tabular-nums",
-                      e.amount > 0 ? "text-highlight" : "text-fg",
-                    )}
-                  >
-                    {e.amount > 0 ? "+" : "−"}
-                    {formatMnt(Math.abs(e.amount))}
-                  </span>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {formatMnt(e.balanceAfter)}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          days.map(({ day, entries: list }) => (
+            <section key={day} className="flex flex-col gap-2">
+              <h2 className="px-1 font-sans text-sm font-semibold tracking-normal text-muted-foreground tabular-nums">
+                {day}
+              </h2>
+              <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-3xl bg-surface">
+                {list.map((e) => {
+                  // A purchase is told apart by what was bought (the note), not by "Худалдан авалт".
+                  const bought = e.type === "purchase" && e.note;
+                  return (
+                    <li key={e.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate font-medium">
+                          {bought ? e.note : t.types[e.type]}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground tabular-nums">
+                          {formatTime(e.createdAt)}
+                          {bought ? ` · ${t.types[e.type]}` : e.note && ` · ${e.note}`}
+                        </span>
+                      </span>
+                      <span className="flex flex-col items-end">
+                        <span
+                          className={cn(
+                            "font-semibold tabular-nums",
+                            e.amount > 0 ? "text-highlight" : "text-fg",
+                          )}
+                        >
+                          {e.amount > 0 ? "+" : "−"}
+                          {formatMnt(Math.abs(e.amount))}
+                        </span>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {formatMnt(e.balanceAfter)}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))
         )}
       </section>
     </div>

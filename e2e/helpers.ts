@@ -53,7 +53,7 @@ export async function signUpFresh(page: Page, prefix = "e2e"): Promise<string> {
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("button", { name: "Алгасах" }).click();
-  await page.getByRole("radio", { name: "Nova" }).click();
+  await page.getByRole("radio", { name: "Дүрс 14", exact: true }).click();
   await page.getByRole("button", { name: "Дуусгах" }).click();
   await page.getByRole("button", { name: "Ертөнц рүүгээ орох" }).click();
   await expect(page).toHaveURL(/\/home$/);

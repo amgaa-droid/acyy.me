@@ -45,7 +45,7 @@ test("new user: email OTP → onboarding → home", async ({ page, context }, in
   await expect(page.getByText("Энэ огноог дараа нь өөрчлөх боломжгүй")).toBeVisible();
   await page.getByRole("button", { name: "Үргэлжлүүлэх" }).click();
   await page.getByRole("button", { name: "Алгасах" }).click();
-  await page.getByRole("radio", { name: "Nova" }).click();
+  await page.getByRole("radio", { name: "Дүрс 14", exact: true }).click();
   await page.getByRole("button", { name: "Дуусгах" }).click();
 
   // Default picker date 2000-01-01 → Матар.
