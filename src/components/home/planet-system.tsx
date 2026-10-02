@@ -511,6 +511,8 @@ export function PlanetSystem({
     // "Today": me big beside my daily horoscopes; everything else folds into me.
     const tl = todayLayout(w, h);
     const meNow = today ? tl.me : me;
+    // To "today": the planets fold in first. To the planets: me goes first, they follow.
+    const meDelay = today ? "250ms" : "100ms";
 
     // The "+N" dock: hidden people in a row near the bottom, as many as fit.
     const dockY = (layout.dock.y / 100) * h;
@@ -743,16 +745,32 @@ export function PlanetSystem({
 
     return (
       <>
-        {/* Orbits around me; on "today" they hug the big me as halos. */}
+        {/*
+          Orbits around me; on "today" they hug the big me as halos. They move with me (same
+          timing). The spinning dashed one never changes size — a running spin keeps its old
+          pivot when its box resizes (it would wobble off-centre) — so its wrapper scales instead.
+        */}
         <span
           aria-hidden
-          className={`pointer-events-none absolute -translate-1/2 rounded-full border-[1.5px] border-dashed border-highlight/25 transition-[left,top,width,height] duration-700 ${SWAP_EASE} motion-safe:animate-orbit-spin motion-reduce:transition-none`}
-          style={{ left: meNow.x, top: meNow.y, width: meNow.r * (today ? 2.5 : 4.6), height: meNow.r * (today ? 2.5 : 4.6), transitionDelay: today ? "150ms" : "0ms" }}
-        />
+          className={`pointer-events-none absolute -translate-1/2 transition-[left,top,scale] duration-700 ${SWAP_EASE} motion-reduce:transition-none`}
+          style={{
+            left: meNow.x,
+            top: meNow.y,
+            width: me.r * 4.6,
+            height: me.r * 4.6,
+            scale: String(today ? (meNow.r * 2.5) / (me.r * 4.6) : 1),
+            transitionDelay: meDelay,
+          }}
+        >
+          <span
+            key={Math.round(me.r * 4.6)}
+            className="absolute inset-0 rounded-full border-[1.5px] border-dashed border-highlight/25 motion-safe:animate-orbit-spin"
+          />
+        </span>
         <span
           aria-hidden
           className={`pointer-events-none absolute -translate-1/2 rounded-full border border-highlight/15 transition-[left,top,width,height] duration-700 ${SWAP_EASE} motion-reduce:transition-none`}
-          style={{ left: meNow.x, top: meNow.y, width: meNow.r * (today ? 3.2 : 7.8), height: meNow.r * (today ? 3.2 : 7.8), transitionDelay: today ? "150ms" : "0ms" }}
+          style={{ left: meNow.x, top: meNow.y, width: meNow.r * (today ? 3.2 : 7.8), height: meNow.r * (today ? 3.2 : 7.8), transitionDelay: meDelay }}
         />
 
         {/* Links of the tapped planet, rim to rim, with the chain in the middle. */}
@@ -923,8 +941,7 @@ export function PlanetSystem({
             top: meNow.y,
             width: meNow.r * 2,
             height: meNow.r * 2,
-            // To "today": the planets fold in first. To the planets: me goes first, they follow.
-            transitionDelay: today ? "250ms" : "100ms",
+            transitionDelay: meDelay,
           }}
         >
           <button
@@ -961,7 +978,7 @@ export function PlanetSystem({
               `pointer-events-none absolute top-full left-1/2 flex origin-top -translate-x-1/2 -translate-y-[18px] flex-col items-center gap-1 transition-[scale] duration-700 ${SWAP_EASE}`,
               today ? "scale-115 lg:scale-135" : "scale-100",
             )}
-            style={{ transitionDelay: today ? "250ms" : "100ms" }}
+            style={{ transitionDelay: meDelay }}
           >
             <h1 className="max-w-48 truncate rounded-full bg-fg px-4 py-1 font-heading text-xl leading-tight font-semibold text-bg lg:text-2xl">
               {data.me.name}

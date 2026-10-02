@@ -15,7 +15,7 @@ test("home opens on today's horoscopes and switches to the planets and back, rem
   await expect(today.getByRole("heading", { name: "Өнөөдрийн хайрын зурхай" })).toBeVisible();
   await expect(today.getByRole("heading", { name: "Өнөөдрийн ажлын зурхай" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Нарны систем рүү шилжих" }).click();
+  await page.getByRole("button", { name: "Миний ертөнц рүү шилжих" }).click();
   await expect(home).toHaveAttribute("data-view", "planets");
   await expect(page.getByRole("button", { name: /^Сарангэрэл, Ээж/ })).toBeVisible();
 

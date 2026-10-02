@@ -18,7 +18,7 @@ export async function showPlanets(page: Page) {
   const home = page.locator("[data-screen=home]");
   await expect(home).toBeVisible();
   if ((await home.getAttribute("data-view")) !== "planets") {
-    await page.getByRole("button", { name: "Нарны систем рүү шилжих" }).click();
+    await page.getByRole("button", { name: "Миний ертөнц рүү шилжих" }).click();
   }
   await expect(home).toHaveAttribute("data-view", "planets");
 }
@@ -55,7 +55,7 @@ export async function signUpFresh(page: Page, prefix = "e2e"): Promise<string> {
   await page.getByRole("button", { name: "Алгасах" }).click();
   await page.getByRole("radio", { name: "Nova" }).click();
   await page.getByRole("button", { name: "Дуусгах" }).click();
-  await page.getByRole("button", { name: "Орчлон руугаа орох" }).click();
+  await page.getByRole("button", { name: "Ертөнц рүүгээ орох" }).click();
   await expect(page).toHaveURL(/\/home$/);
   return email;
 }

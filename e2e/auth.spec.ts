@@ -50,7 +50,7 @@ test("new user: email OTP → onboarding → home", async ({ page, context }, in
 
   // Default picker date 2000-01-01 → Матар.
   await expect(page.getByText("Матар")).toBeVisible();
-  await page.getByRole("button", { name: "Орчлон руугаа орох" }).click();
+  await page.getByRole("button", { name: "Ертөнц рүүгээ орох" }).click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("heading", { name: "Туршилт" })).toBeVisible();
 });
