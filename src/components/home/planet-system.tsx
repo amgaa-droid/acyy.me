@@ -23,6 +23,7 @@ import { ThemeSwitch } from "@/components/app/theme-toggle";
 import { WalletChip } from "@/components/app/wallet-chip";
 import { PRODUCT_ICON_COMPONENTS, PRODUCT_TINT_CLASSES } from "@/components/readings/product-icon";
 import { mn } from "@/i18n/mn";
+import { BIRTHDAY_PRODUCT } from "@/lib/catalog-refs";
 import { HOME_VIEW_COOKIE, type HomeView } from "@/lib/daily";
 import { isOffOrbit, type ProductIconName, type ProductTint } from "@/lib/domain";
 import { guideState, type GuideStep, type OnboardingMark, type OnboardingProgress } from "@/lib/onboarding";
@@ -762,7 +763,7 @@ export function PlanetSystem({
     // dragging or while a sheet or the dock is open.
     const guideOn =
       guide.active && !guide.welcome && !intro && !today && !drag?.moved && !menuOpen && !foldedFor && !showDock;
-    const birthday = data.me.readings.find((r) => r.code === "birthday") ?? data.me.readings[0];
+    const birthday = data.me.readings.find((r) => r.code === BIRTHDAY_PRODUCT) ?? data.me.readings[0];
     const guideSelf = guideOn && guide.current === "self";
     const guideAdd = guideOn && guide.current === "add" && data.people.length === 0;
     const guideLinkId =

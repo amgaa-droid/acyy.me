@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { BIRTHDAY_PART, BIRTHDAY_PRODUCT } from "@/lib/catalog-refs";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { isMonthDay, type MonthDay } from "@/server/astro/calendar";
 import type { AppDb } from "@/server/db/types";
@@ -35,7 +36,7 @@ export async function revealBirthday(db: AppDb, md: MonthDay): Promise<LandingRe
   const refs = await loadAstroRefs(db);
   // Any leap year works: only the month-day matters for sign, period and content key.
   const { sign, period } = describeBirthDate(`2000-${md}`, refs);
-  const preview = await getPreview(db, "birthday", { main: md });
+  const preview = await getPreview(db, BIRTHDAY_PRODUCT, { [BIRTHDAY_PART]: md });
   const main = preview.sections[0];
   return {
     sign,

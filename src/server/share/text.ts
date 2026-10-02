@@ -1,5 +1,6 @@
 import { mn } from "@/i18n/mn";
 import { parseIsoDate } from "@/lib/birth-date";
+import { STRENGTHS_FIELD } from "@/lib/catalog-refs";
 import { fieldItems, isItemKind } from "@/lib/fields";
 import { splitSentences } from "@/lib/preview";
 import type { ReadingSection } from "@/server/reading";
@@ -39,7 +40,7 @@ export type CardList = { label: string; items: string[] };
 export function cardStrengths(sections: ReadingSection[]): CardList | null {
   for (const s of sections) {
     if (s.keyType !== "month_day") continue;
-    const field = s.fields?.find((f) => f.code === "strengths" && isItemKind(f.kind));
+    const field = s.fields?.find((f) => f.code === STRENGTHS_FIELD && isItemKind(f.kind));
     if (!field) continue;
     const items = fieldItems(field.value, field.kind);
     if (items.length > 0) return { label: mn.share.bornOnDay(field.name), items };

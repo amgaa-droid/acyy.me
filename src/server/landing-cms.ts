@@ -1,3 +1,4 @@
+import { RELATION_CHIP_FIELDS, SYNASTRY_PRODUCT } from "@/lib/catalog-refs";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import {
@@ -235,14 +236,15 @@ export async function getLandingVersion(db: AppDb, id: string): Promise<LandingC
  * offered as suggestions so the landing's examples match the product.
  */
 export async function relationSuggestions(db: AppDb, limit = 24): Promise<string[]> {
+  const [goodFor, cautionFor] = RELATION_CHIP_FIELDS;
   const rows = await db.execute<{ chip: string; n: number }>(sql`
     select trim(chip) as chip, count(*)::int as n
     from content_entries,
       lateral regexp_split_to_table(
-        coalesce(fields->>'good_for', '') || ',' || coalesce(fields->>'caution_for', ''),
+        coalesce(fields->>${goodFor}, '') || ',' || coalesce(fields->>${cautionFor}, ''),
         E'[,\\n]'
       ) as chip
-    where product_code = 'synastry' and trim(chip) <> ''
+    where product_code = ${SYNASTRY_PRODUCT} and trim(chip) <> ''
     group by 1
     order by 2 desc
     limit ${limit}`);

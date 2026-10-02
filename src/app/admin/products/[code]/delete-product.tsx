@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { mn } from "@/i18n/mn";
 import { deleteProductAction } from "../../actions";
-import { Status, resultMsg, type Msg } from "../ui";
+import { Status, resultMsg, withAppUseConfirm, type Msg } from "../ui";
 
 const t = mn.admin.productsPage;
 
@@ -25,7 +25,9 @@ export function DeleteProduct({ code }: { code: string }) {
         onClick={() => {
           if (!confirm(t.deleteConfirm)) return;
           startTransition(async () => {
-            const res = await deleteProductAction(code);
+            const res = await withAppUseConfirm((acknowledge) =>
+              deleteProductAction(code, acknowledge),
+            );
             setMsg(resultMsg(res, t.deleted));
             if (res.ok) router.push("/admin/products");
           });

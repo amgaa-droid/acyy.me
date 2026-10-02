@@ -1,4 +1,5 @@
 import { formatBirthDate } from "@/lib/birth-date";
+import { SYNASTRY_PRODUCT } from "@/lib/catalog-refs";
 import { dayLabel, todayIso } from "@/lib/daily";
 import { RELATION_GROUP, isOffOrbit, type Relation, type RelationGroup } from "@/lib/domain";
 import { avatarDataUri } from "@/lib/avatars";
@@ -133,7 +134,9 @@ export async function loadPlanetSystem(
   );
   const pairCandidates = [...products.values()].filter((p) => p.personCount === 2 && p.isActive);
   const pairProduct =
-    pairCandidates.find((p) => p.code === "synastry")?.code ?? pairCandidates[0]?.code ?? null;
+    pairCandidates.find((p) => p.code === SYNASTRY_PRODUCT)?.code ??
+    pairCandidates[0]?.code ??
+    null;
 
   return {
     me: {

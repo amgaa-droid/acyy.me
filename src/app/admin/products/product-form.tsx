@@ -12,7 +12,16 @@ import { mn } from "@/i18n/mn";
 import { PRODUCT_ICONS, PRODUCT_TINTS, RELATION_GROUPS } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { updateProductAction } from "../actions";
-import { Field, Status, Toggle, inputClass, resultMsg, type Msg } from "./ui";
+import {
+  AppUseBadge,
+  Field,
+  Status,
+  Toggle,
+  inputClass,
+  resultMsg,
+  withAppUseConfirm,
+  type Msg,
+} from "./ui";
 
 const t = mn.admin.productsPage;
 
@@ -53,18 +62,21 @@ export function ProductForm({ product }: { product: ProductSettings }) {
 
   const save = () =>
     startTransition(async () => {
-      const res = await updateProductAction({
-        code: product.code,
-        nameMn,
-        description,
-        price: Number(price),
-        sort: Number(sort || 0),
-        isActive,
-        adultOnly,
-        allowedGroups: [...groups],
-        icon,
-        tint,
-      });
+      const res = await withAppUseConfirm((acknowledge) =>
+        updateProductAction({
+          code: product.code,
+          nameMn,
+          description,
+          price: Number(price),
+          sort: Number(sort || 0),
+          isActive,
+          adultOnly,
+          allowedGroups: [...groups],
+          icon,
+          tint,
+          acknowledge,
+        }),
+      );
       const m = resultMsg(res, t.saved);
       setMsg(
         res.ok && res.missing
@@ -78,6 +90,7 @@ export function ProductForm({ product }: { product: ProductSettings }) {
       <div className="flex items-center gap-3">
         <ProductIcon product={{ icon, tint }} />
         <h2 className="text-xl font-semibold">{t.settings}</h2>
+        <AppUseBadge target={{ product: product.code }} />
       </div>
       <Field label={t.name}>
         <input

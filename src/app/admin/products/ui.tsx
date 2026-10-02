@@ -1,6 +1,7 @@
 "use client";
 
 import { mn } from "@/i18n/mn";
+import { appUses, type CatalogTarget } from "@/lib/catalog-refs";
 import { cn } from "@/lib/utils";
 import type { CatalogResult } from "../actions";
 
@@ -100,6 +101,35 @@ export function resultMsg(res: CatalogResult, okText: string): Msg {
   return res.ok
     ? { ok: true, text: okText }
     : { ok: false, text: errors[res.error] ?? errors.generic };
+}
+
+const usedByApp = mn.admin.productsPage.usedByApp;
+
+/**
+ * Runs a catalog action. If the server says the app's own screens use the row ("used_by_app"),
+ * shows which ones and — only if the admin agrees — runs it again with the acknowledgement.
+ */
+export async function withAppUseConfirm(
+  action: (acknowledge: boolean) => Promise<CatalogResult>,
+): Promise<CatalogResult> {
+  const res = await action(false);
+  if (res.ok || res.error !== "used_by_app") return res;
+  const uses = (res.uses ?? []).map((u) => usedByApp.uses[u]);
+  return confirm(usedByApp.confirm(uses)) ? action(true) : res;
+}
+
+/** Marks a product, part or field that the app's own screens read (hover: which ones). */
+export function AppUseBadge({ target }: { target: CatalogTarget }) {
+  const uses = appUses(target);
+  if (uses.length === 0) return null;
+  return (
+    <span
+      title={usedByApp.hint(uses.map((u) => usedByApp.uses[u]))}
+      className="rounded-full bg-tint-2 px-2 py-0.5 font-sans text-xs font-medium text-fg"
+    >
+      {usedByApp.badge}
+    </span>
+  );
 }
 
 export function Status({ msg }: { msg: Msg }) {

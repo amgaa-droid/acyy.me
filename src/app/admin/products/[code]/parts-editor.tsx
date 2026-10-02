@@ -35,7 +35,18 @@ import {
   updatePartAction,
   type CatalogResult,
 } from "../../actions";
-import { Field, Select, Status, Toggle, inputClass, resultMsg, toCode, type Msg } from "../ui";
+import {
+  AppUseBadge,
+  Field,
+  Select,
+  Status,
+  Toggle,
+  inputClass,
+  resultMsg,
+  toCode,
+  withAppUseConfirm,
+  type Msg,
+} from "../ui";
 
 const t = mn.admin.productsPage;
 
@@ -66,14 +77,17 @@ const kindOptions = FIELD_KINDS.map((k) => ({
   label: `${mn.admin.fieldKinds[k]} — ${mn.admin.fieldKindHints[k]}`,
 }));
 
-/** Runs a catalog action, shows its result and refreshes the page data on success. */
+/**
+ * Runs a catalog action, shows its result and refreshes the page data on success. `fn` gets
+ * `acknowledge`: true once the admin agreed to change a row the app's own screens use.
+ */
 function useCatalogAction() {
   const router = useRouter();
   const [msg, setMsg] = useState<Msg>(null);
   const [pending, startTransition] = useTransition();
-  const run = (fn: () => Promise<CatalogResult>, onOk?: () => void) =>
+  const run = (fn: (acknowledge: boolean) => Promise<CatalogResult>, onOk?: () => void) =>
     startTransition(async () => {
-      const res = await fn();
+      const res = await withAppUseConfirm(fn);
       setMsg(res.ok ? null : resultMsg(res, t.saved));
       if (res.ok) {
         onOk?.();
@@ -159,7 +173,7 @@ function PartCard({
     }
     if (!ok) return;
     run(
-      () =>
+      (acknowledge) =>
         updatePartAction({
           productCode,
           code: part.code,
@@ -167,6 +181,7 @@ function PartCard({
           keyType,
           byGender,
           confirm: keysChange,
+          acknowledge,
         }),
       () => setEditing(false),
     );
@@ -175,7 +190,9 @@ function PartCard({
   const remove = () => {
     const text = part.realTexts > 0 ? t.deletePartWithTexts(part.realTexts) : t.deletePartConfirm;
     if (confirm(text)) {
-      run(() => deletePartAction({ productCode, partCode: part.code, confirm: true }));
+      run((acknowledge) =>
+        deletePartAction({ productCode, partCode: part.code, confirm: true, acknowledge }),
+      );
     }
   };
 
@@ -191,6 +208,7 @@ function PartCard({
           <h3 className="flex flex-wrap items-center gap-2 text-xl font-semibold">
             {part.nameMn}
             {part.archived && <Badge className="text-xs font-medium">{t.archived}</Badge>}
+            <AppUseBadge target={{ product: productCode, part: part.code }} />
           </h3>
           <p className="text-sm text-muted-foreground">
             <span className="font-mono">{part.code}</span> · {mn.admin.keyTypes[part.keyType]}
@@ -235,8 +253,13 @@ function PartCard({
               label={part.archived ? t.restore : t.archivePart}
               disabled={pending || isOnlyActive}
               onClick={() =>
-                run(() =>
-                  archivePartAction({ productCode, partCode: part.code, archived: !part.archived }),
+                run((acknowledge) =>
+                  archivePartAction({
+                    productCode,
+                    partCode: part.code,
+                    archived: !part.archived,
+                    acknowledge,
+                  }),
                 )
               }
             >
@@ -366,6 +389,7 @@ function FieldRow({
             {field.isFree && <Badge className="bg-tint-3 text-fg">{mn.admin.content.free}</Badge>}
             {field.required && <Badge>{t.required}</Badge>}
             {field.archived && <Badge>{t.archived}</Badge>}
+            <AppUseBadge target={{ product: productCode, part: partCode, field: field.code }} />
             {field.used > 0 && <span>{t.usedIn(field.used)}</span>}
           </span>
         </div>
@@ -392,7 +416,11 @@ function FieldRow({
           <IconButton
             label={field.archived ? t.restore : t.archive}
             disabled={pending}
-            onClick={() => run(() => archiveFieldAction({ ...ref, archived: !field.archived }))}
+            onClick={() =>
+              run((acknowledge) =>
+                archiveFieldAction({ ...ref, archived: !field.archived, acknowledge }),
+              )
+            }
           >
             {field.archived ? <ArchiveRestore /> : <Archive />}
           </IconButton>
@@ -401,7 +429,9 @@ function FieldRow({
               label={t.delete}
               disabled={pending}
               onClick={() => {
-                if (confirm(t.deleteFieldConfirm)) run(() => deleteFieldAction(ref));
+                if (confirm(t.deleteFieldConfirm)) {
+                  run((acknowledge) => deleteFieldAction({ ...ref, acknowledge }));
+                }
               }}
             >
               <Trash2 />
@@ -432,7 +462,8 @@ function FieldRow({
               disabled={pending || !nameMn.trim()}
               onClick={() =>
                 run(
-                  () => updateFieldAction({ ...ref, nameMn, kind, isFree, required }),
+                  (acknowledge) =>
+                    updateFieldAction({ ...ref, nameMn, kind, isFree, required, acknowledge }),
                   () => setEditing(false),
                 )
               }

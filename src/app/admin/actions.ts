@@ -27,6 +27,7 @@ import {
   UnknownContentKeyError,
   saveContentEntry,
 } from "@/server/admin/content";
+import type { AppUse } from "@/lib/catalog-refs";
 import type { CoverageIssue } from "@/server/astro/coverage";
 import { db } from "@/server/db";
 import { findKind } from "@/server/import/kinds";
@@ -94,7 +95,8 @@ export async function savePeriodRangesAction(input: unknown): Promise<RangesResu
 
 export type CatalogResult =
   | { ok: true; missing?: number }
-  | { ok: false; error: CatalogError["code"] | "invalid" | "generic" };
+  /** `uses`: with "used_by_app", the app screens that depend on the row (ask, then acknowledge). */
+  | { ok: false; error: CatalogError["code"] | "invalid" | "generic"; uses?: AppUse[] };
 
 async function catalogAction(
   fn: (actorId: string) => Promise<{ missing?: number } | void>,
@@ -108,7 +110,9 @@ async function catalogAction(
     revalidatePath("/admin");
     return { ok: true, ...(res ?? {}) };
   } catch (err) {
-    if (err instanceof CatalogError) return { ok: false, error: err.code };
+    if (err instanceof CatalogError) {
+      return { ok: false, error: err.code, ...(err.uses.length ? { uses: err.uses } : {}) };
+    }
     if (err instanceof z.ZodError) return { ok: false, error: "invalid" };
     console.error("[admin:products]", err);
     return { ok: false, error: "generic" };
@@ -130,8 +134,13 @@ export async function updateProductAction(input: unknown): Promise<CatalogResult
   }, code);
 }
 
-export async function deleteProductAction(code: string): Promise<CatalogResult> {
-  return catalogAction((actor) => deleteProduct(db, actor, code));
+export async function deleteProductAction(
+  code: string,
+  acknowledge = false,
+): Promise<CatalogResult> {
+  return catalogAction((actor) =>
+    deleteProduct(db, actor, code, { acknowledge: acknowledge === true }),
+  );
 }
 
 export async function addPartAction(input: unknown): Promise<CatalogResult> {
@@ -146,6 +155,7 @@ export async function deletePartAction(input: {
   productCode: string;
   partCode: string;
   confirm?: boolean;
+  acknowledge?: boolean;
 }): Promise<CatalogResult> {
   return catalogAction((actor) => deletePart(db, actor, input), productOf(input));
 }
@@ -154,6 +164,7 @@ export async function archivePartAction(input: {
   productCode: string;
   partCode: string;
   archived: boolean;
+  acknowledge?: boolean;
 }): Promise<CatalogResult> {
   return catalogAction((actor) => setPartArchived(db, actor, input), productOf(input));
 }
@@ -162,6 +173,7 @@ export async function deleteFieldAction(input: {
   productCode: string;
   partCode: string;
   code: string;
+  acknowledge?: boolean;
 }): Promise<CatalogResult> {
   return catalogAction((actor) => deleteField(db, actor, input), productOf(input));
 }
@@ -179,6 +191,7 @@ export async function archiveFieldAction(input: {
   partCode: string;
   code: string;
   archived: boolean;
+  acknowledge?: boolean;
 }): Promise<CatalogResult> {
   return catalogAction((actor) => setFieldArchived(db, actor, input), productOf(input));
 }

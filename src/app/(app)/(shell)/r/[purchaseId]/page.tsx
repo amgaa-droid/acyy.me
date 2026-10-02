@@ -17,6 +17,7 @@ import { ShareCardButton } from "@/components/readings/share-card-button";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { mn } from "@/i18n/mn";
 import { formatBirthDate, formatDate } from "@/lib/birth-date";
+import { SHARE_CARD_PRODUCTS } from "@/lib/catalog-refs";
 import { sectionLabel } from "@/lib/content-keys-display";
 import { SUMMARY_FIELD_KINDS } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
@@ -30,7 +31,7 @@ import { ReadingNotFoundError, getReading, readingPeople } from "@/server/readin
 export const metadata: Metadata = { title: mn.reading.pageTitle };
 
 /** Readings with a "Хуваалцах" card button (top right); the rest share only selected text. */
-const SHARE_CARD = new Set(["birthday", "synastry"]);
+const SHARE_CARD = new Set(SHARE_CARD_PRODUCTS);
 
 /** The reading (SPEC §6.1 /r/[purchaseId]). Full text only reaches this page via getReading(). */
 export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]">) {

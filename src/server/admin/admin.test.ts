@@ -544,3 +544,111 @@ describe("sign pair → ordered sign pair", () => {
     expect((await contentCoverage(db)).find((c) => c.product === "pairs")?.expected).toBe(144);
   });
 });
+
+describe("catalog rows the app's own screens use", () => {
+  const strengths = { productCode: "birthday", partCode: "main", code: "strengths" };
+  const fieldOf = async (code: string) =>
+    (await loadProductDef(db, "birthday"))!.parts[0].fields.find((f) => f.code === code)!;
+  const settingsOf = async (code: string) => {
+    const [p] = await db.select().from(products).where(eq(products.code, code));
+    return {
+      code,
+      nameMn: p.nameMn,
+      description: p.description,
+      price: p.price,
+      sort: p.sort,
+      isActive: p.isActive,
+      adultOnly: p.adultOnly,
+      allowedGroups: p.allowedGroups as never,
+      icon: p.icon as never,
+      tint: p.tint as never,
+    };
+  };
+
+  it("archiving the share card's list needs an acknowledgement, which is audited", async () => {
+    await expect(
+      setFieldArchived(db, actor, { ...strengths, archived: true }),
+    ).rejects.toMatchObject({ code: "used_by_app", uses: ["share_strengths"] });
+    expect((await fieldOf("strengths")).archivedAt).toBeNull();
+
+    await setFieldArchived(db, actor, { ...strengths, archived: true, acknowledge: true });
+    expect((await fieldOf("strengths")).archivedAt).not.toBeNull();
+    const logs = await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.entityId, "birthday.main.strengths"));
+    expect(logs.at(-1)).toMatchObject({
+      action: "product.field.archive",
+      data: { usedByApp: ["share_strengths"] },
+    });
+
+    // Bringing it back never asks; neither does a field no screen reads.
+    await setFieldArchived(db, actor, { ...strengths, archived: false });
+    await setFieldArchived(db, actor, { ...strengths, code: "health", archived: true });
+    await setFieldArchived(db, actor, { ...strengths, code: "health", archived: false });
+  });
+
+  it("turning that list into prose asks; another item kind doesn't", async () => {
+    const base = { ...strengths, nameMn: "Давуу тал", isFree: true, required: false };
+    await updateField(db, actor, { ...base, kind: "cards" });
+    await expect(updateField(db, actor, { ...base, kind: "text" })).rejects.toMatchObject({
+      code: "used_by_app",
+    });
+    expect((await fieldOf("strengths")).kind).toBe("cards");
+    await updateField(db, actor, { ...base, kind: "list" });
+  });
+
+  it("taking the birthday reading off sale asks; other edits and other products don't", async () => {
+    const birthday = await settingsOf("birthday");
+    await updateProduct(db, actor, { ...birthday, price: birthday.price + 100 });
+    await expect(updateProduct(db, actor, { ...birthday, isActive: false })).rejects.toMatchObject({
+      code: "used_by_app",
+      uses: ["landing_reveal", "landing_price", "first_reading"],
+    });
+    expect((await settingsOf("birthday")).isActive).toBe(true);
+
+    await updateProduct(db, actor, { ...birthday, isActive: false, acknowledge: true });
+    // Already off sale: saving it again has nothing left to ask about.
+    await updateProduct(db, actor, { ...birthday, isActive: false });
+    await updateProduct(db, actor, birthday);
+
+    const sign = await settingsOf("sign");
+    await updateProduct(db, actor, { ...sign, isActive: false });
+    await updateProduct(db, actor, sign);
+  });
+
+  it("archiving or re-keying the birthday part, or deleting a product, asks as well", async () => {
+    const main = { productCode: "birthday", partCode: "main" };
+    await addPart(db, actor, {
+      productCode: "birthday",
+      code: "extra",
+      nameMn: "Нэмэлт",
+      keyType: "month_day",
+    });
+    await expect(setPartArchived(db, actor, { ...main, archived: true })).rejects.toMatchObject({
+      code: "used_by_app",
+      uses: ["landing_reveal", "share_strengths"],
+    });
+    await expect(deletePart(db, actor, { ...main, confirm: true })).rejects.toMatchObject({
+      code: "used_by_app",
+    });
+    await expect(
+      updatePart(db, actor, {
+        productCode: "birthday",
+        code: "main",
+        nameMn: "Төрсөн өдөр",
+        keyType: "month_day",
+        byGender: true,
+        confirm: true,
+      }),
+    ).rejects.toMatchObject({ code: "used_by_app" });
+    // The new part is nobody's business: it goes without a question.
+    await deletePart(db, actor, { productCode: "birthday", partCode: "extra" });
+
+    await expect(deleteProduct(db, actor, "synastry")).rejects.toMatchObject({
+      code: "used_by_app",
+      uses: ["pair_default", "landing_price"],
+    });
+    expect(await loadProductDef(db, "synastry")).not.toBeNull();
+  });
+});

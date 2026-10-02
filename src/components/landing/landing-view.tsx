@@ -15,6 +15,7 @@ import { formatMnt, mn } from "@/i18n/mn";
 import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
 import { avatarDataUri } from "@/lib/avatars";
 import { formatBirthDate } from "@/lib/birth-date";
+import { BIRTHDAY_PRODUCT, SYNASTRY_PRODUCT } from "@/lib/catalog-refs";
 import { fillTokens, type BodySection, type LandingContent } from "@/lib/landing-content";
 import { cn } from "@/lib/utils";
 import { describeBirthDate, type AstroRefs } from "@/server/astro/refs";
@@ -45,8 +46,8 @@ export function LandingView({
   daily: LandingDaily | null;
 }) {
   const t = mn.landing;
-  const birthdayPrice = products.find((p) => p.code === "birthday")?.price ?? 2000;
-  const synastry = products.find((p) => p.code === "synastry");
+  const birthdayPrice = products.find((p) => p.code === BIRTHDAY_PRODUCT)?.price ?? 2000;
+  const synastry = products.find((p) => p.code === SYNASTRY_PRODUCT);
   const cheapest = products.length ? Math.min(...products.map((p) => p.price)) : 1000;
   const best = bestValueIndex(packages);
   const f = (s: string) =>

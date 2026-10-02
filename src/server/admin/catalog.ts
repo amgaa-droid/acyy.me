@@ -11,6 +11,8 @@ import {
   PRODUCT_TINTS,
   RELATION_GROUPS,
 } from "@/lib/domain";
+import { appUsesOf, type AppUse, type CatalogChange, type CatalogTarget } from "@/lib/catalog-refs";
+import { isItemKind } from "@/lib/fields";
 import { isMonthDay } from "@/server/astro/calendar";
 import { validateCoverage, type CoverageIssue } from "@/server/astro/coverage";
 import { logAudit } from "@/server/audit";
@@ -121,11 +123,32 @@ export class CatalogError extends Error {
       | "arity_mismatch"
       | "last_part"
       | "needs_confirm"
-      | "not_ready",
+      | "not_ready"
+      | "used_by_app",
+    /** For `used_by_app`: the screens that would lose something. */
+    readonly uses: AppUse[] = [],
   ) {
     super(code);
   }
 }
+
+/**
+ * A few catalog rows are read by the app's own screens (src/lib/catalog-refs.ts). Changing one
+ * in a way that empties such a screen needs the admin's explicit OK (`acknowledge`); the screens
+ * it affects are returned for the audit log.
+ */
+function assertAcknowledged(
+  target: CatalogTarget,
+  change: CatalogChange,
+  acknowledge: boolean,
+): { usedByApp?: AppUse[] } {
+  const uses = appUsesOf(target, change);
+  if (uses.length && !acknowledge) throw new CatalogError("used_by_app", uses);
+  return uses.length ? { usedByApp: uses } : {};
+}
+
+/** "I know the app's own screens use this" — see assertAcknowledged. */
+const acknowledge = z.boolean().default(false);
 
 const codeSchema = z.string().trim().regex(CODE_PATTERN);
 const nameSchema = z.string().trim().min(1).max(80);
@@ -152,6 +175,7 @@ const productUpdateSchema = z.object({
   sort: z.coerce.number().int().min(0).max(1000),
   icon: z.enum(PRODUCT_ICONS),
   tint: z.enum(PRODUCT_TINTS),
+  acknowledge,
 });
 type ProductUpdate = z.input<typeof productUpdateSchema>;
 
@@ -163,6 +187,7 @@ const partInputSchema = z.object({
   byGender: z.boolean().default(false),
   /** The admin agreed to delete / convert the part's real texts (see updatePart). */
   confirm: z.boolean().default(false),
+  acknowledge,
 });
 type PartInput = z.input<typeof partInputSchema>;
 
@@ -174,10 +199,11 @@ const fieldInputSchema = z.object({
   kind: z.enum(FIELD_KINDS),
   isFree: z.boolean().default(false),
   required: z.boolean().default(false),
+  acknowledge,
 });
 type FieldInput = z.input<typeof fieldInputSchema>;
 
-const partRefSchema = z.object({ productCode: codeSchema, partCode: codeSchema });
+const partRefSchema = z.object({ productCode: codeSchema, partCode: codeSchema, acknowledge });
 const fieldRefSchema = partRefSchema.extend({ code: codeSchema });
 const moveSchema = z.object({
   productCode: codeSchema,
@@ -293,9 +319,13 @@ export async function createProduct(db: AppDb, actorId: string, input: ProductCr
  * so the admin sees a warning.
  */
 export async function updateProduct(db: AppDb, actorId: string, input: ProductUpdate) {
-  const { code, ...data } = productUpdateSchema.parse(input);
+  const { code, acknowledge, ...data } = productUpdateSchema.parse(input);
   const result = await db.transaction(async (tx) => {
     const before = await getProductRow(tx, code);
+    const ack =
+      before.isActive && !data.isActive
+        ? assertAcknowledged({ product: code }, "deactivate", acknowledge)
+        : {};
     if (data.isActive) {
       const def = await loadProductDef(tx as AppDb, code);
       const parts = def ? activeParts(def) : [];
@@ -318,6 +348,7 @@ export async function updateProduct(db: AppDb, actorId: string, input: ProductUp
           allowedGroups: before.allowedGroups,
         },
         after: data,
+        ...ack,
       },
     });
     return after;
@@ -329,14 +360,26 @@ export async function updateProduct(db: AppDb, actorId: string, input: ProductUp
 }
 
 /** Only a product nobody bought can be deleted (its texts go with it); otherwise deactivate. */
-export async function deleteProduct(db: AppDb, actorId: string, input: string) {
+export async function deleteProduct(
+  db: AppDb,
+  actorId: string,
+  input: string,
+  opts: { acknowledge?: boolean } = {},
+) {
   const code = codeSchema.parse(input);
   await db.transaction(async (tx) => {
     await getProductRow(tx, code);
     if (await hasPurchases(tx, code)) throw new CatalogError("has_purchases");
+    const ack = assertAcknowledged({ product: code }, "delete", opts.acknowledge === true);
     await tx.delete(contentEntries).where(eq(contentEntries.productCode, code));
     await tx.delete(products).where(eq(products.code, code));
-    await logAudit(tx, { actorId, action: "product.delete", entity: "products", entityId: code });
+    await logAudit(tx, {
+      actorId,
+      action: "product.delete",
+      entity: "products",
+      entityId: code,
+      ...(ack.usedByApp ? { data: ack } : {}),
+    });
   });
 }
 
@@ -387,7 +430,7 @@ export async function addPart(db: AppDb, actorId: string, input: PartInput) {
  * Real texts (not placeholders) need `confirm`.
  */
 export async function updatePart(db: AppDb, actorId: string, input: PartInput) {
-  const { confirm, ...data } = partInputSchema.parse(input);
+  const { confirm, acknowledge, ...data } = partInputSchema.parse(input);
   await db.transaction(async (tx) => {
     const product = await getProductRow(tx, data.productCode);
     const [part] = await tx
@@ -398,6 +441,9 @@ export async function updatePart(db: AppDb, actorId: string, input: PartInput) {
     const byGender = data.byGender && KEY_TYPE_ARITY[data.keyType] === 1;
     const keysChange = part.keyType !== data.keyType || part.byGender !== byGender;
     let texts: "kept" | "split" | "deleted" = "kept";
+    const ack = keysChange
+      ? assertAcknowledged({ product: data.productCode, part: data.code }, "rekey", acknowledge)
+      : {};
     // Sign pair → ordered sign pair keeps every key valid ("aries|leo" is also the aries→leo
     // text) and readings show both directions, so it's allowed even after sales; texts stay.
     const widening =
@@ -445,7 +491,7 @@ export async function updatePart(db: AppDb, actorId: string, input: PartInput) {
       action: "product.part.update",
       entity: "product_parts",
       entityId: `${data.productCode}.${data.code}`,
-      data: { before: part, after: { ...data, byGender }, texts },
+      data: { before: part, after: { ...data, byGender }, texts, ...ack },
     });
   });
 }
@@ -457,9 +503,9 @@ export async function updatePart(db: AppDb, actorId: string, input: PartInput) {
 export async function deletePart(
   db: AppDb,
   actorId: string,
-  input: { productCode: string; partCode: string; confirm?: boolean },
+  input: { productCode: string; partCode: string; confirm?: boolean; acknowledge?: boolean },
 ) {
-  const { productCode, partCode, confirm } = partRefSchema
+  const { productCode, partCode, confirm, acknowledge } = partRefSchema
     .extend({ confirm: z.boolean().default(false) })
     .parse(input);
   await db.transaction(async (tx) => {
@@ -473,6 +519,7 @@ export async function deletePart(
     if (await hasPurchases(tx, productCode)) throw new CatalogError("has_purchases");
     const othersActive = parts.some((p) => p.code !== partCode && p.archivedAt === null);
     if (!othersActive) throw new CatalogError("last_part");
+    const ack = assertAcknowledged({ product: productCode, part: partCode }, "delete", acknowledge);
     const real = await assertConfirmed(tx, productCode, partCode, confirm);
     await tx.delete(contentEntries).where(partTextsWhere(productCode, partCode));
     await tx.delete(productParts).where(partWhere(productCode, partCode));
@@ -481,7 +528,7 @@ export async function deletePart(
       action: "product.part.delete",
       entity: "product_parts",
       entityId: `${productCode}.${partCode}`,
-      data: { deletedTexts: real },
+      data: { deletedTexts: real, ...ack },
     });
   });
 }
@@ -493,9 +540,9 @@ export async function deletePart(
 export async function setPartArchived(
   db: AppDb,
   actorId: string,
-  input: { productCode: string; partCode: string; archived: boolean },
+  input: { productCode: string; partCode: string; archived: boolean; acknowledge?: boolean },
 ) {
-  const { productCode, partCode, archived } = partRefSchema
+  const { productCode, partCode, archived, acknowledge } = partRefSchema
     .extend({ archived: z.boolean() })
     .parse(input);
   await db.transaction(async (tx) => {
@@ -508,6 +555,9 @@ export async function setPartArchived(
     if (archived && !parts.some((p) => p.code !== partCode && p.archivedAt === null)) {
       throw new CatalogError("last_part");
     }
+    const ack = archived
+      ? assertAcknowledged({ product: productCode, part: partCode }, "archive", acknowledge)
+      : {};
     await tx
       .update(productParts)
       .set({ archivedAt: archived ? new Date() : null })
@@ -517,6 +567,7 @@ export async function setPartArchived(
       action: archived ? "product.part.archive" : "product.part.restore",
       entity: "product_parts",
       entityId: `${productCode}.${partCode}`,
+      ...(ack.usedByApp ? { data: ack } : {}),
     });
   });
 }
@@ -558,7 +609,7 @@ async function getPartFields(tx: Pick<AppDb, "select">, productCode: string, par
 
 /** Adds a sub-section at the end. A code used before (even archived) can't be reused. */
 export async function addField(db: AppDb, actorId: string, input: FieldInput) {
-  const data = fieldInputSchema.parse(input);
+  const data = fieldInputSchema.omit({ acknowledge: true }).parse(input);
   await db.transaction(async (tx) => {
     const fields = await getPartFields(tx, data.productCode, data.partCode);
     if (fields.some((f) => f.code === data.code)) throw new CatalogError("code_taken");
@@ -582,7 +633,16 @@ export async function updateField(db: AppDb, actorId: string, input: FieldInput)
     const fields = await getPartFields(tx, data.productCode, data.partCode);
     const before = fields.find((f) => f.code === data.code);
     if (!before) throw new CatalogError("not_found");
-    const { productCode, partCode, code, ...set } = data;
+    const { productCode, partCode, code, acknowledge, ...set } = data;
+    // An item field (one item per line) turned into prose can no longer be listed.
+    const ack =
+      isItemKind(before.kind) && !isItemKind(set.kind)
+        ? assertAcknowledged(
+            { product: productCode, part: partCode, field: code },
+            "prose",
+            acknowledge,
+          )
+        : {};
     await tx
       .update(productFields)
       .set(set)
@@ -598,7 +658,7 @@ export async function updateField(db: AppDb, actorId: string, input: FieldInput)
       action: "product.field.update",
       entity: "product_fields",
       entityId: `${productCode}.${partCode}.${code}`,
-      data: { before, after: set },
+      data: { before, after: set, ...ack },
     });
   });
 }
@@ -610,12 +670,25 @@ export async function updateField(db: AppDb, actorId: string, input: FieldInput)
 export async function setFieldArchived(
   db: AppDb,
   actorId: string,
-  raw: { productCode: string; partCode: string; code: string; archived: boolean },
+  raw: {
+    productCode: string;
+    partCode: string;
+    code: string;
+    archived: boolean;
+    acknowledge?: boolean;
+  },
 ) {
   const input = fieldRefSchema.extend({ archived: z.boolean() }).parse(raw);
   await db.transaction(async (tx) => {
     const fields = await getPartFields(tx, input.productCode, input.partCode);
     if (!fields.some((f) => f.code === input.code)) throw new CatalogError("not_found");
+    const ack = input.archived
+      ? assertAcknowledged(
+          { product: input.productCode, part: input.partCode, field: input.code },
+          "archive",
+          input.acknowledge,
+        )
+      : {};
     await tx
       .update(productFields)
       .set({ archivedAt: input.archived ? new Date() : null })
@@ -631,6 +704,7 @@ export async function setFieldArchived(
       action: input.archived ? "product.field.archive" : "product.field.restore",
       entity: "product_fields",
       entityId: `${input.productCode}.${input.partCode}.${input.code}`,
+      ...(ack.usedByApp ? { data: ack } : {}),
     });
   });
 }
@@ -639,7 +713,7 @@ export async function setFieldArchived(
 export async function deleteField(
   db: AppDb,
   actorId: string,
-  raw: { productCode: string; partCode: string; code: string },
+  raw: { productCode: string; partCode: string; code: string; acknowledge?: boolean },
 ) {
   const input = fieldRefSchema.parse(raw);
   await db.transaction(async (tx) => {
@@ -647,6 +721,11 @@ export async function deleteField(
     if (!fields.some((f) => f.code === input.code)) throw new CatalogError("not_found");
     const used = (await fieldUsage(tx, input.productCode, input.partCode))[input.code] ?? 0;
     if (used > 0) throw new CatalogError("has_content");
+    const ack = assertAcknowledged(
+      { product: input.productCode, part: input.partCode, field: input.code },
+      "delete",
+      input.acknowledge,
+    );
     await tx
       .delete(productFields)
       .where(
@@ -661,6 +740,7 @@ export async function deleteField(
       action: "product.field.delete",
       entity: "product_fields",
       entityId: `${input.productCode}.${input.partCode}.${input.code}`,
+      ...(ack.usedByApp ? { data: ack } : {}),
     });
   });
 }

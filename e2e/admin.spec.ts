@@ -86,6 +86,27 @@ test("owner sees products", async ({ page }) => {
   await expect(page.getByText("Нийцтэй харилцаа")).toBeVisible();
 });
 
+test("owner is asked before archiving a sub-section the app uses", async ({ page }) => {
+  await loginWithPassword(page, "owner@test.local", "/admin/products/birthday");
+  const row = page.getByRole("listitem").filter({ hasText: "strengths" });
+  await expect(row.getByText("Апп ашигладаг")).toBeVisible();
+
+  // The server refuses without an acknowledgement; the question names the screen. Say no.
+  let asked = "";
+  page.once("dialog", (d) => {
+    asked = d.message();
+    void d.dismiss();
+  });
+  await row.getByRole("button", { name: "Архивлах" }).click();
+  await expect(row.getByRole("status")).toHaveText("Апп энэ мөрийг ашигладаг тул өөрчлөгдсөнгүй.");
+  expect(asked).toContain("хуваалцах карт дээрх «давуу тал» жагсаалт");
+  await expect(row.getByText("Архивлагдсан")).toHaveCount(0);
+
+  // A sub-section nothing depends on has no mark.
+  const health = page.getByRole("listitem").filter({ hasText: "health" });
+  await expect(health.getByText("Апп ашигладаг")).toHaveCount(0);
+});
+
 test("import: template → fill → dry-run report → import", async ({ page }) => {
   await loginWithPassword(page, "editor@test.local", "/admin/import");
 
