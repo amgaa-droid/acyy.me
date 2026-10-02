@@ -58,14 +58,14 @@ export function PairHero({
           className="absolute -top-2 -right-8 size-44 opacity-25"
         />
       )}
-      <Heading className="relative px-6 text-center font-serif text-[30px] leading-[1.05] font-semibold text-balance lg:text-[34px]">
+      <Heading className="relative px-6 text-center font-serif text-3xl leading-[1.05] font-semibold text-balance lg:text-4xl">
         {title}
       </Heading>
       <div className="relative grid grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] items-start">
         <PairPerson {...a} />
         <span
           aria-hidden
-          className="flex h-[72px] items-center justify-center font-serif text-[34px] font-semibold text-highlight"
+          className="flex h-[72px] items-center justify-center font-serif text-4xl font-semibold text-highlight"
         >
           &amp;
         </span>
@@ -88,7 +88,7 @@ function PairPerson({ name, relation, birthDate, avatarSeed, tint }: PairHeroPer
   return (
     <div className="flex min-w-0 flex-col items-center gap-2 text-center">
       <Avatar seed={avatarSeed} size={72} className={cn("border-[3px] border-surface", tint)} />
-      <p className="w-full truncate font-serif text-[30px] leading-none font-semibold lg:text-4xl">
+      <p className="w-full truncate font-serif text-3xl leading-none font-semibold lg:text-4xl">
         {name}
       </p>
       {relation && (
@@ -190,7 +190,7 @@ function SummaryRow({ field }: { field: ReadingField }) {
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
         <SummaryLabel>{field.name}</SummaryLabel>
-        <p className="font-serif text-[28px] leading-[1.1] font-semibold lg:text-[30px]">
+        <p className="font-serif text-3xl leading-[1.1] font-semibold">
           {fieldItems(field.value, field.kind).map((item, i) => (
             <span key={item}>
               {i > 0 && (

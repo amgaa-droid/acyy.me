@@ -19,7 +19,7 @@ export function SignHero({ label, signCode, signName, chips }: SignHeroProps) {
         <span className="text-xs font-semibold tracking-widest text-highlight uppercase">
           {label}
         </span>
-        <span className="font-heading text-5xl leading-[0.95] font-semibold lg:text-[84px]">
+        <span className="font-heading text-5xl leading-[0.95] font-semibold lg:text-7xl">
           {signName}
         </span>
         <div className="mt-1 flex flex-wrap gap-2">

@@ -55,7 +55,7 @@ export default async function EditContentPage({ searchParams }: PageProps<"/admi
           {product.nameMn}
           {product.parts.length > 1 && ` · ${part.nameMn}`}
         </p>
-        <h1 className="text-[40px] leading-none font-semibold">
+        <h1 className="text-4xl leading-none font-semibold">
           {displayKey(target.key, names, part.keyType)}
         </h1>
       </div>

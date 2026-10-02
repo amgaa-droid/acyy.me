@@ -298,7 +298,7 @@ function Step({
 }) {
   return (
     <section className="flex flex-col">
-      <h1 className="text-[40px] leading-none font-semibold">{title}</h1>
+      <h1 className="text-4xl leading-none font-semibold">{title}</h1>
       {hint && <p className="mt-2 text-sm text-muted-foreground">{hint}</p>}
       <div className="mt-6 flex flex-col">{children}</div>
     </section>
@@ -323,7 +323,7 @@ function ResultStep({ result, name }: { result: Done; name: string }) {
       </section>
       {/* No "add someone?" here: the home guide walks them through it, one step at a time. */}
       <div className="flex flex-col gap-1.5 px-1">
-        <h2 className="text-[30px] leading-[1.05] font-semibold">{t.readyTitle}</h2>
+        <h2 className="text-3xl leading-[1.05] font-semibold">{t.readyTitle}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">{t.readyHint}</p>
       </div>
       <Button

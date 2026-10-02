@@ -17,7 +17,7 @@ export default async function ImportPage({ searchParams }: PageProps<"/admin/imp
   return (
     <div className="flex max-w-4xl flex-col gap-5">
       <div>
-        <h1 className="text-[40px] leading-none font-semibold">{mn.admin.import.title}</h1>
+        <h1 className="text-4xl leading-none font-semibold">{mn.admin.import.title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{mn.admin.import.intro}</p>
         <p className="mt-1 text-sm text-muted-foreground">
           {mn.admin.import.dailyHint}{" "}

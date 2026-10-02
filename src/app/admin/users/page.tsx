@@ -18,7 +18,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-[40px] leading-none font-semibold">{mn.admin.nav.users}</h1>
+      <h1 className="text-4xl leading-none font-semibold">{mn.admin.nav.users}</h1>
       <form action="/admin/users" className="relative max-w-md">
         <Search
           className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"

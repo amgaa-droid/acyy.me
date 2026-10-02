@@ -84,7 +84,7 @@ export function InvoicePanel({ topup, balance: initialBalance, mockPayUrl, onCon
     return (
       <Centered>
         <CheckCircle2 className="size-16 text-highlight" aria-hidden />
-        <h2 className="text-[40px] leading-none font-semibold">{t.paid}</h2>
+        <h2 className="text-4xl leading-none font-semibold">{t.paid}</h2>
         <p className="text-muted-foreground" role="status">
           {t.paidBody(formatMnt(topup.amount + topup.bonus))}
         </p>

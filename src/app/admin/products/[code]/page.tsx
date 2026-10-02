@@ -51,7 +51,7 @@ export default async function ProductPage({ params }: PageProps<"/admin/products
       <div className="flex items-center gap-4">
         <ProductIcon product={product} className="size-14" />
         <div className="flex min-w-0 flex-col">
-          <h1 className="text-[34px] leading-none font-semibold lg:text-[40px]">
+          <h1 className="text-4xl leading-none font-semibold">
             {product.nameMn}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">

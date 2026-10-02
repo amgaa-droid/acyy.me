@@ -43,7 +43,7 @@ export function DailyTeaser({
             <Sparkles className="size-3.5" aria-hidden /> {copy.eyebrow}
           </span>
         )}
-        <h2 className="font-heading text-[34px] leading-tight font-semibold text-balance lg:text-5xl">
+        <h2 className="font-heading text-4xl leading-tight font-semibold text-balance lg:text-5xl">
           {copy.title}
         </h2>
         {copy.body && <p className="text-muted-foreground lg:text-lg">{copy.body}</p>}

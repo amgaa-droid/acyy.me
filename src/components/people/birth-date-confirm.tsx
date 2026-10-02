@@ -57,7 +57,7 @@ export function BirthDateConfirm({
     >
       <div className="flex flex-col items-center gap-1 rounded-3xl bg-subtle px-5 py-5 text-center">
         <span className="max-w-full truncate text-sm text-muted-foreground">{name.trim()}</span>
-        <span className="font-heading text-[28px] leading-tight font-semibold text-balance">
+        <span className="font-heading text-3xl leading-tight font-semibold text-balance">
           {ymd ? mn.datePicker.long(ymd.y, ymd.m, ymd.d) : birthDate}
         </span>
       </div>

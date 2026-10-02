@@ -43,7 +43,7 @@ export default async function AdminUserPage({ params }: PageProps<"/admin/users/
         <ChevronLeft className="size-5" aria-hidden /> {mn.admin.nav.users}
       </Link>
       <div>
-        <h1 className="text-[34px] leading-none font-semibold break-all">{detail.user.email}</h1>
+        <h1 className="text-4xl leading-none font-semibold break-all">{detail.user.email}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {detail.user.name} · {t.joined} {fmt.format(detail.user.createdAt)}
         </p>

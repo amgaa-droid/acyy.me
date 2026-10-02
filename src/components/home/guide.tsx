@@ -156,7 +156,7 @@ export function WelcomeCard({
         <span className="text-xs font-semibold tracking-[0.14em] text-highlight uppercase">
           {g.welcome.eyebrow(name)}
         </span>
-        <h2 className="text-[30px] leading-[1.05] font-semibold">{g.welcome.title}</h2>
+        <h2 className="text-3xl leading-[1.05] font-semibold">{g.welcome.title}</h2>
         <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{g.welcome.body}</p>
       </div>
       <ol className="flex flex-col gap-1.5">

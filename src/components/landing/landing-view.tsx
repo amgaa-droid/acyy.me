@@ -197,7 +197,7 @@ export function LandingView({
               {f(c.people.eyebrow)}
             </span>
           )}
-          <h2 className="font-heading text-[34px] leading-tight font-semibold lg:text-5xl">
+          <h2 className="font-heading text-4xl leading-tight font-semibold lg:text-5xl">
             {f(c.people.title)}
           </h2>
           {c.people.body && <p className="text-muted-foreground lg:text-lg">{f(c.people.body)}</p>}
@@ -302,7 +302,7 @@ export function LandingView({
           className="pointer-events-none absolute -bottom-16 -left-16 size-60 opacity-40"
         />
         <div className="relative flex flex-col items-center gap-3">
-          <h2 className="font-heading text-[34px] leading-tight font-semibold text-balance lg:text-5xl">
+          <h2 className="font-heading text-4xl leading-tight font-semibold text-balance lg:text-5xl">
             {f(c.final.title)}
           </h2>
           {c.final.body && <p className="text-muted-foreground">{f(c.final.body)}</p>}
@@ -377,7 +377,7 @@ export function LandingView({
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="font-heading text-[34px] leading-tight font-semibold lg:text-5xl">{title}</h2>
+      <h2 className="font-heading text-4xl leading-tight font-semibold lg:text-5xl">{title}</h2>
       {subtitle && <p className="text-muted-foreground lg:text-lg">{subtitle}</p>}
     </div>
   );

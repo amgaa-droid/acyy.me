@@ -46,7 +46,7 @@ export function StatsHeader({
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <h1 className="text-[40px] leading-none font-semibold">{title}</h1>
+        <h1 className="text-4xl leading-none font-semibold">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground tabular-nums">
           {d.rangeHint(fullFmt.format(since), fullFmt.format(until))}
         </p>
@@ -118,7 +118,7 @@ export function Stat({
   return (
     <div className={cn("flex flex-col gap-1 rounded-3xl p-5", big ? "bg-tint-1" : "bg-surface")}>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-2xl font-semibold tabular-nums lg:text-[28px]">{value}</div>
+      <div className="text-2xl font-semibold tabular-nums lg:text-3xl">{value}</div>
       {shown && (
         <div
           className={cn(

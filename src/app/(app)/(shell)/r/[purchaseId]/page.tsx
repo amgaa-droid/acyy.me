@@ -136,7 +136,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                 <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
                   {reading.productName}
                 </span>
-                <h1 className="text-[52px] leading-[0.95] font-semibold lg:text-[76px]">
+                <h1 className="text-5xl leading-[0.95] font-semibold lg:text-7xl">
                   {people[0].name}
                 </h1>
                 <p className="mt-1.5 flex items-center gap-3.5 text-sm text-muted-foreground lg:text-[15px]">
@@ -180,7 +180,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                         s.teaser && <Teaser text={s.teaser} className="mt-1" />
                       ) : (
                         <>
-                          <h2 className="text-[44px] leading-none font-semibold lg:text-[60px]">
+                          <h2 className="text-4xl leading-none font-semibold lg:text-6xl">
                             {s.title}
                           </h2>
                           {s.teaser && <Teaser text={s.teaser} className="mt-1" />}

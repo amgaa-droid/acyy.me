@@ -23,7 +23,7 @@ export default async function ProductsPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[40px] leading-none font-semibold">{t.title}</h1>
+        <h1 className="text-4xl leading-none font-semibold">{t.title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t.intro}</p>
       </div>
       <CreateProductForm />

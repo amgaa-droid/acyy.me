@@ -233,7 +233,7 @@ export function LandingEditor(props: Props) {
     <EditorCtx.Provider value={ctx}>
       <div className="flex flex-col gap-5 pb-28">
         <div>
-          <h1 className="text-[40px] leading-none font-semibold">{t.title}</h1>
+          <h1 className="text-4xl leading-none font-semibold">{t.title}</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t.intro}</p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
             <span className="rounded-full bg-tint-3 px-3 py-1.5">{liveLine}</span>

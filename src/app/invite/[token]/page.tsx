@@ -32,7 +32,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
         <BrandMark className="size-10 text-highlight" />
         {view ? (
           <>
-            <h1 className="text-[34px] leading-tight font-semibold">
+            <h1 className="text-4xl leading-tight font-semibold">
               {t.title(view.inviterName, APP_NAME)}
             </h1>
             <p className="text-muted-foreground">{t.body}</p>

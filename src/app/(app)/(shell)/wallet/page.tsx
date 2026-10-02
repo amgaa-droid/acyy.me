@@ -55,7 +55,7 @@ export default async function WalletPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold lg:text-[28px]">{t.history}</h1>
+        <h1 className="text-2xl font-semibold lg:text-3xl">{t.history}</h1>
         {entries.length === 0 ? (
           <p className="rounded-3xl bg-surface p-6 text-center text-muted-foreground">
             {t.historyEmpty}

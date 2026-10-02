@@ -31,7 +31,7 @@ export function ProseBody({ value }: { value: string }) {
 function FieldHeading({ children, count }: { children: React.ReactNode; count?: number }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-fg pb-3">
-      <h3 className="text-[28px] leading-[1.1] font-semibold lg:text-[34px]">{children}</h3>
+      <h3 className="text-3xl leading-[1.1] font-semibold lg:text-4xl">{children}</h3>
       {count !== undefined && (
         <span className="text-xs font-medium text-muted-foreground tabular-nums select-none">
           {count}
@@ -62,7 +62,7 @@ export function ArticleField({
           <figcaption className="font-sans text-xs font-semibold tracking-[0.2em] text-nav-fg uppercase">
             {field.name}
           </figcaption>
-          <blockquote className="font-serif text-[34px] leading-[1.12] font-semibold whitespace-pre-line lg:text-[44px] lg:leading-[1.1]">
+          <blockquote className="font-serif text-4xl leading-[1.12] font-semibold whitespace-pre-line lg:text-5xl lg:leading-[1.1]">
             {field.value}
           </blockquote>
         </figure>
@@ -80,7 +80,7 @@ export function ArticleField({
               >
                 <span
                   aria-hidden
-                  className="font-serif text-2xl leading-none font-semibold text-highlight lining-nums tabular-nums select-none lg:text-[28px]"
+                  className="font-serif text-2xl leading-none font-semibold text-highlight lining-nums tabular-nums select-none lg:text-3xl"
                 >
                   {String(j + 1).padStart(2, "0")}
                 </span>
@@ -108,7 +108,7 @@ export function Teaser({ text, className }: { text: string; className?: string }
   return (
     <p
       className={cn(
-        "font-serif text-2xl leading-[1.35] font-medium whitespace-pre-line text-fg/80 italic lg:text-[28px]",
+        "font-serif text-2xl leading-[1.35] font-medium whitespace-pre-line text-fg/80 italic lg:text-3xl",
         className,
       )}
     >

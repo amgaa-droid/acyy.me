@@ -14,7 +14,7 @@ export default async function ZodiacPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-5">
       <div>
-        <h1 className="text-[40px] leading-none font-semibold">{mn.admin.ranges.zodiacTitle}</h1>
+        <h1 className="text-4xl leading-none font-semibold">{mn.admin.ranges.zodiacTitle}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{mn.admin.ranges.hint}</p>
       </div>
       <ZodiacEditor

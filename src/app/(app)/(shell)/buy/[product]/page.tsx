@@ -100,7 +100,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         {header}
         <div>
-          <h1 className="text-[34px] leading-none font-semibold lg:text-[44px]">
+          <h1 className="text-4xl leading-none font-semibold lg:text-5xl">
             {product.personCount === 1 ? t.pickPerson : needsA ? t.pickFirst : t.pickSecond}
           </h1>
           {product.personCount === 2 && (
@@ -167,7 +167,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
             action={setGenderForPurchaseAction}
             className="flex flex-col gap-4 rounded-3xl bg-surface p-6"
           >
-            <h1 className="text-[30px] leading-tight font-semibold">
+            <h1 className="text-3xl leading-tight font-semibold">
               {t.genderTitle(chosenA!.name)}
             </h1>
             <p className="text-sm text-muted-foreground">{t.genderHint}</p>
@@ -239,7 +239,7 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
                   {sectionLabel(s, signNames)}
                 </span>
               )}
-              <h2 className="text-[28px] leading-tight font-semibold">{s.title}</h2>
+              <h2 className="text-3xl leading-tight font-semibold">{s.title}</h2>
               {s.teaser && <Teaser text={s.teaser} />}
               {summary.length > 0 && <SummaryFields fields={summary} />}
               {article.map((f) => (

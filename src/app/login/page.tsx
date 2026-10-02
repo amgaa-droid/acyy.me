@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <span className="font-heading text-3xl font-semibold">{APP_NAME}</span>
         </Link>
         <div className="rounded-3xl bg-surface p-6 lg:p-8">
-          <h1 className="text-[34px] leading-none font-semibold">{mn.login.title}</h1>
+          <h1 className="text-4xl leading-none font-semibold">{mn.login.title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{mn.login.subtitle}</p>
           <LoginForm
             next={target}

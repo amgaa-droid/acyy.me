@@ -35,7 +35,7 @@ export function StatusScreen({
         {code && (
           <span className="text-xs font-semibold tracking-[0.16em] text-highlight">{code}</span>
         )}
-        <h1 className="text-[34px] leading-none font-semibold lg:text-[44px]">{title}</h1>
+        <h1 className="text-4xl leading-none font-semibold lg:text-5xl">{title}</h1>
         <p className="text-muted-foreground">{body}</p>
       </div>
       <div className="flex w-full max-w-xs flex-col gap-2">{children}</div>

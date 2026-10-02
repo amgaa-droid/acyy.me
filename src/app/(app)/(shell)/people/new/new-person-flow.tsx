@@ -240,7 +240,7 @@ export function NewPersonFlow({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-5 pb-6">
-      <h1 className="text-[34px] leading-none font-semibold lg:text-[44px]">{title}</h1>
+      <h1 className="text-4xl leading-none font-semibold lg:text-5xl">{title}</h1>
       {children}
     </section>
   );

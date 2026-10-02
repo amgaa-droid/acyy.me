@@ -324,7 +324,7 @@ export function LandingPlanets({
           {/* No line break after the hyphen of "Astrology-ийн". */}
           {copy.eyebrow.replace(/-/g, "\u2011")}
         </p>
-        <h1 className="font-heading text-[34px] leading-[1.05] font-semibold text-balance short:text-[28px] lg:text-6xl lg:short:text-5xl">
+        <h1 className="font-heading text-4xl leading-[1.05] font-semibold text-balance short:text-3xl lg:text-6xl lg:short:text-5xl">
           {copy.title}
         </h1>
         {copy.subtitle && (

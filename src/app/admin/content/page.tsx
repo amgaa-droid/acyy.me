@@ -47,7 +47,7 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/adm
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-[40px] leading-none font-semibold">{t.nav.content}</h1>
+      <h1 className="text-4xl leading-none font-semibold">{t.nav.content}</h1>
 
       <div className="scrollbar-none flex gap-2 overflow-x-auto">
         {defs.map((p) => (
