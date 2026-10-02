@@ -25,10 +25,11 @@ test.describe("signed in", () => {
     await expect(popup).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Үндсэн цэс" })).toHaveCount(0);
     await popup.getByRole("link", { name: /Би ·/ }).first().click();
-    await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/);
+    // Generous waits: in dev the person page and /home may compile on first visit.
+    await expect(page).toHaveURL(/\/people\/[0-9a-f-]{36}$/, { timeout: 15_000 });
     await expect(page.getByRole("dialog")).toHaveCount(1);
     await page.getByRole("dialog").getByRole("link", { name: "Хаах" }).click();
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/home$/, { timeout: 15_000 });
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 

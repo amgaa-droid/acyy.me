@@ -15,13 +15,14 @@ const ICONS: Record<Theme, typeof Moon> = {
  * Floating colour-mode button, top centre of every page (rendered by the root layout).
  * Each tap moves to the next theme. A plain form + server action, so it works without JS.
  * On the full-screen home it lines up with the menu and wallet buttons (`data-screen="home"`).
- * It slides away while the page scrolls down (HideOnScroll) so it doesn't cover the content.
+ * It slides away while the page scrolls down (HideOnScroll) so it doesn't cover the content,
+ * and is gone while a popup is open: it would sit under the sheet (and /me has its own picker).
  */
 export function ThemeToggle({ current }: { current: Theme }) {
   const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
   const Icon = ICONS[current];
   return (
-    <HideOnScroll className="fixed top-[max(env(safe-area-inset-top),0.625rem)] left-1/2 z-45 -translate-x-1/2 print:hidden lg:top-[1.125rem] [body:has([data-screen=home])_&]:top-[max(env(safe-area-inset-top),1rem)] lg:[body:has([data-screen=home])_&]:top-8">
+    <HideOnScroll className="fixed top-[max(env(safe-area-inset-top),0.625rem)] left-1/2 z-45 -translate-x-1/2 print:hidden lg:top-[1.125rem] [body:has([data-screen=home])_&]:top-[max(env(safe-area-inset-top),1rem)] lg:[body:has([data-screen=home])_&]:top-8 [body:has([role=dialog])_&]:hidden">
       <form action={setTheme}>
         <button
           type="submit"
