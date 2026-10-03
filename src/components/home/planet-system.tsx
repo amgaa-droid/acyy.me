@@ -11,7 +11,6 @@ import {
   Orbit,
   Plus,
   Sparkles,
-  UserRound,
   Wallet,
   X,
 } from "lucide-react";
@@ -1193,15 +1192,11 @@ export function PlanetSystem({
                   tip: guideSelf && sel === ME && r === birthday ? t.guide.tips.reading : undefined,
                 };
               }),
-              {
-                key: "info",
-                href: `/people/${sel === ME ? data.me.id : sel}`,
-                label: t.info,
-                aria: t.infoAria(sel === ME ? data.me.name : (selPerson?.name ?? "")),
-                icon: <UserRound className="size-5" strokeWidth={1.75} aria-hidden />,
-                kind: "info",
-              },
             ]}
+            info={{
+              href: `/people/${sel === ME ? data.me.id : sel}`,
+              aria: t.infoAria(sel === ME ? data.me.name : (selPerson?.name ?? "")),
+            }}
           />
         )}
 

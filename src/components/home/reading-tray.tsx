@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -16,8 +16,8 @@ export type TrayTile = {
   label: string;
   aria: string;
   icon: ReactNode;
-  /** "info": the person's page; "on": a bought reading; "off": not bought yet. */
-  kind: "info" | "on" | "off";
+  /** "on": a bought reading; "off": not bought yet. */
+  kind: "on" | "off";
   onClick?: () => void;
   /** First-run guide: a halo and a tip on this tile. */
   tip?: { title: string; sub: string };
@@ -26,7 +26,8 @@ export type TrayTile = {
 /**
  * The tapped planet's readings, in a tray at the bottom of the screen (thumb reach) instead of
  * buttons scattered round the planet: the orbit stays calm, every name is readable, and more
- * readings only add tiles. One row of up to six; more wrap.
+ * readings only add tiles. One row of up to six; more wrap. The person's own page is the header
+ * row (avatar and name, "Мэдээлэл ›"), not a tile, so it isn't taken for a reading.
  */
 export function ReadingTray({
   name,
@@ -34,9 +35,12 @@ export function ReadingTray({
   avatarUri,
   faceClass,
   tiles,
+  info,
   frame,
   onClose,
 }: {
+  /** The person's page: the header row links there. */
+  info: { href: string; aria: string };
   /** Shared with the "+N" dock: the gap to the bottom of the screen and the width (px). */
   frame: { bottom: number; width: number };
   name: string;
@@ -55,14 +59,25 @@ export function ReadingTray({
       style={{ bottom: frame.bottom, width: frame.width, left: `calc(50% - ${frame.width / 2}px)` }}
     >
       <div className="flex items-center gap-3">
-        <span className={cn("size-[42px] shrink-0 overflow-hidden rounded-full border-2", faceClass)}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
-          <img src={avatarUri} alt="" draggable={false} className="size-full" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-base leading-tight font-semibold">{name}</span>
-          <span className="truncate text-xs text-muted-foreground">{sub}</span>
-        </span>
+        <Link
+          href={info.href}
+          scroll={false}
+          aria-label={info.aria}
+          className="-m-1.5 flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-subtle p-1.5 transition-colors hover:bg-border/60"
+        >
+          <span className={cn("size-[42px] shrink-0 overflow-hidden rounded-full border-2", faceClass)}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
+            <img src={avatarUri} alt="" draggable={false} className="size-full" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-base leading-tight font-semibold">{name}</span>
+            <span className="truncate text-xs text-muted-foreground">{sub}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-0.5 pr-1 text-sm font-semibold">
+            {t.info}
+            <ChevronRight className="size-4" strokeWidth={2.4} aria-hidden />
+          </span>
+        </Link>
         <button
           type="button"
           onClick={onClose}
@@ -90,7 +105,6 @@ export function ReadingTray({
                 <span
                   className={cn(
                     `relative flex size-12 items-center justify-center rounded-full border-[1.5px] transition-[scale] duration-300 ${SPRING} group-hover/r:scale-110 group-active/r:scale-95`,
-                    tile.kind === "info" && "border-fg bg-fg text-bg",
                     tile.kind === "on" && "border-highlight bg-highlight text-highlight-fg",
                     tile.kind === "off" && "border-highlight/30 bg-surface text-highlight",
                   )}
