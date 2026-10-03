@@ -102,7 +102,9 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
           href="/readings?tab=mine"
           className="flex h-11 shrink-0 items-center gap-1 rounded-full bg-surface pr-4 pl-2 text-sm font-semibold"
         >
-          <ChevronLeft className="size-5" aria-hidden /> {t.back}
+          <ChevronLeft className="size-5" aria-hidden />
+          <span className="sm:hidden">{mn.common.back}</span>
+          <span className="hidden sm:inline">{t.back}</span>
         </Link>
         {pair && (
           <span className="min-w-0 truncate rounded-full bg-pair px-2.5 py-1.5 text-xs font-semibold tracking-wide text-pair-fg uppercase lg:px-3.5 lg:tracking-widest">
@@ -157,7 +159,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                 <h1 className="text-5xl leading-[0.95] font-semibold lg:text-7xl">
                   {people[0].name}
                 </h1>
-                <p className="mt-1.5 flex items-center gap-3.5 text-sm text-muted-foreground lg:text-[15px]">
+                <p className="mt-1.5 flex items-center gap-3.5 text-sm text-muted-foreground lg:text-base">
                   <span className="flex items-center gap-1.5">
                     <CircleDot className="size-3.5" aria-hidden />
                     {signName(people[0].sign)}
