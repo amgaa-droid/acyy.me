@@ -1,18 +1,17 @@
 "use server";
 
-import { and, count, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 
 import { APP_NAME, env } from "@/env";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { db } from "@/server/db";
-import { topups } from "@/server/db/schema";
 import type { InvoiceData } from "@/server/db/schema";
 import { mockQPay, qpay } from "@/server/qpay";
 import {
   InvalidTierError,
   PackageChangedError,
   TopupNotFoundError,
+  TopupRateLimitError,
   createTopup,
   getTopupForUser,
   settleTopup,
@@ -20,7 +19,6 @@ import {
 import { createThrottle } from "@/server/throttle";
 import { getBalance } from "@/server/wallet";
 
-const INVOICES_PER_HOUR = 10; // SPEC §12
 /** "Төлсөн, шалгах" asks QPay at most this often per user; in between it answers from the DB. */
 const mayAskQPay = createThrottle(3_000);
 
@@ -49,14 +47,6 @@ export async function createTopupAction(input: unknown): Promise<
   const offer = offerSchema.safeParse(input);
   if (!offer.success) return { ok: false, error: "invalid_tier" };
 
-  const [{ recent }] = await db
-    .select({ recent: count() })
-    .from(topups)
-    .where(
-      and(eq(topups.userId, user.id), gte(topups.createdAt, new Date(Date.now() - 60 * 60 * 1000))),
-    );
-  if (recent >= INVOICES_PER_HOUR) return { ok: false, error: "rate" };
-
   try {
     const t = await createTopup(db, qpay(), {
       userId: user.id,
@@ -80,6 +70,7 @@ export async function createTopupAction(input: unknown): Promise<
   } catch (err) {
     if (err instanceof InvalidTierError) return { ok: false, error: "package_changed" };
     if (err instanceof PackageChangedError) return { ok: false, error: "package_changed" };
+    if (err instanceof TopupRateLimitError) return { ok: false, error: "rate" };
     console.error("[topup:create]", err);
     return { ok: false, error: "generic" };
   }

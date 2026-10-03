@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { logAudit } from "@/server/audit";
@@ -18,6 +18,8 @@ import { credit } from "@/server/wallet";
 
 export type Topup = typeof topups.$inferSelect;
 const TOPUP_TTL_MS = 24 * 60 * 60 * 1000;
+/** Invoices one user may create per hour (SPEC §12) — paid or not. */
+export const INVOICES_PER_HOUR = 10;
 /** One cron run stops starting new checks after this long (it is called every 5 minutes). */
 const CHECK_BUDGET_MS = 4 * 60 * 1000;
 
@@ -30,6 +32,11 @@ export class InvalidTierError extends Error {
 export class PackageChangedError extends Error {
   constructor() {
     super("package_changed");
+  }
+}
+export class TopupRateLimitError extends Error {
+  constructor() {
+    super("topup_rate_limited");
   }
 }
 export class TopupNotFoundError extends Error {
@@ -55,6 +62,8 @@ export async function createTopup(
     appUrl: string;
     callbackSecret: string;
     description: string;
+    /** Invoices per hour this user may have (default INVOICES_PER_HOUR). */
+    maxPerHour?: number;
   },
 ): Promise<Topup> {
   const tier = await findActivePackage(db, opts.offer.packageId);
@@ -62,16 +71,33 @@ export async function createTopup(
   if (tier.amount !== opts.offer.amount || tier.bonus !== opts.offer.bonus)
     throw new PackageChangedError();
 
-  const [topup] = await db
-    .insert(topups)
-    .values({
-      userId: opts.userId,
-      packageId: tier.id,
-      amount: tier.amount,
-      bonus: tier.bonus,
-      provider: provider.mode,
-    })
-    .returning();
+  // The hourly limit is counted and the row written under a per-user lock, so parallel requests
+  // can't each read "9" and all get through. The lock ends with the transaction — before QPay is
+  // called, so a slow QPay never holds it.
+  const topup = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${opts.userId}))`);
+    const [{ recent }] = await tx
+      .select({ recent: count() })
+      .from(topups)
+      .where(
+        and(
+          eq(topups.userId, opts.userId),
+          gte(topups.createdAt, new Date(Date.now() - 60 * 60 * 1000)),
+        ),
+      );
+    if (recent >= (opts.maxPerHour ?? INVOICES_PER_HOUR)) throw new TopupRateLimitError();
+    const [row] = await tx
+      .insert(topups)
+      .values({
+        userId: opts.userId,
+        packageId: tier.id,
+        amount: tier.amount,
+        bonus: tier.bonus,
+        provider: provider.mode,
+      })
+      .returning();
+    return row;
+  });
 
   try {
     const invoice = await provider.createInvoice({

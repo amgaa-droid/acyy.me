@@ -9,6 +9,7 @@ import { createTestDb, insertUser, offerFor } from "@/test/db";
 import {
   InvalidTierError,
   TopupNotFoundError,
+  TopupRateLimitError,
   callbackUrl,
   checkPendingTopups,
   createTopup,
@@ -43,6 +44,25 @@ describe("createTopup", () => {
     await expect(createTopup(db, qpay, await opts(await newUser(), 3_000))).rejects.toBeInstanceOf(
       InvalidTierError,
     );
+  });
+
+  it("stops at the hourly limit, counting invoices whatever became of them", async () => {
+    const qpay = new MockQPayProvider(APP);
+    const u = await newUser();
+    const o = { ...(await opts(u, 10_000)), maxPerHour: 3 };
+    await createTopup(db, qpay, o);
+    await createTopup(db, qpay, o);
+    // A failed one (QPay refused) still counts: the limit is on invoices asked for.
+    const refusing = {
+      ...qpay,
+      mode: qpay.mode,
+      createInvoice: () => Promise.reject(new Error("down")),
+    };
+    await expect(createTopup(db, refusing as never, o)).rejects.toThrow("down");
+    await expect(createTopup(db, qpay, o)).rejects.toBeInstanceOf(TopupRateLimitError);
+    expect(await db.select().from(topups).where(eq(topups.userId, u))).toHaveLength(3);
+    // Another user is not affected.
+    await createTopup(db, qpay, { ...(await opts(await newUser(), 10_000)), maxPerHour: 3 });
   });
 
   it("stores the invoice and a signed callback URL", async () => {

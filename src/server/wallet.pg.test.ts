@@ -1,10 +1,17 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { productFields, productParts, products, user, walletEntries } from "@/server/db/schema";
+import {
+  productFields,
+  productParts,
+  products,
+  topups,
+  user,
+  walletEntries,
+} from "@/server/db/schema";
 import { catalogRows } from "@/server/db/seed-data";
 import { MockQPayProvider } from "@/server/qpay/mock";
-import { createTopup, settleTopup } from "@/server/topups";
+import { TopupRateLimitError, createTopup, settleTopup } from "@/server/topups";
 import { offerFor } from "@/test/db";
 import { contentEntries, purchases } from "@/server/db/schema";
 import { placeholderContentRows } from "@/server/db/seed-data";
@@ -112,6 +119,29 @@ describe.skipIf(process.env.SKIP_PG_TESTS === "1")("wallet on real Postgres", ()
     expect(results.filter((r) => r.credited)).toHaveLength(1);
     expect(await getBalance(db, u)).toBe(11_000);
     expect(await ledgerSum(db, u)).toBe(11_000);
+  }, 60_000);
+
+  it("25 concurrent invoice requests never exceed the hourly limit", async () => {
+    const u = await newUser("invoices@test.local");
+    const qpay = new MockQPayProvider("http://localhost:3000");
+    const offer = await offerFor(db, 10_000);
+    const results = await Promise.allSettled(
+      Array.from({ length: 25 }, () =>
+        createTopup(db, qpay, {
+          userId: u,
+          offer,
+          appUrl: "http://localhost:3000",
+          callbackSecret: "s".repeat(64),
+          description: "test",
+          maxPerHour: 10,
+        }),
+      ),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(10);
+    const rejected = results.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
+    expect(rejected).toHaveLength(15);
+    for (const r of rejected) expect(r.reason).toBeInstanceOf(TopupRateLimitError);
+    expect(await db.select().from(topups).where(eq(topups.userId, u))).toHaveLength(10);
   }, 60_000);
 
   it("10 concurrent purchases of the same reading (incl. B×A) charge once", async () => {
