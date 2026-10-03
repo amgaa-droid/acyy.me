@@ -121,7 +121,7 @@ function TileTip({ tip, edge }: { tip: { title: string; sub: string }; edge: "st
       )}
     >
       <div className="relative rounded-xl bg-fg px-4 py-2.5 text-bg shadow-[0_14px_34px_rgb(0_0_0/0.28)] motion-safe:animate-guide-bob">
-        <p className="text-[15px] leading-tight font-semibold">{tip.title}</p>
+        <p className="text-base leading-tight font-semibold">{tip.title}</p>
         <p className="mt-0.5 text-xs leading-snug opacity-75">{tip.sub}</p>
         <span
           aria-hidden

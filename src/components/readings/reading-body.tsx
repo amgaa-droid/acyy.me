@@ -14,7 +14,7 @@ export function ProseBody({ value }: { value: string }) {
     block.type === "heading" ? (
       <h4
         key={i}
-        className="flex items-center gap-2.5 pt-2.5 text-[13px] font-semibold tracking-[0.12em] uppercase"
+        className="flex items-center gap-2.5 pt-2.5 text-sm font-semibold tracking-[0.12em] uppercase"
       >
         <span aria-hidden className="h-px w-4 shrink-0 bg-highlight" />
         {block.text}

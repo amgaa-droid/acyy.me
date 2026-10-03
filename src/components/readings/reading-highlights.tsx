@@ -138,7 +138,7 @@ export function SummaryFields({ fields }: { fields: ReadingField[] }) {
                 )}
               >
                 <SummaryLabel className="mb-1.5">{f.name}</SummaryLabel>
-                <ul className="text-[15px] leading-[1.3] font-medium lg:text-base">
+                <ul className="text-base leading-[1.3] font-medium">
                   {fieldItems(f.value, f.kind).map((item) => (
                     <li key={item} className="border-t border-fg/10 py-2.5 lg:py-[11px]">
                       {item}

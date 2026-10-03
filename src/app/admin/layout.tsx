@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 
 /**
  * Admin shell (SPEC §6.2): desktop-first, but usable on a phone. Non-admins get 404.
- * Phone: the menu floats at the bottom (thumb reach). The colour-mode button is in the desktop
- * sidebar; on a phone the mode is changed on /me.
+ * Phone: the menu floats at the bottom (thumb reach), the colour-mode button at its end; on
+ * desktop the button sits in the sidebar's foot.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
@@ -26,8 +26,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <BrandMark className="size-5 text-nav-fg" />
             <span className="font-heading text-2xl font-semibold">{mn.admin.title}</span>
           </div>
-          <div className="scrollbar-none overflow-x-auto">
+          <div className="scrollbar-none flex items-center gap-1 overflow-x-auto lg:block">
             <AdminNav isOwner={admin.role === "owner"} />
+            <div className="shrink-0 pr-1 lg:hidden">
+              <CurrentThemeToggle />
+            </div>
           </div>
           <div className="mt-auto hidden items-end justify-between gap-2 px-3 text-xs text-nav-fg lg:flex">
             <span className="min-w-0 break-words">

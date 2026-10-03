@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { COSMIC } from "@/lib/palette";
 import path from "node:path";
 
 import { ImageResponse } from "next/og";
@@ -20,14 +21,14 @@ import type { CardList } from "./text";
  */
 
 const C = {
-  ground: "#f5f1eb",
-  ink: "#1d1b3f",
-  muted: "#6b6880",
-  highlight: "#4a44b5",
-  lavender: "#e6e3fb",
-  blush: "#f9e0db",
-  coral: "#d9705f",
-  white: "#ffffff",
+  ground: COSMIC.bg,
+  ink: COSMIC.fg,
+  muted: COSMIC.muted,
+  highlight: COSMIC.highlight,
+  lavender: COSMIC["tint-1"],
+  blush: COSMIC["tint-2"],
+  coral: COSMIC["ring-2"],
+  white: COSMIC.surface,
 };
 
 const SUBSETS = ["latin", "latin-ext", "cyrillic", "cyrillic-ext"] as const;

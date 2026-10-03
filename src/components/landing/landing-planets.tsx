@@ -319,8 +319,8 @@ export function LandingPlanets({
       >
         {/* Short screens keep only the headline, smaller: the stage needs the height. */}
         {/* Phones: two balanced lines of plain text (a pill wrapped to two lines looked boxed in). */}
-        <p className="max-w-[17rem] text-center text-[13px] leading-snug font-semibold tracking-wide text-balance text-highlight short:hidden lg:flex lg:max-w-none lg:items-center lg:gap-1.5 lg:rounded-full lg:bg-surface/80 lg:px-3 lg:py-1.5 lg:text-xs lg:tracking-normal">
-          <Sparkles className="mr-1 inline size-3.5 -translate-y-px align-middle lg:mr-0" aria-hidden />
+        <p className="max-w-[17rem] text-center text-sm leading-snug font-semibold tracking-wide text-balance text-highlight short:hidden lg:flex lg:max-w-none lg:items-center lg:gap-1.5 lg:rounded-full lg:bg-surface/80 lg:px-3 lg:py-1.5 lg:text-xs lg:tracking-normal">
+          <BrandMark className="mr-1 inline size-3.5 -translate-y-px align-middle lg:mr-0" />
           {/* No line break after the hyphen of "Astrology-ийн". */}
           {copy.eyebrow.replace(/-/g, "\u2011")}
         </p>
@@ -335,7 +335,7 @@ export function LandingPlanets({
       {size && renderStage()}
 
       <p
-        className="pointer-events-none absolute bottom-16 left-1/2 z-20 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-surface/70 px-4 py-2 text-center text-[13px] leading-snug text-balance text-muted-foreground"
+        className="pointer-events-none absolute bottom-16 left-1/2 z-20 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-surface/70 px-4 py-2 text-center text-sm leading-snug text-balance text-muted-foreground"
         style={{ bottom: 64 }}
       >
         {drag?.moved && drag.target ? tp.dropOn : copy.hint}
@@ -651,7 +651,7 @@ export function LandingPlanets({
                       <img src={p.avatarUri} alt="" draggable={false} className="size-full" />
                     </span>
                     <span className="pointer-events-none absolute top-full left-1/2 mt-1 flex -translate-x-1/2 flex-col items-center rounded-xl bg-tint-1/85 px-2 py-0.5 leading-tight whitespace-nowrap">
-                      <span className="text-[13px] font-semibold lg:text-[15px]">{p.name}</span>
+                      <span className="text-sm font-semibold lg:text-base">{p.name}</span>
                       <span className="text-xs text-muted-foreground">
                         {p.signName}
                         <span className="hidden lg:inline"> · {p.birthDate}</span>

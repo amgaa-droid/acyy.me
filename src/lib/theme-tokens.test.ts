@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { COSMIC } from "./palette";
 import { THEME_GROUND } from "./theme";
 
 /**
@@ -91,6 +92,10 @@ describe("theme tokens (globals.css)", () => {
 
   it("keeps the two cosmic night blocks the same", () => {
     expect(cosmicOsDark).toEqual(cosmicNight);
+  });
+
+  it("COSMIC (share card, e-mails, app icon) is the cosmic palette", () => {
+    for (const [token, hex] of Object.entries(COSMIC)) expect(cosmic[token]).toBe(hex);
   });
 
   it("THEME_GROUND (browser chrome, manifest) is each mode's --bg", () => {

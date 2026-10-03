@@ -742,7 +742,7 @@ export function PlanetSystem({
                   <img src={p.avatarUri} alt="" draggable={false} className="size-full" />
                 </span>
                 <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 flex w-28 -translate-x-1/2 flex-col items-center">
-                  <span className="max-w-full truncate text-[13px] leading-tight font-semibold lg:text-[15px]">{p.name}</span>
+                  <span className="max-w-full truncate text-sm leading-tight font-semibold lg:text-base">{p.name}</span>
                   {!fromDock && (
                     <span className="max-w-full truncate text-xs leading-tight text-muted-foreground">{p.signName}</span>
                   )}
@@ -913,7 +913,7 @@ export function PlanetSystem({
                 )}
               >
                 {showDock ? <X className="size-6" aria-hidden /> : `+${hidden.length}`}
-                <span className="absolute top-full left-1/2 mt-1.5 -translate-x-1/2 font-sans text-[13px] font-semibold whitespace-nowrap text-highlight">
+                <span className="absolute top-full left-1/2 mt-1.5 -translate-x-1/2 font-sans text-sm font-semibold whitespace-nowrap text-highlight">
                   {t.more}
                 </span>
               </button>
@@ -966,7 +966,7 @@ export function PlanetSystem({
             >
               <Plus className="size-6" aria-hidden />
             </Link>
-            <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 -translate-x-1/2 text-[13px] font-semibold whitespace-nowrap text-highlight">
+            <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 -translate-x-1/2 text-sm font-semibold whitespace-nowrap text-highlight">
               {mn.people.add}
             </span>
           </div>
@@ -1130,7 +1130,7 @@ export function PlanetSystem({
           <button
             type="button"
             onClick={() => mark("dismissed")}
-            className="absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-[39] flex h-10 -translate-x-1/2 animate-pop-in items-center rounded-full bg-surface/80 px-4 text-[13px] font-semibold text-muted-foreground shadow-[0_4px_14px_rgb(0_0_0/0.08)] backdrop-blur lg:bottom-8"
+            className="absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-[39] flex h-10 -translate-x-1/2 animate-pop-in items-center rounded-full bg-surface/80 px-4 text-sm font-semibold text-muted-foreground shadow-[0_4px_14px_rgb(0_0_0/0.08)] backdrop-blur lg:bottom-8"
           >
             {t.guide.later}
           </button>
@@ -1162,7 +1162,7 @@ export function PlanetSystem({
             className="my-auto flex flex-col gap-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:gap-4 lg:py-2"
             style={tc ? { paddingTop: tc.distance + 12 } : undefined}
           >
-            <p className="px-1 text-center text-[13px] font-semibold text-highlight lg:text-left lg:text-sm">
+            <p className="px-1 text-center text-sm font-semibold text-highlight lg:text-left">
               {mn.home.today.eyebrow(data.today.label, data.me.signName)}
             </p>
             {data.today.readings.map((r, i) => (
@@ -1186,7 +1186,7 @@ export function PlanetSystem({
                   {r.name}
                 </h2>
                 {r.text ? (
-                  <div className="mt-3 flex flex-col gap-2.5 text-[15px] leading-relaxed lg:text-base">
+                  <div className="mt-3 flex flex-col gap-2.5 text-base leading-relaxed">
                     {r.text.split(/\n\s*\n/).map((para, j) => (
                       <p key={j} className="whitespace-pre-line">
                         {para}
@@ -1194,7 +1194,7 @@ export function PlanetSystem({
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-3 text-[15px] text-muted-foreground">{mn.home.today.empty}</p>
+                  <p className="mt-3 text-base text-muted-foreground">{mn.home.today.empty}</p>
                 )}
               </article>
             ))}
@@ -1204,7 +1204,7 @@ export function PlanetSystem({
         <p
           aria-live="polite"
           className={cn(
-            "pointer-events-none absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-5 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-[13px] text-muted-foreground transition-opacity lg:bottom-8",
+            "pointer-events-none absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-1/2 z-5 max-w-[calc(100%-2rem)] -translate-x-1/2 truncate rounded-full bg-surface/70 px-4 py-2 text-center text-sm text-muted-foreground transition-opacity lg:bottom-8",
             today || (showDock && !drag?.moved) || guideOn || guide.welcome || toast || selBody ? "opacity-0" : "opacity-100",
           )}
         >

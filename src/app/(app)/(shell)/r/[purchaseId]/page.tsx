@@ -89,9 +89,9 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
       .map((f) => ({ ...f, code: `${s.section}.${s.key}.${f.code}` })),
   );
   const multiPart = reading.sections.length > 1;
-  // A pair's headline (the first part's title, "Харилцааны зөвлөмж") sits in the hero with the two
-  // people instead of atop its article section.
-  const headline = pair ? reading.sections.find((s) => s.fields !== null && s.title) : undefined;
+  // The headline (the first part's title: "Харилцааны зөвлөмж", "Давшигч"…) sits on the name card
+  // — with the two people for a pair — instead of atop its article section.
+  const headline = reading.sections.find((s) => s.fields !== null && s.title);
   const firstScored = reading.sections.find((s) => s.score !== null);
 
   return (
@@ -145,6 +145,11 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
                 sign={people[0].sign}
                 className="absolute -top-8 -right-16 size-80 lg:-top-12 lg:-right-20 lg:size-[26rem]"
               />
+              {headline?.title && (
+                <h2 className="absolute inset-x-6 top-6 max-w-[78%] text-4xl leading-[1.05] font-semibold text-balance lg:inset-x-9 lg:top-9 lg:text-5xl">
+                  {headline.title}
+                </h2>
+              )}
               <div className="absolute inset-x-6 bottom-6.5 flex flex-col gap-2 lg:inset-x-9 lg:bottom-8.5 lg:gap-2.5">
                 <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
                   {reading.productName}

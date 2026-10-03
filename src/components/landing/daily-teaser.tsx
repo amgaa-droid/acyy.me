@@ -1,6 +1,8 @@
 "use client";
 
 import { ArrowRight, Lock, Sparkles } from "lucide-react";
+
+import { BrandMark } from "@/components/app/brand-mark";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -40,7 +42,7 @@ export function DailyTeaser({
       <div className="flex min-w-0 flex-col gap-3">
         {copy.eyebrow && (
           <span className="flex w-fit items-center gap-1.5 rounded-full bg-tint-3 px-3 py-1.5 text-xs font-semibold">
-            <Sparkles className="size-3.5" aria-hidden /> {copy.eyebrow}
+            <BrandMark className="size-3.5" /> {copy.eyebrow}
           </span>
         )}
         <h2 className="font-heading text-4xl leading-tight font-semibold text-balance lg:text-5xl">

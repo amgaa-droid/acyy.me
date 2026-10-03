@@ -137,7 +137,7 @@ export function ShareCardButton({ purchaseId }: { purchaseId: string }) {
     <ShareSheet
       purchaseId={purchaseId}
       trigger={
-        <Button size="lg" className="h-12 w-full gap-2 rounded-full text-[15px]">
+        <Button size="lg" className="h-12 w-full gap-2 rounded-full">
           <Share2 aria-hidden /> {t.button}
         </Button>
       }

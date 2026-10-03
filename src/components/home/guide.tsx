@@ -41,7 +41,7 @@ export function GuidePill({
         aria-expanded={open}
         aria-label={g.pillAria(count)}
         className={cn(
-          "flex h-10 animate-pop-in items-center gap-2 rounded-full pr-4 pl-3 text-[13px] font-semibold whitespace-nowrap shadow-[0_6px_18px_rgb(0_0_0/0.12)] transition-colors duration-500",
+          "flex h-10 animate-pop-in items-center gap-2 rounded-full pr-4 pl-3 text-sm font-semibold whitespace-nowrap shadow-[0_6px_18px_rgb(0_0_0/0.12)] transition-colors duration-500",
           ready ? "bg-pair text-pair-fg" : "bg-surface text-fg",
         )}
       >
@@ -67,7 +67,7 @@ export function GuidePill({
             >
               <span
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold",
+                  "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
                   done[s] ? "bg-pair text-pair-fg" : current === s ? "bg-fg text-bg" : "bg-tint-1 text-highlight",
                 )}
               >
@@ -122,7 +122,7 @@ export function GuideTip({
       style={{ left, top: above ? top - 8 : bottom + 8 }}
     >
       <div className="relative rounded-xl bg-fg px-4 py-2.5 text-bg shadow-[0_14px_34px_rgb(0_0_0/0.28)] motion-safe:animate-guide-bob">
-        <p className="text-[15px] leading-tight font-semibold">{title}</p>
+        <p className="text-base leading-tight font-semibold">{title}</p>
         <p className="mt-0.5 text-xs leading-snug opacity-75">{sub}</p>
         <span
           aria-hidden
@@ -173,7 +173,7 @@ export function WelcomeCard({
         <button
           type="button"
           onClick={onLater}
-          className="h-13 rounded-full bg-subtle px-5 text-[15px] font-semibold text-muted-foreground"
+          className="h-13 rounded-full bg-subtle px-5 text-base font-semibold text-muted-foreground"
         >
           {g.welcome.later}
         </button>
@@ -218,7 +218,7 @@ export function GhostPlanet({
           >
             <Plus className="size-[36%]" aria-hidden />
           </span>
-          <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 -translate-x-1/2 text-[13px] font-semibold whitespace-nowrap text-highlight">
+          <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 -translate-x-1/2 text-sm font-semibold whitespace-nowrap text-highlight">
             {label}
           </span>
         </Link>

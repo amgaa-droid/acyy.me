@@ -136,7 +136,7 @@ export function DailyEditor({
                 rows={6}
                 placeholder={t.placeholder}
                 onChange={(e) => setTexts((cur) => ({ ...cur, [s.code]: e.target.value }))}
-                className="min-h-36 w-full resize-y rounded-2xl bg-subtle px-3.5 py-3 text-[15px] leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-36 w-full resize-y rounded-2xl bg-subtle px-3.5 py-3 text-base leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <span className="self-end text-xs text-muted-foreground tabular-nums">
                 {t.chars(value.length, max)}
