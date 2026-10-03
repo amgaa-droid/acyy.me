@@ -107,24 +107,26 @@ test("tapping a planet shows its readings; they open as a popup over home", asyn
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("the \"+N\" dock shows one page of people at a time and turns pages", async ({ page }) => {
+test("tapping \"+N\" shows the next five people each time, then closes", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await loginWithPassword(page, "owner@test.local");
   await showPlanets(page);
   const more = page.getByRole("button", { name: /^Бусад \d+ хүн$/ });
   test.skip((await more.count()) === 0, "owner has nobody waiting in +N");
+  const total = Number((await more.getAttribute("aria-label"))!.match(/\d+/)![0]);
   await more.click();
   const dock = page.getByRole("region", { name: /^Бусад \d+ хүн · чирж нийцүүл$/ });
   await expect(dock).toBeVisible();
-  const pages = dock.getByRole("button", { name: /-р хуудас$/ });
   const names = async () =>
     page.locator("[data-screen=home] button[aria-label]").evaluateAll((els) =>
       els.map((e) => e.getAttribute("aria-label") ?? "").filter((l) => /, .+, /.test(l)),
     );
-  if ((await pages.count()) > 1) {
-    const first = await names();
-    await pages.nth(1).click();
-    await expect.poll(names).not.toEqual(first);
-    await expect(pages.nth(1)).toHaveAttribute("aria-current", "true");
+  const pages = Math.ceil(total / 5);
+  for (let i = 1; i < pages; i++) {
+    const before = await names();
+    await page.getByRole("button", { name: /^Дараагийн \d+ хүн$/ }).click();
+    await expect.poll(names).not.toEqual(before);
   }
+  await page.getByRole("button", { name: "Бусад хүмүүсийг хаах" }).click();
+  await expect(dock).toHaveCount(0);
 });

@@ -93,6 +93,8 @@ const FACE = "dark:bg-face";
  */
 const PAIR = "var(--pair, #dc5815)";
 const PAIR_FG = "var(--pair-fg, #100f26)";
+/** People per "+N" dock page; each tap on "+N" shows the next ones, then closes. */
+const DOCK_PER_PAGE = 5;
 /** Room per person in the "+N" dock (its name fits under it); more people go to further pages. */
 const DOCK_MIN_STEP = 76;
 /** How long the opening fly-out lasts (ms). */
@@ -572,12 +574,14 @@ export function PlanetSystem({
     const dockW = Math.min(w - 32, layout.key === "phone" ? 420 : 640);
     const arrows = layout.key !== "phone";
     const step = Math.max(DOCK_MIN_STEP, layout.dock.step * Math.min(1, k));
-    const perPage = Math.max(1, Math.floor((dockW - (arrows ? 112 : 24)) / step));
+    // At most five a page: tapping "+N" again brings the next five.
+    const perPage = Math.min(DOCK_PER_PAGE, Math.max(1, Math.floor((dockW - (arrows ? 112 : 24)) / step)));
     const dockPages = Math.max(1, Math.ceil(hidden.length / perPage));
     const page = Math.min(dockPage.index, dockPages - 1);
     const docked = showDock ? hidden.slice(page * perPage, (page + 1) * perPage) : [];
     const dockR = Math.min(layout.dock.r * k, step / 2 - 10);
     const dockX0 = w / 2 - (docked.length * step) / 2 + step / 2;
+    const lastDockPage = page === dockPages - 1;
     const turnPage = (dir: 1 | -1) => {
       const index = Math.min(dockPages - 1, Math.max(0, page + dir));
       if (index !== page) setDockPage({ index, dir });
@@ -940,21 +944,33 @@ export function PlanetSystem({
             <div className="size-full motion-safe:animate-drift-a" style={{ animationDelay: "-4s" }}>
               <button
                 type="button"
-                aria-label={showDock ? t.closeDock : t.moreAria(hidden.length)}
+                aria-label={
+                  !showDock ? t.moreAria(hidden.length) : lastDockPage ? t.closeDock : t.moreNext(perPage)
+                }
                 aria-expanded={showDock}
+                // Closed → the first page; open → the next page; on the last page → close.
                 onClick={() => {
                   setSelected(null);
-                  setDockPage({ index: 0, dir: 1 });
-                  setDockOpen((o) => !o);
+                  if (!showDock) {
+                    setDockPage({ index: 0, dir: 1 });
+                    setDockOpen(true);
+                  } else if (lastDockPage) setDockOpen(false);
+                  else turnPage(1);
                 }}
                 className={cn(
-                  `relative flex size-full items-center justify-center rounded-full border-[3px] border-surface font-heading text-xl font-semibold text-bg shadow-[0_8px_24px_rgb(0_0_0/0.18)] transition-[scale] duration-500 ${SPRING} hover:scale-110 lg:text-2xl`,
-                  showDock ? "bg-highlight" : "bg-fg",
+                  `relative flex size-full items-center justify-center rounded-full border-[3px] border-surface font-heading text-xl font-semibold text-bg shadow-[0_8px_24px_rgb(0_0_0/0.18)] transition-[scale,background-color] duration-500 ${SPRING} hover:scale-110 lg:text-2xl`,
+                  !showDock ? "bg-fg" : lastDockPage ? "bg-muted-foreground" : "bg-highlight",
                 )}
               >
-                {showDock ? <X className="size-6" aria-hidden /> : `+${hidden.length}`}
+                {!showDock ? (
+                  `+${hidden.length}`
+                ) : lastDockPage ? (
+                  <X className="size-6" aria-hidden />
+                ) : (
+                  <span key={page} className="animate-pop-in tabular-nums">{`${page + 1}/${dockPages}`}</span>
+                )}
                 <span className="absolute top-full left-1/2 mt-1.5 -translate-x-1/2 font-sans text-sm font-semibold whitespace-nowrap text-highlight">
-                  {t.more}
+                  {!showDock ? t.more : lastDockPage ? mn.common.close : t.moreNextShort(perPage)}
                 </span>
               </button>
             </div>
@@ -976,7 +992,15 @@ export function PlanetSystem({
               }}
             >
               <div className="absolute inset-x-5 top-3 flex items-center justify-between gap-2">
-                <p className="min-w-0 truncate text-xs font-semibold text-highlight">{t.dockTitle(hidden.length)}</p>
+                <p className="min-w-0 truncate text-xs font-semibold text-highlight">
+                  {dockPages > 1 ? t.moreAria(hidden.length) : t.dockTitle(hidden.length)}
+                  {dockPages > 1 && (
+                    <span className="text-fg tabular-nums">
+                      {" · "}
+                      {page * perPage + 1}–{Math.min(hidden.length, (page + 1) * perPage)}
+                    </span>
+                  )}
+                </p>
                 <Link href="/people" scroll={false} className="shrink-0 text-xs font-semibold text-fg underline-offset-2 hover:underline">
                   {mn.home.all} →
                 </Link>
