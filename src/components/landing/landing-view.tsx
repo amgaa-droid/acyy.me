@@ -6,6 +6,7 @@ import { ConstellationArt } from "@/components/app/constellation";
 import { DailyTeaser } from "@/components/landing/daily-teaser";
 import { CurrentThemeToggle } from "@/components/app/current-theme-toggle";
 import { LandingPlanets } from "@/components/landing/landing-planets";
+import { LegalFooter } from "@/components/legal/legal-footer";
 import { StickyCta } from "@/components/landing/sticky-cta";
 import { PriceAction } from "@/components/readings/price-action";
 import { ProductIcon } from "@/components/readings/product-icon";
@@ -362,12 +363,20 @@ export function LandingView({
 
       <main
         id="more"
-        className="mx-auto flex max-w-6xl scroll-mt-4 flex-col gap-16 px-4 pt-14 pb-32 lg:gap-24 lg:px-8 lg:pt-20 lg:pb-24"
+        className="mx-auto flex max-w-6xl scroll-mt-4 flex-col gap-16 px-4 pt-14 pb-16 lg:gap-24 lg:px-8 lg:pt-20 lg:pb-16"
       >
         {c.layout
           .filter((s) => s.visible)
           .map((s) => (sections[s.key] ? <div key={s.key}>{sections[s.key]}</div> : null))}
       </main>
+
+      {/* Google/Facebook sign-in ask for the terms and privacy links on the home page. */}
+      <footer className="mx-auto max-w-6xl px-4 pb-32 lg:px-8 lg:pb-12">
+        <LegalFooter className="border-t border-border pt-4" />
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} {APP_NAME}
+        </p>
+      </footer>
 
       {/* ---- Mobile sticky CTA ---- */}
       <StickyCta targetId="top" label={t.stickyCta} />

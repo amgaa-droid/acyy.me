@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { BrandMark } from "@/components/app/brand-mark";
 import { CurrentThemeToggle } from "@/components/app/current-theme-toggle";
+import { LegalFooter } from "@/components/legal/legal-footer";
 import { APP_NAME, env } from "@/env";
 import { mn } from "@/i18n/mn";
 import { safeNext } from "@/lib/safe-next";
@@ -48,6 +49,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             devMail={env().NODE_ENV !== "production" && env().EMAIL_TRANSPORT === "console"}
           />
         </div>
+        <LegalFooter className="mt-4" />
       </div>
     </main>
   );
