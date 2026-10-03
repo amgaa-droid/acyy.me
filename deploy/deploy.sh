@@ -11,7 +11,7 @@ set -euo pipefail
 
 HOST="${DEPLOY_HOST:-root@2.28.197.187}"
 SSH_KEY="${DEPLOY_SSH_KEY:-$HOME/.ssh/id_ed25519}"
-DOMAIN="${DEPLOY_DOMAIN:-zurkhai.2-28-197-187.sslip.io}"
+DOMAIN="${DEPLOY_DOMAIN:-acyy.me}"
 NEIGHBOUR="https://2-28-197-187.sslip.io/"
 DIR=/opt/zurkhai
 
