@@ -100,6 +100,15 @@ export const auth = betterAuth({
     },
     session: {
       create: {
+        // A deleted account (src/server/account-deletion.ts) keeps its row for the money trail
+        // but must never sign in again, whatever path tries to.
+        before: async (s) => {
+          const [u] = await db
+            .select({ deletedAt: user.deletedAt })
+            .from(user)
+            .where(eq(user.id, s.userId));
+          if (u?.deletedAt) return false;
+        },
         after: async (s) => {
           await db
             .update(user)

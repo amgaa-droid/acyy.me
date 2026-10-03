@@ -11,10 +11,10 @@ import { getUserAdminRole } from "./roles";
 /** Current session (deduplicated per request). */
 export const getSession = cache(async () => auth.api.getSession({ headers: await headers() }));
 
-/** Signed-in user or redirect to /login. */
+/** Signed-in user or redirect to /login. A deleted account's leftover session counts as none. */
 export async function requireUser() {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session || session.user.deletedAt) redirect("/login");
   return session.user;
 }
 
