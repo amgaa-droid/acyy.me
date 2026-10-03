@@ -26,7 +26,7 @@
 
 - [ ] Сервер: `deploy` хэрэглэгч, SSH key, UFW (22/80/443), Docker + Compose суулгах
 - [ ] Caddy контейнер: `2-28-197-187.sslip.io` → статик `privacy.html`, `terms.html`, `data-deletion.html` (SSL автоматаар)
-- [ ] Нууцлалын бодлого, Үйлчилгээний нөхцөлийн **ноорог** (монгол), SPEC §4.1, §9-ийн дүрмүүдийг тусгасан
+- [x] Нууцлалын бодлого, Үйлчилгээний нөхцөлийн **ноорог** (монгол), SPEC §4.1, §9-ийн дүрмүүдийг тусгасан — `/terms`, `/privacy` (`src/i18n/legal.ts`, хуульчаар шалгуулах)
 - [ ] `docs/SETUP-OAUTH.md`: хэрэглэгч Google Cloud Console, Meta for Developers дээр юу хийхийг алхам алхмаар (redirect URI-ууд: `{APP_URL}/api/auth/callback/google|facebook`)
 
 **Дууссаны шалгуур:** `https://2-28-197-187.sslip.io/privacy` HTTPS-ээр нээгдэнэ. Хэрэглэгч OAuth app-уудаа үүсгэж review-д илгээх боломжтой.
@@ -165,7 +165,7 @@
 - [x] **Тест:** dump задлах, төлөвлөгөө (харилцаа, нэр, давхардал, огноо), бичилт (idempotent, зөрчил rollback), "Би" сонгох
 - [ ] Серверт: Facebook app-д `https://acyy.me/api/auth/callback/facebook` redirect URI, `FACEBOOK_CLIENT_SECRET`
 - [ ] Шилжүүлэх өдөр: шинэ dump → `scripts/legacy-users.ts --commit` production DB дээр; өөрийн хуучин FB-ээр нэвтэрч шалгах
-- [ ] Нууцлалын бодлогод хуучин сайтын мэдээлэл шилжсэнийг тусгах
+- [x] Нууцлалын бодлогод хуучин сайтын мэдээлэл шилжсэнийг тусгах (`src/i18n/legal.ts`)
 
 **Дууссаны шалгуур:** Хуучин Facebook бүртгэлээр нэвтрэхэд хуучин зурхай, үлдэгдэл харагдаж, "Та аль нь вэ?"-гээр "Би"-гээ сонгоно.
 
