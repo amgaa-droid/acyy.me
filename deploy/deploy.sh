@@ -57,18 +57,22 @@ ssh_ "set -e
   fi"
 
 echo "==> wait for the app"
-for i in $(seq 1 30); do
-  if curl -fsS -o /dev/null "https://$DOMAIN/"; then break; fi
+for _ in $(seq 1 30); do
+  if curl -fsS -o /dev/null "https://$DOMAIN/" 2>/dev/null; then break; fi
   sleep 5
 done
 
 echo "==> checks"
-printf "zurkhai:     "; curl -sS -o /dev/null -w "%{http_code}\n" "https://$DOMAIN/" || true
+printf "zurkhai:     "; ours=$(curl -sS -o /dev/null -w "%{http_code}" "https://$DOMAIN/" || echo 000); echo "$ours"
 printf "bitdefender: "; code=$(curl -sS -o /dev/null -w "%{http_code}" "$NEIGHBOUR" || echo 000); echo "$code"
 ssh_ "free -m; docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.CPUPerc}}'"
 if [ "$code" != "200" ]; then
   echo "!! Bitdefender does not answer 200 — roll back: rm /opt/caddy-sites/zurkhai.caddy, reload Caddy,"
   echo "!! docker compose -p zurkhai down — and investigate."
+  exit 1
+fi
+if [ "$ours" != "200" ]; then
+  echo "!! $DOMAIN answers $ours — see: docker logs --tail 50 zurkhai-web-1"
   exit 1
 fi
 echo "==> done"
