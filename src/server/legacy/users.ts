@@ -52,7 +52,7 @@ export type UserPlan = {
 type SkipReason =
   "no_facebook" | "duplicate_facebook_id" | "duplicate_email" | "invalid_birth_date";
 
-type LegacyPlan = {
+export type LegacyPlan = {
   users: UserPlan[];
   skipped: { reason: SkipReason; legacyUserId: number; ref?: string }[];
 };

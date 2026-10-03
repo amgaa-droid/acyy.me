@@ -3,6 +3,11 @@
  *
  *   pnpm tsx scripts/legacy-users.ts [--commit] [--limit N] [--only <legacyUserId>]
  *       [--dump OldDB/alldata.sql] [--logins OldDB/onlyAspnetuserslogin.sql]
+ *       [--plan-out plan.json] [--plan-in plan.json]
+ *
+ * Reading the dumps takes ~1.5 GB of memory, so on a small server: plan where the dumps are
+ * (`--plan-out`, writes the planned accounts — personal data, chmod 600), copy the file over and
+ * apply it there (`--plan-in … --commit`), which needs no dumps. Delete the file afterwards.
  *
  * Reads the SQL Server dumps (kept out of git), plans every account (users with a Facebook
  * login who paid for a reading or hold a balance), prints a report and — with --commit —
@@ -10,7 +15,7 @@
  * and the balance is credited once (idempotency key "legacy:balance:{id}").
  * A JSON report goes to OldDB/export/legacy-users-report.json.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -25,7 +30,7 @@ import {
   type ApplyResult,
 } from "@/server/legacy/apply";
 import { readDump } from "@/server/legacy/mssql";
-import { planLegacyUsers } from "@/server/legacy/users";
+import { planLegacyUsers, type LegacyPlan } from "@/server/legacy/users";
 import { loadProductDefs } from "@/server/products";
 
 try {
@@ -49,28 +54,44 @@ async function main() {
   const dumpPath = arg("dump") ?? "OldDB/alldata.sql";
   const loginsPath = arg("logins") ?? "OldDB/onlyAspnetuserslogin.sql";
 
-  console.time("read dumps");
-  const [data, logins] = await Promise.all([
-    readDump(dumpPath, ["Users", "acyyUserAction", "acyyRelation", "acyyChargeHistory"]),
-    readDump(loginsPath, ["AspNetUserLogins"]),
-  ]);
-  console.timeEnd("read dumps");
-
-  const plan = planLegacyUsers(
-    {
-      users: data.Users,
-      logins: logins.AspNetUserLogins,
-      actions: data.acyyUserAction,
-      relations: data.acyyRelation,
-      charges: data.acyyChargeHistory,
-    },
-    toIsoDate(todayYmd()),
-  );
+  const planIn = arg("plan-in");
+  const planOut = arg("plan-out");
+  let plan: LegacyPlan;
+  type Source = { users: number; logins: number };
+  let source: Source = { users: 0, logins: 0 };
+  if (planIn) {
+    ({ plan, source } = JSON.parse(await readFile(planIn, "utf8")) as {
+      plan: LegacyPlan;
+      source: Source;
+    });
+  } else {
+    console.time("read dumps");
+    const [data, logins] = await Promise.all([
+      readDump(dumpPath, ["Users", "acyyUserAction", "acyyRelation", "acyyChargeHistory"]),
+      readDump(loginsPath, ["AspNetUserLogins"]),
+    ]);
+    console.timeEnd("read dumps");
+    source = { users: data.Users.length, logins: logins.AspNetUserLogins.length };
+    plan = planLegacyUsers(
+      {
+        users: data.Users,
+        logins: logins.AspNetUserLogins,
+        actions: data.acyyUserAction,
+        relations: data.acyyRelation,
+        charges: data.acyyChargeHistory,
+      },
+      toIsoDate(todayYmd()),
+    );
+  }
+  if (planOut) {
+    await writeFile(planOut, JSON.stringify({ plan, source }), { mode: 0o600 });
+    console.log(`plan → ${planOut}`);
+  }
   const users = plan.users.filter((u) => only === null || u.legacyUserId === only).slice(0, limit);
 
   const summary = {
-    sourceUsers: data.Users.length,
-    facebookLogins: logins.AspNetUserLogins.length,
+    sourceUsers: source.users,
+    facebookLogins: source.logins,
     plannedUsers: plan.users.length,
     selected: users.length,
     people: users.reduce((n, u) => n + u.people.length, 0),
@@ -137,7 +158,7 @@ async function main() {
     console.log("Dry run — nothing written. Add --commit to apply.");
   }
 
-  const out = path.resolve("OldDB/export/legacy-users-report.json");
+  const out = path.resolve(arg("report") ?? "OldDB/export/legacy-users-report.json");
   await mkdir(path.dirname(out), { recursive: true });
   await writeFile(
     out,
