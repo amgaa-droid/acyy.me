@@ -1508,6 +1508,9 @@ export const mn = {
   } satisfies Record<Relation, string>,
 } as const;
 
+// One formatter for the process: building an Intl.NumberFormat is far costlier than using one.
+const mntFormat = new Intl.NumberFormat("en-US");
+
 export function formatMnt(amount: number): string {
-  return `${new Intl.NumberFormat("en-US").format(amount)}${mn.common.currency}`;
+  return `${mntFormat.format(amount)}${mn.common.currency}`;
 }

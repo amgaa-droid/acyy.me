@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { avatarDataUri } from "@/lib/avatars";
+import { avatarUrl } from "@/lib/avatars";
 
 type AvatarProps = {
   seed: string;
@@ -19,14 +19,8 @@ export function Avatar({ seed, size = 48, className, alt = "" }: AvatarProps) {
       )}
       style={{ width: size, height: size }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- local data URI, nothing to optimize */}
-      <img
-        src={avatarDataUri(seed)}
-        alt={alt}
-        width={size}
-        height={size}
-        className="size-full"
-      />
+      {/* eslint-disable-next-line @next/next/no-img-element -- small cached SVG, nothing to optimize */}
+      <img src={avatarUrl(seed)} alt={alt} width={size} height={size} className="size-full" />
     </span>
   );
 }

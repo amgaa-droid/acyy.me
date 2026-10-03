@@ -10,11 +10,15 @@ import { LegalFooter } from "@/components/legal/legal-footer";
 import { StickyCta } from "@/components/landing/sticky-cta";
 import { PriceAction } from "@/components/readings/price-action";
 import { ProductIcon } from "@/components/readings/product-icon";
-import { PairHero, type PairHeroPerson, SummaryFields } from "@/components/readings/reading-highlights";
+import {
+  PairHero,
+  type PairHeroPerson,
+  SummaryFields,
+} from "@/components/readings/reading-highlights";
 import { APP_NAME } from "@/env";
 import { formatMnt, mn } from "@/i18n/mn";
 import { AVATAR_SEEDS } from "@/lib/avatar-seeds";
-import { avatarDataUri } from "@/lib/avatars";
+import { avatarUrl } from "@/lib/avatars";
 import { formatBirthDate } from "@/lib/birth-date";
 import { BIRTHDAY_PRODUCT, SYNASTRY_PRODUCT } from "@/lib/catalog-refs";
 import { fillTokens, type BodySection, type LandingContent } from "@/lib/landing-content";
@@ -23,7 +27,6 @@ import { describeBirthDate, type AstroRefs } from "@/server/astro/refs";
 import type { Product } from "@/server/catalog";
 import type { LandingDaily } from "@/server/landing-daily";
 import { bestValueIndex, type PackageOption } from "@/server/topup-packages";
-
 
 const primaryCta =
   "flex h-13 items-center justify-center gap-2 rounded-full bg-fg px-6 text-base font-semibold text-bg";
@@ -51,12 +54,13 @@ export function LandingView({
   const synastry = products.find((p) => p.code === SYNASTRY_PRODUCT);
   const cheapest = products.length ? Math.min(...products.map((p) => p.price)) : 1000;
   const best = bestValueIndex(packages);
-  const f = (s: string) =>
-    fillTokens(s, {
-      minPrice: formatMnt(cheapest),
-      birthdayPrice: formatMnt(birthdayPrice),
-      synastryPrice: formatMnt(synastry?.price ?? cheapest),
-    });
+  // Formatted once: every CMS text on the page goes through f().
+  const tokens = {
+    minPrice: formatMnt(cheapest),
+    birthdayPrice: formatMnt(birthdayPrice),
+    synastryPrice: formatMnt(synastry?.price ?? cheapest),
+  };
+  const f = (s: string) => fillTokens(s, tokens);
   const override = new Map(c.products.items.map((i) => [i.code, i]));
   const examplePerson = (i: 0 | 1): PairHeroPerson => {
     const p = c.synastry.pair[i];
@@ -181,8 +185,18 @@ export function LandingView({
           />
           <SummaryFields
             fields={[
-              { code: "good", name: c.demo.goodLabel, kind: "chips" as const, items: c.synastry.goodFor },
-              { code: "caution", name: c.demo.cautionLabel, kind: "alert" as const, items: c.synastry.cautionFor },
+              {
+                code: "good",
+                name: c.demo.goodLabel,
+                kind: "chips" as const,
+                items: c.synastry.goodFor,
+              },
+              {
+                code: "caution",
+                name: c.demo.cautionLabel,
+                kind: "alert" as const,
+                items: c.synastry.cautionFor,
+              },
             ]
               .filter((x) => x.items.length > 0)
               .map(({ items, ...x }) => ({ ...x, isFree: true, value: items.join("\n") }))}
@@ -261,7 +275,9 @@ export function LandingView({
                 <span className={cn("text-xs", isBest ? "opacity-70" : "text-muted-foreground")}>
                   {t.wallet.pay}
                 </span>
-                <span className="font-heading text-2xl font-semibold">{formatMnt(tier.amount)}</span>
+                <span className="font-heading text-2xl font-semibold">
+                  {formatMnt(tier.amount)}
+                </span>
                 <span
                   className={cn(
                     "text-sm font-semibold",
@@ -270,8 +286,11 @@ export function LandingView({
                 >
                   {tier.bonus ? t.wallet.bonus(formatMnt(tier.bonus)) : "—"}
                 </span>
-                <span className={cn("mt-2 text-xs", isBest ? "opacity-70" : "text-muted-foreground")}>
-                  {t.wallet.get} {formatMnt(total)} · {t.wallet.readings(Math.floor(total / cheapest))}
+                <span
+                  className={cn("mt-2 text-xs", isBest ? "opacity-70" : "text-muted-foreground")}
+                >
+                  {t.wallet.get} {formatMnt(total)} ·{" "}
+                  {t.wallet.readings(Math.floor(total / cheapest))}
                 </span>
               </li>
             );
@@ -288,7 +307,10 @@ export function LandingView({
             <details key={i} className="group rounded-3xl bg-surface px-5">
               <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">
                 {f(item.q)}
-                <ChevronDown className="size-5 shrink-0 transition group-open:rotate-180" aria-hidden />
+                <ChevronDown
+                  className="size-5 shrink-0 transition group-open:rotate-180"
+                  aria-hidden
+                />
               </summary>
               <p className="pb-5 whitespace-pre-line text-muted-foreground">{f(item.a)}</p>
             </details>
@@ -342,7 +364,7 @@ export function LandingView({
           tint: d.tint,
           birthDate: formatBirthDate(d.birthDate),
           signName: describeBirthDate(d.birthDate, refs).sign.nameMn,
-          avatarUri: avatarDataUri(AVATAR_SEEDS[d.seed % AVATAR_SEEDS.length]),
+          avatarUri: avatarUrl(AVATAR_SEEDS[d.seed % AVATAR_SEEDS.length]),
         }))}
         links={c.demo.links.map((l) => ({ ...l, text: f(l.text) }))}
         products={products

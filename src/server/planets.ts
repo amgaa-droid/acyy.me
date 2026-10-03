@@ -2,7 +2,7 @@ import { formatBirthDate } from "@/lib/birth-date";
 import { SYNASTRY_PRODUCT } from "@/lib/catalog-refs";
 import { dayLabel, todayIso } from "@/lib/daily";
 import { RELATION_GROUP, isOffOrbit, type Relation, type RelationGroup } from "@/lib/domain";
-import { avatarDataUri } from "@/lib/avatars";
+import { avatarUrl } from "@/lib/avatars";
 import { relationText } from "@/lib/people";
 import { pairKey, type PairLink } from "@/lib/planet-system";
 import { loadAstroRefs } from "@/server/astro/refs";
@@ -144,7 +144,7 @@ export async function loadPlanetSystem(
       name: self.name,
       signName: signOf(self),
       birthDate: formatBirthDate(self.birthDate),
-      avatarUri: avatarDataUri(self.avatarSeed),
+      avatarUri: avatarUrl(self.avatarSeed),
       readings: readingsOf(0),
     },
     people: others.map((p, i) => ({
@@ -153,7 +153,7 @@ export async function loadPlanetSystem(
       relation: p.relation,
       relationText: relationText(p),
       signName: signOf(p),
-      avatarUri: avatarDataUri(p.avatarSeed),
+      avatarUri: avatarUrl(p.avatarSeed),
       readings: readingsOf(i + 1),
     })),
     mePairs,

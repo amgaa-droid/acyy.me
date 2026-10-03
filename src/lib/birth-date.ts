@@ -74,14 +74,16 @@ export function parseIsoDate(value: string): Ymd | null {
   return { y, m, d };
 }
 
+const ymdFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: APP_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 /** Today's calendar date in Mongolia, regardless of the server's time zone. */
 export function todayYmd(now: Date = new Date()): Ymd {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: APP_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
+  const parts = ymdFormat.formatToParts(now);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
   return { y: get("year"), m: get("month"), d: get("day") };
 }
