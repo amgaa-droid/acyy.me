@@ -37,7 +37,7 @@ beforeAll(async () => {
 afterAll(() => close());
 
 const names = async (q: Parameters<typeof searchUsers>[1]) =>
-  (await searchUsers(db, q)).map((r) => r.name);
+  (await searchUsers(db, q)).rows.map((r) => r.name);
 
 describe("searchUsers", () => {
   it("sorts by join date, newest first by default", async () => {
@@ -48,12 +48,25 @@ describe("searchUsers", () => {
   it("sorts by latest paid top-up; never-paid users last either way", async () => {
     expect(await names({ sort: "topup", dir: "desc" })).toEqual(["ann", "bat", "dulmaa", "chuka"]);
     expect(await names({ sort: "topup", dir: "asc" })).toEqual(["bat", "ann", "dulmaa", "chuka"]);
-    const [ann] = await searchUsers(db, { q: "ann" });
+    const [ann] = (await searchUsers(db, { q: "ann" })).rows;
     expect(new Date(ann.lastTopupAt!).toISOString()).toBe(day(20).toISOString());
   });
 
   it("ignores bad sort params and still searches", async () => {
     expect(await names({ sort: "x" as never, dir: "y" as never, q: "BAT" })).toEqual(["bat"]);
     expect(await names("chu")).toEqual(["chuka"]);
+  });
+
+  it("pages through the list and clamps out-of-range pages", async () => {
+    const first = await searchUsers(db, { page: 1 }, 3);
+    expect(first).toMatchObject({ total: 4, page: 1, pages: 2 });
+    expect(first.rows.map((r) => r.name)).toEqual(["dulmaa", "chuka", "bat"]);
+    const second = await searchUsers(db, { page: 2 }, 3);
+    expect(second.rows.map((r) => r.name)).toEqual(["ann"]);
+    // Past the end → last page; garbage → first page.
+    expect((await searchUsers(db, { page: 9 }, 3)).page).toBe(2);
+    expect((await searchUsers(db, { page: "x" as never }, 3)).page).toBe(1);
+    // The total follows the search.
+    expect(await searchUsers(db, { q: "zzz" }, 3)).toMatchObject({ total: 0, page: 1, pages: 1 });
   });
 });

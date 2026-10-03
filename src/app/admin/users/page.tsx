@@ -5,7 +5,13 @@ import Link from "next/link";
 import { formatMnt, mn } from "@/i18n/mn";
 import { cn } from "@/lib/utils";
 import { requireOwner } from "@/server/admin/guard";
-import { searchUsers, userListQuerySchema, type UserListQuery } from "@/server/admin/users";
+import { Pagination } from "@/components/admin/pagination";
+import {
+  USERS_PAGE_SIZE,
+  searchUsers,
+  userListQuerySchema,
+  type UserListQuery,
+} from "@/server/admin/users";
 import { db } from "@/server/db";
 
 export const metadata: Metadata = { title: mn.admin.nav.users };
@@ -31,7 +37,10 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
   const query = userListQuerySchema.parse(
     Object.fromEntries(Object.entries(sp).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])),
   );
-  const rows = await searchUsers(db, query);
+  const { rows, total, page, pages } = await searchUsers(db, query);
+  // Sort/search stay on every page link; re-sorting or searching starts again at page 1.
+  const keep: Record<string, string> = { sort: query.sort, dir: query.dir };
+  if (query.q) keep.q = query.q;
   const t = mn.admin.users;
 
   return (
@@ -92,6 +101,14 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/admin
           </tbody>
         </table>
       </div>
+      <Pagination
+        basePath="/admin/users"
+        params={keep}
+        page={page}
+        pages={pages}
+        total={total}
+        pageSize={USERS_PAGE_SIZE}
+      />
     </div>
   );
 }
