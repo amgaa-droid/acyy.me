@@ -300,7 +300,9 @@ export async function dashboardStats(db: AppDb, range: Range, now = new Date()) 
     db
       .select({ total: sum(wallets.balance), holders: count() })
       .from(wallets)
-      .where(sql`${wallets.balance} > 0`),
+      // A deleted account's balance is forfeited (terms §7): no longer owed to anyone.
+      .innerJoin(user, eq(user.id, wallets.userId))
+      .where(and(sql`${wallets.balance} > 0`, isNull(user.deletedAt))),
     db.select().from(topupPackages),
   ]);
   return {

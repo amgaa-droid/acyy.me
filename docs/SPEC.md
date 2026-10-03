@@ -358,7 +358,7 @@ help_chats       id uuid pk, user_id → user (cascade), conversation_id uuid, q
                  cached_tokens, output_tokens, ms, feedback (-1|1) null, created_at
 ```
 
-**Данс устгах** (`/me` → анхааруулга + «Ойлголоо» checkbox, `src/server/account-deletion.ts`, нэг transaction, idempotent): persons, invitations, session/account, `preview_views`, `help_chats` устгана; бусдын хүнд холбогдсон `linked_user_id`-г null болгоно; `purchases.snapshot`-ын нэрсийг хоосолно. `purchases`, `topups`, `wallet_entries`, `wallets`-ийг санхүүгийн бүртгэлд үлдээж (үлдэгдэл хүчингүй, ledger өөрчлөгдөхгүй), `user` мөрийг нэр/имэйлгүй болгож (`deleted-{id}@deleted.invalid`, `deleted_at`) anonymize хийнэ — имэйл чөлөөлөгдөж дахин бүртгүүлж болно. Audit log `account.delete` (зөвхөн тоо). Хуучин сайтын шилжүүлэлт устгасан дансыг сэргээхгүй (`account_deleted`).
+**Данс устгах** (`/me` → анхааруулга + «Ойлголоо» checkbox, `src/server/account-deletion.ts`, нэг transaction, idempotent): persons, invitations, session/account, `preview_views`, `help_chats` устгана; бусдын хүнд холбогдсон `linked_user_id`-г null болгоно; `purchases.snapshot`-ын нэрсийг хоосолно. `purchases`, `topups`, `wallet_entries`, `wallets`-ийг санхүүгийн бүртгэлд үлдээж (үлдэгдэл хүчингүй, ledger өөрчлөгдөхгүй; admin самбарын «хэтэвчинд байгаа» тоонд орохгүй), `user` мөрийг нэр/имэйлгүй болгож (`deleted-{id}@deleted.invalid`, `deleted_at`) anonymize хийнэ — имэйл чөлөөлөгдөж дахин бүртгүүлж болно. Audit log `account.delete` (зөвхөн тоо). Хуучин сайтын шилжүүлэлт устгасан дансыг сэргээхгүй (`account_deleted`).
 
 ---
 

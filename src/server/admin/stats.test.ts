@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { purchases, topupPackages, topups } from "@/server/db/schema";
 import type { AppDb } from "@/server/db/types";
+import { deleteAccount } from "@/server/account-deletion";
 import { recordPreviewView } from "@/server/preview-views";
+import { credit } from "@/server/wallet";
 import { createTestDb, insertUser } from "@/test/db";
 import { bucketsFor, change, dashboardStats, parseRange, rangeWindow, ratio } from "./stats";
 
@@ -183,8 +185,16 @@ describe("dashboardStats", () => {
     expect(s.prev.conversion.views).toBe(1);
   });
 
-  it("reports unspent wallet money", async () => {
+  it("reports unspent wallet money, leaving out deleted accounts", async () => {
     const s = await dashboardStats(db, "7d", NOW);
     expect(s.liability).toEqual({ total: 0, holders: 0 }); // top-ups inserted directly, no ledger
+
+    const [kept, gone] = await Promise.all(
+      ["kept", "gone"].map((n) => insertUser(db, `${n}@liability.test`)),
+    );
+    await credit(db, "topup", { userId: kept.id, amount: 3000, idempotencyKey: `liab-${kept.id}` });
+    await credit(db, "topup", { userId: gone.id, amount: 5000, idempotencyKey: `liab-${gone.id}` });
+    await deleteAccount(db, gone.id);
+    expect((await dashboardStats(db, "7d", NOW)).liability).toEqual({ total: 3000, holders: 1 });
   });
 });
