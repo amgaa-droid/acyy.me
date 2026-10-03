@@ -1,7 +1,8 @@
 # Production stack on the shared server (2.28.197.187). See deploy/deploy.sh.
 # - Fixed project name; volumes and containers are prefixed "zurkhai".
-# - No host ports: the server's Caddy (Bitdefender's "bdmn" stack) reaches `web` over the external
-#   `edge` network as `zurkhai-web:3000` (deploy/zurkhai.caddy). db stays on the private network.
+# - No host ports: the server's Caddy (Bitdefender's "bdmn" stack) reaches the two `web` containers
+#   over the external `edge` network (deploy/zurkhai.caddy). db stays on the private network.
+# - Postgres connections: 2 web × DATABASE_POOL_MAX (10) + tools stay under max_connections=40.
 # - Run with: docker compose --env-file /opt/zurkhai/.env -f docker-compose.prod.yml …
 name: zurkhai
 
@@ -12,10 +13,15 @@ x-app-env: &app-env
     DATABASE_URL: postgres://zurkhai:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/zurkhai
 
 services:
+  # Two Node processes (one per CPU): containers zurkhai-web-1 and zurkhai-web-2, balanced by the
+  # shared Caddy with ip_hash (deploy/zurkhai.caddy) so each client IP stays on one process —
+  # Better Auth's per-IP rate limits and src/server/throttle.ts live in process memory.
   web:
     build: { context: ., target: runner }
     image: zurkhai-web:latest
     restart: unless-stopped
+    deploy:
+      replicas: 2
     <<: *app-env
     depends_on:
       db: { condition: service_healthy }
@@ -31,7 +37,7 @@ services:
       timeout: 10s
       start_period: 40s
       retries: 3
-    mem_limit: 512m
+    mem_limit: 768m
     networks:
       default: {}
       edge:

@@ -17,12 +17,17 @@ import {
   restoreIntoDraft,
   saveLandingDraft,
 } from "@/server/landing-cms";
+import { landingData } from "@/server/landing-data";
 
 /** Landing CMS (Owner + Editor: page copy is content, SPEC §5). */
 
 export type CmsResult<T = object> =
   | ({ ok: true } & T)
-  | { ok: false; error: "conflict" | "invalid" | "not_found" | "generic"; issues?: Record<string, IssueCode> };
+  | {
+      ok: false;
+      error: "conflict" | "invalid" | "not_found" | "generic";
+      issues?: Record<string, IssueCode>;
+    };
 
 const revision = z.number().int().min(0);
 
@@ -67,6 +72,7 @@ export async function publishLandingAction(
       z.string().max(200).parse(note),
     );
     refresh();
+    landingData.clear();
     revalidatePath("/");
     return { ok: true, version: r.version };
   } catch (err) {
