@@ -160,6 +160,9 @@ export function PlanetSystem({
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  /** The phone's bottom safe area (home indicator), measured: the bottom sheets sit above it. */
+  const [safeBottom, setSafeBottom] = useState(0);
+  const safeProbe = useRef<HTMLSpanElement>(null);
   const orbitIds = data.people.filter((p) => !isOffOrbit(p.relation)).map((p) => p.id);
   const offCount = data.people.length - orbitIds.length;
   const storeKey = `planets:v2:${data.me.id}`;
@@ -227,7 +230,10 @@ export function PlanetSystem({
   useLayoutEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    const measure = () => {
+      setSize({ w: el.clientWidth, h: el.clientHeight });
+      setSafeBottom(safeProbe.current?.offsetHeight ?? 0);
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -401,6 +407,7 @@ export function PlanetSystem({
       className="fixed inset-0 h-dvh touch-none overflow-hidden bg-tint-1 select-none"
       aria-label={today ? mn.home.today.label : t.label}
     >
+      <span ref={safeProbe} aria-hidden className="pointer-events-none invisible absolute h-[env(safe-area-inset-bottom)] w-px" />
       {/* Tapping empty space clears a selection or closes the dock. */}
       <div
         aria-hidden
@@ -570,8 +577,9 @@ export function PlanetSystem({
 
     // The "+N" dock: hidden people near the bottom, one page at a time — as many as fit with
     // their names readable; the rest are a swipe (or an arrow, or a dot) away.
-    const dockY = (layout.dock.y / 100) * h;
-    const dockW = Math.min(w - 32, layout.key === "phone" ? 420 : 640);
+    // The dock and the readings tray share one frame: same width, same gap to the bottom.
+    const sheetBottom = layout.key === "phone" ? Math.max(safeBottom, 14) : 32;
+    const dockW = Math.min(w - 24, layout.key === "phone" ? 448 : 600);
     const arrows = layout.key !== "phone";
     const step = Math.max(DOCK_MIN_STEP, layout.dock.step * Math.min(1, k));
     // At most five a page: tapping "+N" again brings the next five.
@@ -580,6 +588,10 @@ export function PlanetSystem({
     const page = Math.min(dockPage.index, dockPages - 1);
     const docked = showDock ? hidden.slice(page * perPage, (page + 1) * perPage) : [];
     const dockR = Math.min(layout.dock.r * k, step / 2 - 10);
+    // Bottom up: dots (when paged), names, the people, the header.
+    const dockH = 44 + dockR * 2 + 30 + (dockPages > 1 ? 26 : 10);
+    const dockTop = h - sheetBottom - dockH;
+    const dockY = dockTop + 44 + dockR;
     const dockX0 = w / 2 - (docked.length * step) / 2 + step / 2;
     const lastDockPage = page === dockPages - 1;
     const turnPage = (dir: 1 | -1) => {
@@ -641,6 +653,8 @@ export function PlanetSystem({
         setDockOpen(false);
         setSelected(id);
       } else {
+        // One popup at a time: a planet's readings tray closes the "+N" dock.
+        if (!fromDock) setDockOpen(false);
         setSelected((cur) => (cur === id ? null : id));
       }
     };
@@ -982,8 +996,8 @@ export function PlanetSystem({
             <div
               role="region"
               aria-label={t.dockTitle(hidden.length)}
-              className="absolute z-[15] -translate-x-1/2 animate-rise-in touch-pan-y rounded-4xl bg-surface/85 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] backdrop-blur-md"
-              style={{ left: w / 2, top: dockY - dockR - 40, width: dockW, height: dockR * 2 + (dockPages > 1 ? 96 : 76) }}
+              className="absolute z-[15] animate-rise-in touch-pan-y rounded-3xl bg-surface shadow-[0_-8px_40px_rgb(0_0_0/0.16)]"
+              style={{ left: (w - dockW) / 2, top: dockTop, width: dockW, height: dockH }}
               onPointerDown={(e) => (dockSwipe.current = e.clientX)}
               onPointerUp={(e) => {
                 const from = dockSwipe.current;
@@ -1094,7 +1108,10 @@ export function PlanetSystem({
             inert={today}
             aria-label={t.meAria(data.me.name, data.me.signName)}
             aria-pressed={selected === ME}
-            onClick={() => setSelected((cur) => (cur === ME ? null : ME))}
+            onClick={() => {
+              setDockOpen(false);
+              setSelected((cur) => (cur === ME ? null : ME));
+            }}
             className="group/me relative block size-full rounded-full motion-safe:animate-breathe"
           >
             {guideSelf && selected !== ME && (
@@ -1139,6 +1156,7 @@ export function PlanetSystem({
         {/* The tapped planet's readings, in a tray at the bottom */}
         {selBody && !today && (
           <ReadingTray
+            frame={{ bottom: sheetBottom, width: dockW }}
             key={sel}
             name={sel === ME ? data.me.name : (selPerson?.name ?? "")}
             sub={

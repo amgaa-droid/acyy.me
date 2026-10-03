@@ -34,8 +34,11 @@ export function ReadingTray({
   avatarUri,
   faceClass,
   tiles,
+  frame,
   onClose,
 }: {
+  /** Shared with the "+N" dock: the gap to the bottom of the screen and the width (px). */
+  frame: { bottom: number; width: number };
   name: string;
   sub: string;
   avatarUri: string;
@@ -47,7 +50,9 @@ export function ReadingTray({
   return (
     <section
       aria-label={t.trayAria(name)}
-      className="absolute inset-x-3 bottom-[max(env(safe-area-inset-bottom),0.875rem)] z-40 mx-auto flex max-w-md animate-rise-in flex-col gap-3.5 rounded-3xl bg-surface px-3.5 pt-3.5 pb-4 shadow-[0_-8px_40px_rgb(0_0_0/0.16)] lg:bottom-8"
+      className="absolute z-40 flex animate-rise-in flex-col gap-3.5 rounded-3xl bg-surface px-3.5 pt-3.5 pb-4 shadow-[0_-8px_40px_rgb(0_0_0/0.16)]"
+      // Centred with left, not translate: the rise-in animation owns translate.
+      style={{ bottom: frame.bottom, width: frame.width, left: `calc(50% - ${frame.width / 2}px)` }}
     >
       <div className="flex items-center gap-3">
         <span className={cn("size-[42px] shrink-0 overflow-hidden rounded-full border-2", faceClass)}>

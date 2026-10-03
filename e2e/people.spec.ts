@@ -130,3 +130,30 @@ test("tapping \"+N\" shows the next five people each time, then closes", async (
   await page.getByRole("button", { name: "Бусад хүмүүсийг хаах" }).click();
   await expect(dock).toHaveCount(0);
 });
+
+test("one sheet at a time: a planet's tray closes the \"+N\" dock, and both sit alike", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await loginWithPassword(page, "owner@test.local");
+  await showPlanets(page);
+  const more = page.getByRole("button", { name: /^Бусад \d+ хүн$/ });
+  test.skip((await more.count()) === 0, "owner has nobody waiting in +N");
+  await more.click();
+  const dock = page.getByRole("region", { name: /^Бусад \d+ хүн · чирж нийцүүл$/ });
+  await expect(dock).toBeVisible();
+  await page.waitForTimeout(600); // the rise-in animation
+  const dockBox = (await dock.boundingBox())!;
+
+  // A planet on the orbit (not in the dock): its tray replaces the dock.
+  const planet = page.locator("[data-screen=home] button[aria-label*=', ']").first();
+  const name = (await planet.getAttribute("aria-label"))!.split(",")[0];
+  await planet.click({ force: true });
+  const tray = page.getByRole("region", { name: `${name} — зурхайнууд` });
+  await expect(tray).toBeVisible();
+  await expect(dock).toHaveCount(0);
+
+  // Same width and the same gap to the bottom of the screen.
+  await page.waitForTimeout(600);
+  const trayBox = (await tray.boundingBox())!;
+  expect(Math.round(trayBox.y + trayBox.height)).toBe(Math.round(dockBox.y + dockBox.height));
+  expect(Math.round(trayBox.width)).toBe(Math.round(dockBox.width));
+});
