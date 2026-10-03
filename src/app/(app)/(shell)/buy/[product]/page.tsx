@@ -38,6 +38,9 @@ const id = z.uuid();
 const one = (v: string | string[] | undefined) =>
   typeof v === "string" && id.safeParse(v).success ? v : undefined;
 
+/** Reading time of the locked text, about 180 words a minute, at least a minute. */
+const readMinutes = (words: number) => Math.max(1, Math.round(words / 180));
+
 export default async function BuyPage({ params, searchParams }: PageProps<"/buy/[product]">) {
   const { product: code } = await params;
   const sp = await searchParams;
@@ -245,19 +248,40 @@ export default async function BuyPage({ params, searchParams }: PageProps<"/buy/
               {article.map((f) => (
                 <ArticleField key={f.code} field={f} />
               ))}
-              {s.excerpt && <p className="text-base leading-relaxed">{s.excerpt}</p>}
+              {/* The paid excerpt fades out, as if the text runs on under the lock. */}
+              {s.excerpt && (
+                <p className="text-base leading-relaxed [mask-image:linear-gradient(to_bottom,#000_45%,rgb(0_0_0/0.35)_75%,transparent)]">
+                  {s.excerpt}
+                </p>
+              )}
             </section>
           );
         })}
-        {/* Decorative placeholder lines — the real text is not on the page. */}
-        <div aria-hidden className="flex flex-col gap-2.5 pt-1">
-          {[100, 94, 97, 62].map((w) => (
-            <div key={w} className="h-3 rounded-full bg-subtle" style={{ width: `${w}%` }} />
-          ))}
-        </div>
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="size-4" aria-hidden /> {t.locked}
-        </p>
+        {/* What the lock holds: only headings and a length — the text itself is not on the page. */}
+        {preview.locked.headings.length > 0 ? (
+          <div className="flex flex-col gap-3.5">
+            <div className="flex items-center gap-2.5">
+              <span aria-hidden className="h-px flex-1 bg-border" />
+              <span className="flex items-center gap-1.5 rounded-full bg-subtle px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
+                <Lock className="size-3.5" strokeWidth={2.4} aria-hidden />
+                {t.lockedMore(preview.locked.headings.length, readMinutes(preview.locked.words))}
+              </span>
+              <span aria-hidden className="h-px flex-1 bg-border" />
+            </div>
+            <ul aria-label={t.lockedList} className="flex flex-col">
+              {preview.locked.headings.map((h) => (
+                <li key={h} className="flex items-center gap-3 border-b border-border py-2.5 last:border-b-0">
+                  <span className="flex-1 font-heading text-xl leading-tight font-semibold">{h}</span>
+                  <span aria-hidden className="h-2.5 w-16 shrink-0 rounded-full bg-subtle motion-safe:animate-shine" />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Lock className="size-4" aria-hidden /> {t.locked}
+          </p>
+        )}
       </article>
 
       <BuyConfirm

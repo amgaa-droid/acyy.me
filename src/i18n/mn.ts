@@ -431,6 +431,8 @@ export const mn = {
     change: "Солих",
     preview: "Урьдчилан харах",
     locked: "Үлдсэн хэсэг нээсний дараа харагдана",
+    lockedMore: (n: number, minutes: number) => `Цааш ${n} хэсэг · ~${minutes} мин унших`,
+    lockedList: "Нээсний дараа унших хэсгүүд",
     confirmTitle: "Баталгаажуулах",
     willCharge: (price: string) => `${price} хасагдана`,
     balanceChange: (from: string, to: string) => `Үлдэгдэл ${from} → ${to}`,

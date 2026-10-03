@@ -211,7 +211,28 @@ type PreviewSection = {
   excerpt: string | null;
 };
 
-export type Preview = { sections: PreviewSection[] };
+/**
+ * What the paywall hides, without any of it: the headings of the paid fields (their names in the
+ * product definition, not reading text) and how many words they hold.
+ */
+export type LockedSummary = { headings: string[]; words: number };
+
+export type Preview = { sections: PreviewSection[]; locked: LockedSummary };
+
+const countWords = (text: string) => text.split(/\s+/).filter(Boolean).length;
+
+/** Headings (each once, in order) and word count of the paid fields behind the paywall. */
+export function lockedSummary(sectionsFields: ReadingField[][]): LockedSummary {
+  const headings: string[] = [];
+  let words = 0;
+  for (const fields of sectionsFields)
+    for (const f of fields) {
+      if (f.isFree) continue;
+      words += countWords(f.value);
+      if (f.name && !headings.includes(f.name)) headings.push(f.name);
+    }
+  return { headings, words };
+}
 
 /** The first 2 sentences of the first paid prose field — all of the paid text a preview shows. */
 function paidExcerpt(fields: ReadingField[]): string | null {
@@ -230,11 +251,13 @@ export async function getPreview(
   keys: PurchaseSnapshot["keys"],
 ): Promise<Preview> {
   const product = await loadProductDef(db, productCode);
-  if (!product) return { sections: [] };
+  if (!product) return { sections: [], locked: { headings: [], words: 0 } };
   const sections = await loadSections(db, product, keys);
+  const all = sections.map(({ part, row }) => (row ? readingFields(part, row.fields) : []));
   return {
+    locked: lockedSummary(all),
     sections: sections.map(({ part, key, row }, i) => {
-      const fields = row ? readingFields(part, row.fields) : [];
+      const fields = all[i];
       return {
         section: part.code,
         keyType: part.keyType,

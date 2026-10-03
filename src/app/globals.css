@@ -280,6 +280,7 @@
   --animate-guide-halo: guide-halo 1.8s ease-out infinite;
   --animate-guide-bob: guide-bob 2.4s ease-in-out infinite;
   --animate-share-sweep: share-sweep 2.6s ease-in-out infinite;
+  --animate-shine: shine 2.8s ease-in-out infinite;
   --animate-dock-next: dock-next 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   --animate-dock-prev: dock-prev 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   --animate-guide-burst: guide-burst 0.9s ease-out both;
@@ -373,6 +374,16 @@
     }
     100% {
       box-shadow: 0 0 0 24px transparent;
+    }
+  }
+  /* A locked heading's placeholder bar: a soft light passes over it. */
+  @keyframes shine {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
     }
   }
   /* The "+N" dock turning a page: people slide in from the side it moved to. */

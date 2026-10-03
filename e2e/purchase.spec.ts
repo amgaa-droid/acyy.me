@@ -77,6 +77,9 @@ test("new user: short balance → top-up → back to confirm → buys every acti
   const previewHtml = await page.content();
   expect(previewHtml).not.toContain("Гурав дахь өгүүлбэр");
   expect(previewHtml).not.toContain("## ");
+  // What the lock holds is named (headings, a length) so the text visibly runs on.
+  await expect(page.getByRole("list", { name: "Нээсний дараа унших хэсгүүд" })).toBeVisible();
+  await expect(page.getByText(/^Цааш \d+ хэсэг · ~\d+ мин унших$/)).toBeVisible();
 
   // Balance 0 → the confirm sheet offers a top-up instead.
   await page.getByRole("button", { name: `Нээх · ${mnt(price("birthday"))}` }).click();
