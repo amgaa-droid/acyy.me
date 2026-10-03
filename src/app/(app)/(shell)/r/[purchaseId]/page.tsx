@@ -25,6 +25,7 @@ import { relationText, relationTint } from "@/lib/people";
 import { cn } from "@/lib/utils";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
+import { getOnboarding } from "@/server/onboarding";
 import { loadViewer, offersForPeople } from "@/server/catalog";
 import { db } from "@/server/db";
 import { getPerson, type Person } from "@/server/persons";
@@ -44,6 +45,8 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
     throw err;
   });
   const refs = await loadAstroRefs(db);
+  // The one-time "select a line → share it" tip, until it was seen.
+  const onboarding = await getOnboarding(db, user.id);
   const signName = (code: string) => refs.signs.find((s) => s.code === code)?.nameMn ?? code;
   const signNames = Object.fromEntries(refs.signs.map((s) => [s.code, s.nameMn]));
   const live = await readingPeople(db, user.id, reading.personIds);
@@ -55,9 +58,7 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
   // only what isn't bought yet. A pair's reading offers each of the two their own readings
   // (not another pair); someone else's reading (via a link) ends with the text.
   const subjects = (
-    await Promise.all(
-      live.map((l) => (l ? getPerson(db, user.id, l.id).catch(() => null) : null)),
-    )
+    await Promise.all(live.map((l) => (l ? getPerson(db, user.id, l.id).catch(() => null) : null)))
   ).filter((p): p is Person => p !== null);
   const offerLists = subjects.length
     ? await offersForPeople(db, await loadViewer(db, user.id), subjects)
@@ -178,7 +179,11 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
 
         <div className="flex min-w-0 flex-col gap-5">
           <article className="flex flex-col gap-12 rounded-3xl bg-surface px-5.5 pt-7.5 pb-6.5 lg:rounded-4xl lg:px-16 lg:pt-14 lg:pb-11">
-            <SelectionShare purchaseId={reading.id} className="flex flex-col gap-12">
+            <SelectionShare
+              purchaseId={reading.id}
+              tip={!onboarding.share}
+              className="flex flex-col gap-12"
+            >
               {reading.sections.map((s) => {
                 const article = (s.fields ?? []).filter((f) => !isSummary(f.kind));
                 const lone = article.length === 1 && article[0].kind === "text";

@@ -561,6 +561,15 @@ export const mn = {
     download: "Татах",
     preparing: "Бэлдэж байна…",
     selection: "Сонгосон хэсгийг хуваалцах",
+    /** One-time tip on the first reading: select a line → share it as a card. */
+    tip: {
+      title: "Таалагдсан мөрөө хуваалц",
+      sub: "Тодруулсан мөрийг дар, эсвэл өөрөө сонго",
+      press: "Дарвал карт болно",
+      ok: "Ойлголоо",
+      done: "Бэлэн! Дуртай мөрөө хэзээ ч хуваалцаж болно",
+      line: "Жишээ мөрийг сонгох",
+    },
     monthDay: (month: number, day: number) => `${month}-р сарын ${day}`,
     bornOnDay: (field: string) => `Энэ өдөр төрсөн хүмүүсийн ${field.toLocaleLowerCase("mn")}`,
   },

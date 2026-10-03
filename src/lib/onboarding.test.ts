@@ -44,4 +44,12 @@ describe("guideState", () => {
     expect(onboardingMarkSchema.safeParse("link").success).toBe(true);
     expect(onboardingMarkSchema.safeParse("admin").success).toBe(false);
   });
+
+  it("keeps the share tip apart from the home guide", () => {
+    expect(onboardingMarkSchema.safeParse("share").success).toBe(true);
+    // Seeing the share tip neither finishes nor dismisses the guide.
+    const g = guideState({ share: "2026-10-03T00:00:00Z" }, { people: 0, pairs: 0 });
+    expect(g.active).toBe(true);
+    expect(g.current).toBe("self");
+  });
 });

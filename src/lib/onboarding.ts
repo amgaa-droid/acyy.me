@@ -8,7 +8,8 @@ import { z } from "zod";
 const GUIDE_STEPS = ["self", "add", "link"] as const;
 export type GuideStep = (typeof GUIDE_STEPS)[number];
 
-const ONBOARDING_MARKS = ["welcome", ...GUIDE_STEPS, "dismissed"] as const;
+/** "share": the one-time tip on a first reading (select a line → share it), apart from the guide. */
+const ONBOARDING_MARKS = ["welcome", ...GUIDE_STEPS, "dismissed", "share"] as const;
 export type OnboardingMark = (typeof ONBOARDING_MARKS)[number];
 export type OnboardingProgress = Partial<Record<OnboardingMark, string>>;
 
