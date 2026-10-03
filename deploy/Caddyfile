@@ -1,5 +1,0 @@
-# DRAFT — finished in C8. Replace the host when the real domain is ready (APP_URL).
-2-28-197-187.sslip.io {
-	encode zstd gzip
-	reverse_proxy app:3000
-}

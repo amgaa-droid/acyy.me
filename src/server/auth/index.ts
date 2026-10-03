@@ -56,7 +56,12 @@ export const auth = betterAuth({
     provider: "pg",
     schema: { user, session, account, verification },
   }),
-  advanced: { database: { generateId: "uuid" } },
+  advanced: {
+    database: { generateId: "uuid" },
+    // Behind exactly one trusted proxy (the server's Caddy), which sets X-Forwarded-For to the
+    // real client — the address rate limits are counted by.
+    ipAddress: { ipAddressHeaders: ["x-forwarded-for"] },
+  },
   emailAndPassword: {
     enabled: e.AUTH_PASSWORD_ENABLED,
     minPasswordLength: 8,

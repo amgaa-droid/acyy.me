@@ -1,0 +1,7 @@
+# Installed as /opt/caddy-sites/zurkhai.caddy; imported by the shared Caddy (Bitdefender's stack).
+# Caddy sets X-Forwarded-For to the connecting client (it trusts no upstream proxy), which is the
+# one hop the app trusts (src/server/auth/index.ts → ipAddressHeaders).
+zurkhai.2-28-197-187.sslip.io {
+	encode zstd gzip
+	reverse_proxy zurkhai-web:3000
+}

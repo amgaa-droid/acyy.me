@@ -1,47 +1,98 @@
-# DRAFT — finished in C8 (Dockerfile, GHCR image, deploy workflow).
+# Production stack on the shared server (2.28.197.187). See deploy/deploy.sh.
+# - Fixed project name; volumes and containers are prefixed "zurkhai".
+# - No host ports: the server's Caddy (Bitdefender's "bdmn" stack) reaches `web` over the external
+#   `edge` network as `zurkhai-web:3000` (deploy/zurkhai.caddy). db stays on the private network.
+# - Run with: docker compose --env-file /opt/zurkhai/.env -f docker-compose.prod.yml …
+name: zurkhai
+
+x-app-env: &app-env
+  env_file: /opt/zurkhai/.env
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgres://zurkhai:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/zurkhai
+
 services:
-  app:
-    image: ghcr.io/OWNER/zurkhai:latest # TODO(C8): real image name
+  web:
+    build: { context: ., target: runner }
+    image: zurkhai-web:latest
     restart: unless-stopped
-    env_file: .env
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/zurkhai
+    <<: *app-env
     depends_on:
-      db:
-        condition: service_healthy
-    expose:
-      - "3000"
+      db: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    mem_limit: 512m
+    networks:
+      default: {}
+      edge:
+        aliases: [zurkhai-web]
 
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40"]
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: zurkhai
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: zurkhai
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d zurkhai"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD-SHELL", "pg_isready -U zurkhai -d zurkhai"]
+      interval: 10s
+      timeout: 5s
       retries: 10
+    mem_limit: 256m
+    networks: [default]
 
-  caddy:
-    image: caddy:2-alpine
+  # Every 5 minutes: settle pending QPay top-ups and run the daily-horoscope sync when due.
+  cron:
+    image: alpine:3.22
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET}
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          sleep 300
+          for job in qpay-check daily-sync; do
+            wget -q -O /dev/null --header "Authorization: Bearer $$CRON_SECRET" "http://web:3000/api/cron/$$job" || echo "cron $$job failed"
+          done
+        done
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 60s
     depends_on:
-      - app
+      web: { condition: service_healthy }
+    mem_limit: 32m
+    networks: [default]
+
+  # One-off jobs only (profile "tools"): migrations, content import.
+  tools:
+    build: { context: ., target: tools }
+    image: zurkhai-tools:latest
+    profiles: [tools]
+    <<: *app-env
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 768m
+    networks: [default]
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:
+
+networks:
+  edge:
+    external: true
