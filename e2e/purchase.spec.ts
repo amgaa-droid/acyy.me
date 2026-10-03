@@ -30,6 +30,9 @@ async function activeCatalog(page: Page): Promise<Record<string, number>> {
   );
 }
 
+/** The reading's title: on the name card (the first part's), else atop the article. */
+const readingTitle = (page: Page) => page.getByRole("heading", { level: 2 }).first();
+
 /** From a buy page: open the confirm sheet and buy; lands on /r/:id. */
 async function confirmPurchase(page: Page) {
   await page
@@ -70,7 +73,7 @@ test("new user: short balance → top-up → back to confirm → buys every acti
 
   // Preview: title (+ teaser) + a short excerpt — never the rest, never raw "## " markup.
   // Works with both the seeded placeholders and the imported real texts.
-  await expect(page.getByRole("article").getByRole("heading", { level: 2 })).toBeVisible();
+  await expect(readingTitle(page)).toBeVisible();
   const previewHtml = await page.content();
   expect(previewHtml).not.toContain("Гурав дахь өгүүлбэр");
   expect(previewHtml).not.toContain("## ");
@@ -92,7 +95,7 @@ test("new user: short balance → top-up → back to confirm → buys every acti
   );
   await back.getByRole("button", { name: `Нээх · ${mnt(price("birthday"))}` }).click();
   await expect(page).toHaveURL(/\/r\/[0-9a-f-]{36}$/, { timeout: 15_000 });
-  await expect(page.getByRole("article").getByRole("heading", { level: 2 })).toBeVisible();
+  await expect(readingTitle(page)).toBeVisible();
   await expect(page.getByText("Энэ хэсгийн текст түр засварлагдаж байна.")).toHaveCount(0);
   expect(await page.content()).not.toContain("## ");
 
@@ -101,7 +104,7 @@ test("new user: short balance → top-up → back to confirm → buys every acti
     await page.goto(`/buy/${code}?a=${selfId}`);
     await confirmPurchase(page);
     // Full text is shown (whatever it currently is), not the "unavailable" note.
-    await expect(page.getByRole("article").getByRole("heading", { level: 2 })).toBeVisible();
+    await expect(readingTitle(page)).toBeVisible();
     await expect(page.getByText("Энэ хэсгийн текст түр засварлагдаж байна.")).toHaveCount(0);
   }
 
