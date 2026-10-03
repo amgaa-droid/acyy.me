@@ -80,6 +80,7 @@ export default async function BusinessPage({ searchParams }: PageProps<"/admin/b
           <Stat
             label={d.payers}
             value={int(cur.topup.payers)}
+            href="/admin/users?sort=topup&dir=desc"
             delta={change(cur.topup.payers, prev.topup.payers)}
             hint={d.firstTime(cur.topup.firstTimePayers)}
           />

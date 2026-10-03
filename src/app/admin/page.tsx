@@ -57,6 +57,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
           <Stat
             label={d.signups}
             value={int(cur.signups)}
+            href="/admin/users?sort=joined&dir=desc"
             delta={change(cur.signups, prev.signups)}
           />
           <Stat

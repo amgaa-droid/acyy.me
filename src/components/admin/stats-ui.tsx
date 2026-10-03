@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { mn } from "@/i18n/mn";
@@ -97,6 +97,11 @@ export function Section({
   );
 }
 
+/**
+ * One number card. The value shrinks with the card's own width (container query) and, as a last
+ * resort, wraps — so long sums like 38,072,000₮ never spill out. With `href` the whole card links
+ * to the list behind the number.
+ */
 export function Stat({
   label,
   value,
@@ -104,6 +109,7 @@ export function Stat({
   deltaIsPoints,
   hint,
   big,
+  href,
 }: {
   label: string;
   value: string;
@@ -111,14 +117,20 @@ export function Stat({
   deltaIsPoints?: boolean;
   hint?: string;
   big?: boolean;
+  href?: string;
 }) {
   const shown = delta !== undefined && delta !== null && Math.abs(delta) >= 0.0005;
   const up = (delta ?? 0) > 0;
   const Arrow = up ? ArrowUpRight : ArrowDownRight;
-  return (
-    <div className={cn("flex flex-col gap-1 rounded-3xl p-5", big ? "bg-tint-1" : "bg-surface")}>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-2xl font-semibold tabular-nums lg:text-3xl">{value}</div>
+  const body = (
+    <>
+      <div className="flex items-start justify-between gap-2 text-xs text-muted-foreground">
+        {label}
+        {href && <ChevronRight className="size-4 shrink-0" aria-hidden />}
+      </div>
+      <div className="text-xl leading-tight font-semibold wrap-anywhere tabular-nums @[11rem]:text-2xl @[15rem]:text-3xl">
+        {value}
+      </div>
       {shown && (
         <div
           className={cn(
@@ -136,7 +148,18 @@ export function Stat({
         </div>
       )}
       {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
-    </div>
+    </>
+  );
+  const cls = cn(
+    "@container flex min-w-0 flex-col gap-1 rounded-3xl p-5",
+    big ? "bg-tint-1" : "bg-surface",
+  );
+  return href ? (
+    <Link href={href} className={cn(cls, "transition hover:ring-2 hover:ring-border")}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 }
 
