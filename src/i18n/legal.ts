@@ -16,8 +16,6 @@ export const LEGAL_SITE = "acyy.me";
 export const legalLinks = {
   terms: "Үйлчилгээний нөхцөл",
   privacy: "Нууцлалын бодлого",
-  dataDeletion: "Мэдээлэл устгах",
-  contact: "Холбоо барих",
   home: "Нүүр хуудас",
   updated: "Сүүлд шинэчилсэн:",
   contents: "Агуулга",

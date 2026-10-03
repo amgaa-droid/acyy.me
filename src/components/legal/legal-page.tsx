@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { BrandMark } from "@/components/app/brand-mark";
 import { CurrentThemeToggle } from "@/components/app/current-theme-toggle";
-import { LegalFooter } from "@/components/legal/legal-footer";
 import { APP_NAME } from "@/env";
 import { legalLinks, type LegalDoc } from "@/i18n/legal";
 
@@ -67,8 +66,6 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
           </section>
         ))}
       </main>
-
-      <LegalFooter className="mx-auto mt-12 max-w-[680px] border-t border-border pt-4" />
     </div>
   );
 }

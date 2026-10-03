@@ -7,7 +7,6 @@ import { DeleteAccountButton } from "@/components/app/delete-account-button";
 import { PageTitle } from "@/components/app/empty-state";
 import { SignOutButton } from "@/components/app/sign-out-button";
 import { LinkedAccounts } from "@/components/app/linked-accounts";
-import { LegalFooter } from "@/components/legal/legal-footer";
 import { AdultConfirm } from "@/components/readings/adult-confirm";
 import { UnlinkButton } from "@/components/app/unlink-button";
 import { peopleLinkedTo } from "@/server/invitations";
@@ -122,7 +121,6 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         <SignOutButton />
         <DeleteAccountButton summary={deletion} />
       </div>
-      <LegalFooter className="mt-6" />
     </>
   );
 }
