@@ -1156,7 +1156,9 @@ export function PlanetSystem({
         {/* The tapped planet's readings, in a tray at the bottom */}
         {selBody && !today && (
           <ReadingTray
-            frame={{ bottom: sheetBottom, width: dockW }}
+            // Same gap to the bottom as the dock; on desktop it keeps its compact width so the
+            // tiles stay close together.
+            frame={{ bottom: sheetBottom, width: Math.min(w - 24, 448) }}
             key={sel}
             name={sel === ME ? data.me.name : (selPerson?.name ?? "")}
             sub={

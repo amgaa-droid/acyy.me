@@ -131,7 +131,7 @@ test("tapping \"+N\" shows the next five people each time, then closes", async (
   await expect(dock).toHaveCount(0);
 });
 
-test("one sheet at a time: a planet's tray closes the \"+N\" dock, and both sit alike", async ({ page }) => {
+test("one sheet at a time: a planet's tray closes the \"+N\" dock, and both sit on the same line", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await loginWithPassword(page, "owner@test.local");
   await showPlanets(page);
@@ -155,5 +155,6 @@ test("one sheet at a time: a planet's tray closes the \"+N\" dock, and both sit 
   await page.waitForTimeout(600);
   const trayBox = (await tray.boundingBox())!;
   expect(Math.round(trayBox.y + trayBox.height)).toBe(Math.round(dockBox.y + dockBox.height));
-  expect(Math.round(trayBox.width)).toBe(Math.round(dockBox.width));
+  // Phones: the same width too (desktop keeps the tray compact).
+  if (dockBox.width < 448) expect(Math.round(trayBox.width)).toBe(Math.round(dockBox.width));
 });
