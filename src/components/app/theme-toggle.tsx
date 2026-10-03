@@ -15,7 +15,7 @@ const ICONS: Record<Theme, typeof Moon> = {
  * Colour-mode button for the screens outside the app (landing, login) and the admin sidebar:
  * each tap moves to the next theme. A plain form + server action, so it works without JS.
  * It sits in the page's own layout — a button floating over every page covered content and
- * crowded the header. Signed in, the choice is in the home menu (`ThemeSwitch`) and on /me.
+ * crowded the header. Signed in, the choice is in the home menu (`ThemeSwitch`) only.
  */
 export function ThemeToggle({ current, className }: { current: Theme; className?: string }) {
   const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];

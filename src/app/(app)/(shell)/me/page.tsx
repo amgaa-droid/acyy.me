@@ -11,7 +11,6 @@ import { UnlinkButton } from "@/components/app/unlink-button";
 import { peopleLinkedTo } from "@/server/invitations";
 import { getSelf } from "@/server/persons";
 import { ageOn, formatBirthDate, parseIsoDate, todayYmd } from "@/lib/birth-date";
-import { ThemePicker } from "@/components/app/theme-picker";
 import { formatMnt, mn } from "@/i18n/mn";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { linkedProviders } from "@/server/auth/accounts";
@@ -19,7 +18,6 @@ import { requireOnboardedUser } from "@/server/auth/current";
 import { enabledSocialProviders } from "@/server/auth";
 import { adminRoleOf } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { readTheme } from "@/server/theme";
 import { getBalance } from "@/server/wallet";
 
 export const metadata: Metadata = { title: mn.me.title };
@@ -30,7 +28,6 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
   const { error } = await searchParams;
   const linked = await linkedProviders(db, user.id);
   const { sign } = describeBirthDate(self.birthDate, await loadAstroRefs(db));
-  const theme = await readTheme();
   const role = adminRoleOf(user);
   const balance = await getBalance(db, user.id);
   const selfAge = ageOn(parseIsoDate(self.birthDate)!, todayYmd());
@@ -46,7 +43,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
   return (
     <>
       <PageTitle>{mn.me.title}</PageTitle>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      <div className="grid gap-6 lg:grid-cols-2">
         <section className="flex items-center gap-4 self-start rounded-3xl bg-surface p-5">
           <Avatar seed={self.avatarSeed} size={72} />
           <div className="flex min-w-0 flex-1 flex-col">
@@ -68,7 +65,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         {role && (
           <Link
             href="/admin"
-            className="flex h-14 w-full items-center gap-3 self-start rounded-3xl bg-tint-1 px-5 font-semibold text-highlight lg:col-start-1"
+            className="flex h-14 w-full items-center gap-3 self-start rounded-3xl bg-tint-1 px-5 font-semibold text-highlight"
           >
             <ShieldCheck className="size-5" aria-hidden />
             <span className="flex-1">
@@ -79,7 +76,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
         )}
         <Link
           href="/wallet"
-          className="flex w-full items-center justify-between self-start rounded-3xl bg-surface p-5 lg:col-start-1"
+          className="flex w-full items-center justify-between self-start rounded-3xl bg-surface p-5"
         >
           <span className="flex flex-col">
             <span className="text-xs text-muted-foreground">{mn.wallet.title}</span>
@@ -89,11 +86,11 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             {mn.wallet.history} <ArrowRight className="size-4" aria-hidden />
           </span>
         </Link>
-        <div className="lg:col-start-1">
+        <div>
           <AdultConfirm state={adultState} />
         </div>
         {linkedTo.length > 0 && (
-          <section className="flex flex-col gap-2 rounded-3xl bg-surface p-5 lg:col-start-1">
+          <section className="flex flex-col gap-2 rounded-3xl bg-surface p-5">
             <h2 className="text-xl font-semibold">{mn.invite.linkedToMe}</h2>
             <p className="text-sm text-muted-foreground">{mn.invite.linkedToMeHint}</p>
             <ul className="flex flex-col divide-y divide-border">
@@ -109,20 +106,13 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
             </ul>
           </section>
         )}
-        <div className="lg:col-start-1">
+        <div>
           <LinkedAccounts
             providers={enabledSocialProviders}
             linked={linked}
             error={typeof error === "string" ? error : undefined}
           />
         </div>
-        <section className="flex flex-col gap-3 lg:col-start-2 lg:row-span-6 lg:row-start-1">
-          <div>
-            <h2 className="text-2xl font-semibold">{mn.me.appearance}</h2>
-            <p className="text-sm text-muted-foreground">{mn.me.appearanceHint}</p>
-          </div>
-          <ThemePicker current={theme} />
-        </section>
       </div>
       <div className="mt-8">
         <SignOutButton />

@@ -57,15 +57,22 @@ test.describe("signed in", () => {
     );
   });
 
-  test("colour mode can be switched on /me and persists", async ({ page }) => {
+  test("colour mode is switched in the home menu and persists", async ({ page }) => {
+    // One place for it: the home menu (not on /me).
     await page.goto("/me");
+    await expect(page.getByRole("group", { name: "Өнгөний горим" })).toHaveCount(0);
+    await page.goto("/home");
     const html = page.locator("html");
     await expect(html).toHaveAttribute("data-theme", "cosmic");
-    await page.getByRole("button", { name: /White/ }).click();
+    const openMenu = async () => {
+      await page.getByRole("button", { name: "Цэс" }).click();
+      return page.getByRole("group", { name: "Өнгөний горим" });
+    };
+    await (await openMenu()).getByRole("button", { name: "White" }).click();
     await expect(html).toHaveAttribute("data-theme", "white");
     await page.reload();
     await expect(html).toHaveAttribute("data-theme", "white");
-    await expect(page.getByRole("button", { name: /White/ })).toHaveAttribute(
+    await expect((await openMenu()).getByRole("button", { name: "White" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

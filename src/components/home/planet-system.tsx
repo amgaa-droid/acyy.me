@@ -467,6 +467,7 @@ export function PlanetSystem({
         <div className="flex flex-col gap-2 pt-5">
           <span className="text-sm font-semibold text-muted-foreground">{mn.me.appearance}</span>
           <ThemeSwitch current={theme} />
+          <p className="text-xs text-muted-foreground">{mn.me.appearanceHint}</p>
         </div>
         <div className="pt-5">
           <SignOutButton />
