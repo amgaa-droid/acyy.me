@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { contentSecurityPolicy } from "@/lib/csp";
 
 /** Signed-in areas. The real session check (and "Би" → /onboarding) happens in the pages. */
-const PRIVATE = /^\/(home|people|readings|me|wallet|buy|r|onboarding|admin)(\/|$)/;
+const PRIVATE = /^\/(home|people|readings|me|wallet|help|buy|r|onboarding|admin)(\/|$)/;
 
 /**
  * Runs for every page request (not for /api or static files):

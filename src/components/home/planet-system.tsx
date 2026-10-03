@@ -1,6 +1,18 @@
 "use client";
 
-import { Calendar1, Link2, Lock, Menu, Orbit, Plus, Sparkles, UserRound, Wallet, X } from "lucide-react";
+import {
+  Calendar1,
+  LifeBuoy,
+  Link2,
+  Lock,
+  Menu,
+  Orbit,
+  Plus,
+  Sparkles,
+  UserRound,
+  Wallet,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -452,6 +464,7 @@ export function PlanetSystem({
           {[
             ...NAV_ITEMS.filter((n) => n.href !== "/home"),
             { href: "/wallet", label: mn.header.wallet, Icon: Wallet },
+            { href: "/help", label: mn.help.title, Icon: LifeBuoy },
           ].map(({ href, label, Icon }) => (
             <Link
               key={href}

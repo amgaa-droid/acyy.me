@@ -621,3 +621,81 @@ export const appSettings = pgTable("app_settings", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+// ---------- Help (FAQ + AI assistant) ----------
+
+/**
+ * Frequently asked questions on the in-app help screen (/help), managed at /admin/faq. Published
+ * ones are shown in `sort` order and also feed the AI assistant's knowledge.
+ */
+export const faqEntries = pgTable(
+  "faq_entries",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    question: text().notNull(),
+    answer: text().notNull(),
+    sort: integer().notNull().default(0),
+    isPublished: boolean().notNull().default(true),
+    createdAt: createdAt(),
+    updatedBy: uuid().references(() => user.id, { onDelete: "set null" }),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("faq_entries_sort_idx").on(t.sort)],
+);
+
+/**
+ * What admins teach the help assistant by hand (/admin/ai/knowledge): extra facts and rules
+ * added to the knowledge written in code (src/server/help/knowledge.ts). Inactive notes are kept
+ * but not sent to the AI.
+ */
+export const aiKnowledge = pgTable("ai_knowledge", {
+  id: uuid().primaryKey().defaultRandom(),
+  title: text().notNull(),
+  body: text().notNull(),
+  isActive: boolean().notNull().default(true),
+  sort: integer().notNull().default(0),
+  createdAt: createdAt(),
+  updatedBy: uuid().references(() => user.id, { onDelete: "set null" }),
+  updatedAt: timestamp({ withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * One question to the help assistant and its answer. `source`: `ai` (the model answered) or
+ * `faq` (a near-identical FAQ answered it — no AI call). Token counts are what the provider
+ * reported; `feedback` is the user's 👍 (1) / 👎 (-1).
+ */
+export const helpChats = pgTable(
+  "help_chats",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    conversationId: uuid().notNull(),
+    question: text().notNull(),
+    answer: text().notNull(),
+    source: text().notNull(),
+    faqId: uuid().references(() => faqEntries.id, { onDelete: "set null" }),
+    provider: text(),
+    model: text(),
+    inputTokens: integer().notNull().default(0),
+    cachedTokens: integer().notNull().default(0),
+    outputTokens: integer().notNull().default(0),
+    ms: integer(),
+    feedback: integer(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("help_chats_source", inList("source", ["ai", "faq"])),
+    check("help_chats_feedback", sql`${t.feedback} IN (-1, 1)`),
+    index("help_chats_user_idx").on(t.userId, t.createdAt),
+    index("help_chats_conversation_idx").on(t.conversationId, t.createdAt),
+    index("help_chats_created_idx").on(t.createdAt),
+  ],
+);

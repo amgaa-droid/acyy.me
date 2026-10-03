@@ -148,6 +148,13 @@
       "when": 1790961512687,
       "tag": "0020_legacy_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791014932580,
+      "tag": "0021_help_center",
+      "breakpoints": true
     }
   ]
 }

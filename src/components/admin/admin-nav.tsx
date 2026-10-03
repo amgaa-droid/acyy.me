@@ -2,9 +2,10 @@
 
 import {
   ArrowLeft,
+  Bot,
   ChartColumn,
+  CircleHelp,
   FileSpreadsheet,
-  Languages,
   LayoutTemplate,
   LayoutDashboard,
   Orbit,
@@ -30,6 +31,7 @@ const ITEMS = [
   { href: "/admin/landing", label: t.landing, Icon: LayoutTemplate, owner: false },
   { href: "/admin/content", label: t.content, Icon: Text, owner: false },
   { href: "/admin/daily", label: t.daily, Icon: Sun, owner: false },
+  { href: "/admin/faq", label: t.faq, Icon: CircleHelp, owner: false },
   { href: "/admin/import", label: t.import, Icon: FileSpreadsheet, owner: false },
   { href: "/admin/zodiac", label: t.zodiac, Icon: Sparkles, owner: false },
   { href: "/admin/periods", label: t.periods, Icon: Orbit, owner: false },
@@ -37,7 +39,7 @@ const ITEMS = [
   { href: "/admin/users", label: t.users, Icon: Users, owner: true },
   { href: "/admin/topups", label: t.topups, Icon: Receipt, owner: true },
   { href: "/admin/packages", label: t.packages, Icon: Wallet, owner: true },
-  { href: "/admin/ai", label: t.ai, Icon: Languages, owner: true },
+  { href: "/admin/ai", label: t.ai, Icon: Bot, owner: true },
 ];
 
 /** Admin navigation: sidebar on desktop, horizontal scroller on mobile. Owner-only items hidden for Editors. */

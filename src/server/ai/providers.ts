@@ -1,6 +1,6 @@
 /**
- * The two translation providers (Gemini, ChatGPT) behind one call: system + user prompt in,
- * the model's text out. Plain `fetch` against their REST APIs — no SDKs. Keys are never put
+ * The two AI providers (Gemini, ChatGPT) behind one call: system + user prompt in, the model's
+ * text out. Used by the daily-sync translation and the help assistant. Plain `fetch` against their REST APIs — no SDKs. Keys are never put
  * in URLs or error messages.
  */
 
@@ -28,12 +28,23 @@ export function currentModel(provider: AiProviderId, model: string): string {
 
 export type AiConfig = { provider: AiProviderId; model: string; apiKey: string };
 
+export type AiTurn = { role: "user" | "assistant"; text: string };
+
 export type AiRequest = {
   system: string;
   user: string;
+  /** Earlier turns of a conversation, oldest first (before `user`). */
+  history?: AiTurn[];
   /** Ask for a JSON object back (both APIs have a JSON mode). */
   json?: boolean;
+  /** Cap on the reply, thinking included (a cost guard). */
+  maxTokens?: number;
+  /** "low": as little thinking as the model allows — for short, factual replies. */
+  effort?: "low";
 };
+
+/** What the provider billed: input (of which `cached` came from its prompt cache) and output. */
+export type AiUsage = { input: number; cached: number; output: number };
 
 export type AiComplete = (req: AiRequest) => Promise<string>;
 
@@ -94,13 +105,57 @@ const TIMEOUT_MS = 180_000;
 
 type GeminiResponse = {
   candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
+  usageMetadata?: {
+    promptTokenCount?: number;
+    cachedContentTokenCount?: number;
+    candidatesTokenCount?: number;
+    thoughtsTokenCount?: number;
+  };
   error?: ApiError;
 };
 
 type OpenAiResponse = {
   choices?: { message?: { content?: string | null } }[];
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+  };
   error?: ApiError;
 };
+
+export function geminiUsage(body: GeminiResponse): AiUsage {
+  const u = body.usageMetadata ?? {};
+  return {
+    input: u.promptTokenCount ?? 0,
+    cached: u.cachedContentTokenCount ?? 0,
+    output: (u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0),
+  };
+}
+
+export function openAiUsage(body: OpenAiResponse): AiUsage {
+  const u = body.usage ?? {};
+  return {
+    input: u.prompt_tokens ?? 0,
+    cached: u.prompt_tokens_details?.cached_tokens ?? 0,
+    output: u.completion_tokens ?? 0,
+  };
+}
+
+/**
+ * The "think less" knob, where the model has one: Gemini 2.5 Flash takes a thinking budget
+ * (0 = off), Gemini 3+ a thinking level; OpenAI's reasoning models (gpt-5…, o…) an effort.
+ * Other models get nothing — an unknown parameter would fail the request.
+ */
+export function geminiThinking(model: string): Record<string, unknown> | undefined {
+  if (/^gemini-2\.5-flash/.test(model)) return { thinkingBudget: 0 };
+  if (/^gemini-([3-9]|\d\d)/.test(model)) return { thinkingLevel: "low" };
+  return undefined;
+}
+
+export function openAiReasoning(model: string): boolean {
+  return /^(gpt-[5-9]|o\d)/.test(model) && !model.includes("chat");
+}
 
 export function geminiText(body: GeminiResponse): string {
   const parts = body.candidates?.[0]?.content?.parts ?? [];
@@ -115,8 +170,10 @@ export function openAiText(body: OpenAiResponse): string {
   return (body.choices?.[0]?.message?.content ?? "").trim();
 }
 
-function request(cfg: AiConfig, req: AiRequest): { url: string; init: RequestInit } {
+export function request(cfg: AiConfig, req: AiRequest): { url: string; init: RequestInit } {
+  const history = req.history ?? [];
   if (cfg.provider === "gemini") {
+    const thinking = req.effort === "low" ? geminiThinking(cfg.model) : undefined;
     return {
       url: `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`,
       init: {
@@ -124,8 +181,18 @@ function request(cfg: AiConfig, req: AiRequest): { url: string; init: RequestIni
         headers: { "content-type": "application/json", "x-goog-api-key": cfg.apiKey },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: req.system }] },
-          contents: [{ role: "user", parts: [{ text: req.user }] }],
-          generationConfig: req.json ? { responseMimeType: "application/json" } : {},
+          contents: [
+            ...history.map((t) => ({
+              role: t.role === "assistant" ? "model" : "user",
+              parts: [{ text: t.text }],
+            })),
+            { role: "user", parts: [{ text: req.user }] },
+          ],
+          generationConfig: {
+            ...(req.json ? { responseMimeType: "application/json" } : {}),
+            ...(req.maxTokens ? { maxOutputTokens: req.maxTokens } : {}),
+            ...(thinking ? { thinkingConfig: thinking } : {}),
+          },
         }),
       },
     };
@@ -139,20 +206,23 @@ function request(cfg: AiConfig, req: AiRequest): { url: string; init: RequestIni
         model: cfg.model,
         messages: [
           { role: "system", content: req.system },
+          ...history.map((t) => ({ role: t.role, content: t.text })),
           { role: "user", content: req.user },
         ],
         ...(req.json ? { response_format: { type: "json_object" } } : {}),
+        ...(req.maxTokens ? { max_completion_tokens: req.maxTokens } : {}),
+        ...(req.effort === "low" && openAiReasoning(cfg.model) ? { reasoning_effort: "low" } : {}),
       }),
     },
   };
 }
 
-/** One completion; throws AiError with the provider's own message on failure. */
-export async function aiComplete(
+/** One completion with its token usage; throws AiError with the provider's message on failure. */
+export async function aiCompleteWithUsage(
   cfg: AiConfig,
   req: AiRequest,
   fetchImpl: typeof fetch = fetch,
-): Promise<string> {
+): Promise<{ text: string; usage: AiUsage }> {
   const { url, init } = request(cfg, req);
   let res: Response;
   try {
@@ -172,7 +242,16 @@ export async function aiComplete(
   }
   const text = cfg.provider === "gemini" ? geminiText(body) : openAiText(body);
   if (!text) throw new AiError("empty", "empty response");
-  return text;
+  return { text, usage: cfg.provider === "gemini" ? geminiUsage(body) : openAiUsage(body) };
+}
+
+/** One completion; throws AiError with the provider's own message on failure. */
+export async function aiComplete(
+  cfg: AiConfig,
+  req: AiRequest,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  return (await aiCompleteWithUsage(cfg, req, fetchImpl)).text;
 }
 
 export function aiCompleter(cfg: AiConfig, fetchImpl: typeof fetch = fetch): AiComplete {

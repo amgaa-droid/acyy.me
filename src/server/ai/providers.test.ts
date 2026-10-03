@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AiError, aiComplete, geminiText, limitOf, openAiText } from "./providers";
+import {
+  AiError,
+  aiComplete,
+  aiCompleteWithUsage,
+  geminiText,
+  geminiThinking,
+  limitOf,
+  openAiReasoning,
+  openAiText,
+  request,
+} from "./providers";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -130,5 +140,86 @@ describe("AI providers", () => {
       fetchImpl as unknown as typeof fetch,
     ).catch((e) => e);
     expect(err.limit).toEqual({ quota: true, retryAfterMs: undefined });
+  });
+
+  it("sends a conversation, a reply cap and low thinking (help assistant)", () => {
+    const req = {
+      system: "sys",
+      user: "дараа нь?",
+      history: [
+        { role: "user" as const, text: "сайн уу" },
+        { role: "assistant" as const, text: "сайн" },
+      ],
+      maxTokens: 900,
+      effort: "low" as const,
+    };
+    const g = JSON.parse(
+      request({ provider: "gemini", model: "gemini-3.8-flash", apiKey: "k" }, req).init
+        .body as string,
+    );
+    expect(g.contents.map((c: { role: string }) => c.role)).toEqual(["user", "model", "user"]);
+    expect(g.generationConfig).toEqual({
+      maxOutputTokens: 900,
+      thinkingConfig: { thinkingLevel: "low" },
+    });
+    const o = JSON.parse(
+      request({ provider: "openai", model: "gpt-5-mini", apiKey: "k" }, req).init.body as string,
+    );
+    expect(o.messages.map((m: { role: string }) => m.role)).toEqual([
+      "system",
+      "user",
+      "assistant",
+      "user",
+    ]);
+    expect(o).toMatchObject({ max_completion_tokens: 900, reasoning_effort: "low" });
+    // The translation request is unchanged: no cap, no thinking knob.
+    const plain = JSON.parse(
+      request({ provider: "openai", model: "gpt-5-mini", apiKey: "k" }, { system: "s", user: "u" })
+        .init.body as string,
+    );
+    expect(plain).not.toHaveProperty("max_completion_tokens");
+    expect(plain).not.toHaveProperty("reasoning_effort");
+  });
+
+  it("only sends a thinking knob to models that take one", () => {
+    expect(geminiThinking("gemini-2.5-flash-lite")).toEqual({ thinkingBudget: 0 });
+    expect(geminiThinking("gemini-3.8-flash")).toEqual({ thinkingLevel: "low" });
+    expect(geminiThinking("gemini-2.0-flash")).toBeUndefined();
+    expect(openAiReasoning("gpt-5-mini")).toBe(true);
+    expect(openAiReasoning("o4-mini")).toBe(true);
+    expect(openAiReasoning("gpt-4.1-mini")).toBe(false);
+    expect(openAiReasoning("gpt-5-chat-latest")).toBe(false);
+  });
+
+  it("reports token usage, cached and thinking included", async () => {
+    const g = await aiCompleteWithUsage(
+      { provider: "gemini", model: "gemini-3.8-flash", apiKey: "k" },
+      { system: "s", user: "u" },
+      (async () =>
+        json({
+          candidates: [{ content: { parts: [{ text: "ok" }] } }],
+          usageMetadata: {
+            promptTokenCount: 4000,
+            cachedContentTokenCount: 3000,
+            candidatesTokenCount: 50,
+            thoughtsTokenCount: 20,
+          },
+        })) as unknown as typeof fetch,
+    );
+    expect(g.usage).toEqual({ input: 4000, cached: 3000, output: 70 });
+    const o = await aiCompleteWithUsage(
+      { provider: "openai", model: "gpt-5-mini", apiKey: "k" },
+      { system: "s", user: "u" },
+      (async () =>
+        json({
+          choices: [{ message: { content: "ok" } }],
+          usage: {
+            prompt_tokens: 4000,
+            completion_tokens: 90,
+            prompt_tokens_details: { cached_tokens: 2048 },
+          },
+        })) as unknown as typeof fetch,
+    );
+    expect(o.usage).toEqual({ input: 4000, cached: 2048, output: 90 });
   });
 });

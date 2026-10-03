@@ -13,6 +13,8 @@ import {
   type AiSettingsView,
 } from "@/server/ai/settings";
 import { db } from "@/server/db";
+import { NoteError, createNote, deleteNote, updateNote } from "@/server/help/notes";
+import { saveHelpSettings } from "@/server/help/settings";
 
 type ErrorCode = AiSettingsError["code"] | "invalid" | "generic";
 
@@ -71,4 +73,43 @@ export async function testAiAction(input: unknown): Promise<TestAiResult> {
     console.error("[admin:ai:test]", err);
     return { ok: false, error: "generic" };
   }
+}
+
+// ---------- Help assistant (SPEC §3.3) ----------
+
+export type HelpAdminResult =
+  { ok: true } | { ok: false; error: "invalid" | "not_found" | "generic" };
+
+async function helpAdminAction(
+  fn: (actorId: string) => Promise<unknown>,
+): Promise<HelpAdminResult> {
+  const admin = await requireOwner();
+  try {
+    await fn(admin.userId);
+    revalidatePath("/admin/ai", "layout");
+    revalidatePath("/help");
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof NoteError) return { ok: false, error: err.code };
+    if (err instanceof z.ZodError) return { ok: false, error: "invalid" };
+    console.error("[admin:ai:help]", err);
+    return { ok: false, error: "generic" };
+  }
+}
+
+/** Assistant on/off, provider/model, greeting, contact, extra rules, cost guards. */
+export async function saveHelpSettingsAction(input: unknown): Promise<HelpAdminResult> {
+  return helpAdminAction((actor) => saveHelpSettings(db, actor, input));
+}
+
+export async function createNoteAction(input: unknown): Promise<HelpAdminResult> {
+  return helpAdminAction((actor) => createNote(db, actor, input));
+}
+
+export async function updateNoteAction(input: unknown): Promise<HelpAdminResult> {
+  return helpAdminAction((actor) => updateNote(db, actor, input));
+}
+
+export async function deleteNoteAction(id: string): Promise<HelpAdminResult> {
+  return helpAdminAction((actor) => deleteNote(db, actor, id));
 }

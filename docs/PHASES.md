@@ -236,6 +236,16 @@
 - [x] `/admin/ai` (Owner): provider, модель, шифрлэгдсэн API түлхүүр (`app_settings`, migration 0019), орчуулгын заавар, автомат sync, туршилт
 - [ ] Production: `SETTINGS_ENCRYPTION_KEY` env, host crontab `*/5 * * * *` → `/api/cron/daily-sync`, `/admin/ai`-д жинхэнэ API түлхүүр
 
+
+## Нэмэлт — Тусламж: FAQ + AI туслах (SPEC §3.3)
+
+- [x] `faq_entries`, `ai_knowledge`, `help_chats` (migration 0021) + анхны ТОП-10 FAQ
+- [x] `/help` («Цэс» → «Тусламж», popup): FAQ accordion → «Асуух зүйл байвал» чат (төстэй FAQ санал, 👍/👎, «Шинэ яриа»)
+- [x] `src/server/help/`: мэдлэг (код + DB + FAQ + админы текст), FAQ shortcut, BM25 сонголт / prompt cache, өдрийн хязгаар, лог
+- [x] `src/server/ai/providers.ts`: олон ээлжит яриа, хариултын дээд token, «бага бод», token usage
+- [x] Админ: «AI орчуулга» → «AI тохиргоо» (4 таб: Түлхүүр ба орчуулга · AI туслах · Мэдлэг · Асуултууд), `/admin/faq`
+- [x] Unit тест: хайлт/сонголт, FAQ/мэдлэг CRUD, askHelp (FAQ shortcut, түүх, хязгаар, эрх), provider-ийн хүсэлт/usage
+- [ ] Production: «AI туслах»-д дэмжлэгийн холбоо барих (Facebook хуудас / имэйл) оруулах; Нууцлалын бодлогод чатын лог хадгалагддагийг тусгах
 ---
 
 ## MVP-ийн дараа (backlog)

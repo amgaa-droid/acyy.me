@@ -8,12 +8,13 @@ import { getAiSettingsView } from "@/server/ai/settings";
 import { db } from "@/server/db";
 import { AUTO_SYNC_EARLIEST_TOMORROW } from "@/server/daily-sync/schedule";
 import { AiSettingsForm } from "./ai-settings-form";
+import { AiHeader } from "./ai-tabs";
 
 export const metadata: Metadata = { title: mn.admin.nav.ai };
 
 const t = mn.admin.ai;
 
-/** Owner only: the AI that translates the daily sync (SPEC §3.2). */
+/** Owner only: AI keys and the daily-sync translation (SPEC §3.2); tabs lead to the assistant. */
 export default async function AiSettingsPage() {
   await requireOwner();
   const settings = await getAiSettingsView(db);
@@ -21,10 +22,7 @@ export default async function AiSettingsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-4xl leading-none font-semibold">{t.title}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t.intro}</p>
-      </div>
+      <AiHeader intro={t.intro} />
       {!encryptionReady && (
         <p
           role="alert"
