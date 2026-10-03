@@ -109,6 +109,9 @@ export function InvoicePanel({ topup, balance: initialBalance, mockPayUrl, onCon
   }
 
   const inv = topup.invoice;
+  const payLink = inv ? qpayAppLink(inv) : null;
+  // QPay's https page opens in its own tab so this popup keeps polling; an app deeplink can't.
+  const external = payLink?.startsWith("https://") ?? false;
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
       <section className="rounded-3xl bg-tint-1 p-6 text-center">
@@ -121,14 +124,16 @@ export function InvoicePanel({ topup, balance: initialBalance, mockPayUrl, onCon
         )}
       </section>
 
-      {inv && (
+      {inv && payLink && (
         <>
-          {/* Phones: open the QPay app directly. */}
+          {/* Phones: QPay first (its https page when it sent one, else the app). */}
           <section className="flex flex-col gap-2 lg:hidden">
             <Button
               size="lg"
               className="h-14 rounded-full text-base"
-              render={<a href={qpayAppLink(inv)} />}
+              render={
+                <a href={payLink} {...(external && { target: "_blank", rel: "noopener" })} />
+              }
               nativeButton={false}
             >
               {t.payInApp}
@@ -136,16 +141,17 @@ export function InvoicePanel({ topup, balance: initialBalance, mockPayUrl, onCon
             <p className="text-center text-sm text-muted-foreground">{t.payInAppHint}</p>
           </section>
 
-          {/* Desktop: scan the QR with a phone. */}
-          <section className="hidden flex-col items-center gap-3 rounded-3xl bg-surface p-6 lg:flex">
-            <p className="text-xl font-semibold">{t.scan}</p>
+          {/* The QR everywhere: desktop scans it with a phone; on a phone it's the fallback
+              (a bank app can read it from a screenshot, or another phone can scan it). */}
+          <section className="flex flex-col items-center gap-3 rounded-3xl bg-surface p-5 lg:p-6">
+            <p className="text-center text-sm font-semibold lg:text-xl">{t.scan}</p>
             {/* eslint-disable-next-line @next/next/no-img-element -- data URI from QPay */}
             <img
               src={inv.qrImage}
               alt="QPay QR"
               width={256}
               height={256}
-              className="rounded-2xl bg-white p-2"
+              className="size-48 rounded-2xl bg-white p-2 lg:size-64"
             />
           </section>
         </>

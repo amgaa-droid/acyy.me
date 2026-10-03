@@ -414,6 +414,8 @@ export type InvoiceData = {
   qrImage: string;
   qrText: string;
   deeplinks: { name: string; logo: string; link: string }[];
+  /** QPay's https payment page; missing on invoices made before it was stored. */
+  shortUrl?: string;
 };
 
 // ---------- Purchases ----------

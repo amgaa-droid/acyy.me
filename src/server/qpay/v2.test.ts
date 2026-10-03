@@ -48,6 +48,7 @@ describe("QPayV2Provider", () => {
           invoice_id: "inv-1",
           qr_text: "000201…",
           qr_image: "iVBORw0KGgo=",
+          qPay_shortUrl: "https://s.qpay.mn/abc",
           urls: [
             {
               name: "Khan bank",
@@ -80,6 +81,7 @@ describe("QPayV2Provider", () => {
       deeplinks: [
         { name: "Хаан банк", logo: "https://x/khan.png", link: "khanbank://q?qPay_QRcode=…" },
       ],
+      shortUrl: "https://s.qpay.mn/abc",
     });
     expect(calls.filter((c) => c.url.endsWith("/v2/auth/token"))).toHaveLength(1);
     const auth = (calls[0].init.headers as Record<string, string>).Authorization;

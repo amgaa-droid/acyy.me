@@ -114,6 +114,7 @@ export async function createTopup(
           qrImage: invoice.qrImage,
           qrText: invoice.qrText,
           deeplinks: invoice.deeplinks,
+          ...(invoice.shortUrl ? { shortUrl: invoice.shortUrl } : {}),
         },
       })
       .where(eq(topups.id, topup.id))

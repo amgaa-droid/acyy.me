@@ -14,6 +14,7 @@ type InvoiceResponse = {
   invoice_id: string;
   qr_text: string;
   qr_image: string; // base64 PNG
+  qPay_shortUrl?: string;
   urls?: { name: string; description?: string; logo: string; link: string }[];
 };
 type CheckResponse = {
@@ -115,6 +116,7 @@ export class QPayV2Provider implements QPayProvider {
         logo: u.logo,
         link: u.link,
       })),
+      ...(data.qPay_shortUrl ? { shortUrl: data.qPay_shortUrl } : {}),
     };
   }
 

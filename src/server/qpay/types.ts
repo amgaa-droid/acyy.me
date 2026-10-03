@@ -6,6 +6,8 @@ export type Invoice = {
   qrImage: string; // data URI (PNG/SVG)
   qrText: string;
   deeplinks: Deeplink[];
+  /** QPay's https payment page (`qPay_shortUrl`): opens on any phone, app installed or not. */
+  shortUrl?: string;
 };
 
 export type PaymentCheck = { paid: boolean; amount: number; paymentId?: string };

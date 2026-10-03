@@ -3,6 +3,22 @@ import { describe, expect, it } from "vitest";
 import { qpayAppLink } from "./qpay-link";
 
 describe("qpayAppLink", () => {
+  it("prefers QPay's https payment page, which opens without the app", () => {
+    expect(
+      qpayAppLink({
+        qrText: "0002",
+        shortUrl: "https://s.qpay.mn/abc",
+        deeplinks: [{ name: "qPay wallet", logo: "", link: "qpaywallet://q?qPay_QRcode=0002" }],
+      }),
+    ).toBe("https://s.qpay.mn/abc");
+  });
+
+  it("ignores a short url that isn't https", () => {
+    expect(
+      qpayAppLink({ qrText: "0002", shortUrl: "javascript:alert(1)", deeplinks: [] }),
+    ).toBe("qpaywallet://q?qPay_QRcode=0002");
+  });
+
   it("uses QPay's own entry from the invoice urls", () => {
     expect(
       qpayAppLink({
