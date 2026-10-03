@@ -2,6 +2,8 @@
 
 import {
   Calendar1,
+  ChevronLeft,
+  ChevronRight,
   LifeBuoy,
   Link2,
   Lock,
@@ -91,8 +93,8 @@ const FACE = "dark:bg-face";
  */
 const PAIR = "var(--pair, #dc5815)";
 const PAIR_FG = "var(--pair-fg, #100f26)";
-/** Smallest gap between planets in the "+N" dock before it shows a "see all" link instead. */
-const DOCK_MIN_STEP = 60;
+/** Room per person in the "+N" dock (its name fits under it); more people go to further pages. */
+const DOCK_MIN_STEP = 76;
 /** How long the opening fly-out lasts (ms). */
 const INTRO_MS = 1600;
 /** Switching between "today" and the planets: me grows/shrinks, the planets fold in/out. */
@@ -179,6 +181,9 @@ export function PlanetSystem({
   const [intro, setIntro] = useState(initialView === "planets");
   const [selected, setSelected] = useState<string | null>(null);
   const [dockOpen, setDockOpen] = useState(false);
+  /** The "+N" dock shows one page of people at a time; swipe (or the arrows/dots) for more. */
+  const [dockPage, setDockPage] = useState({ index: 0, dir: 1 });
+  const dockSwipe = useRef<number | null>(null);
   const [drag, setDragState] = useState<Drag | null>(null);
   // Pointer events can arrive before React re-renders (a quick tap), so handlers read the ref.
   const dragRef = useRef<Drag | null>(null);
@@ -561,15 +566,22 @@ export function PlanetSystem({
     // To "today": the planets fold in first. To the planets: me goes first, they follow.
     const meDelay = today ? "250ms" : "100ms";
 
-    // The "+N" dock: hidden people in a row near the bottom, as many as fit.
+    // The "+N" dock: hidden people near the bottom, one page at a time — as many as fit with
+    // their names readable; the rest are a swipe (or an arrow, or a dot) away.
     const dockY = (layout.dock.y / 100) * h;
-    const step = Math.max(DOCK_MIN_STEP, Math.min(layout.dock.step * k, (w - 48) / Math.max(1, hidden.length)));
-    const fit = Math.max(1, Math.floor((w - 48) / step));
-    const docked = showDock ? hidden.slice(0, hidden.length > fit ? fit - 1 : fit) : [];
-    const dockOverflow = showDock && hidden.length > docked.length;
-    const dockCount = docked.length + (dockOverflow ? 1 : 0);
-    const dockR = Math.min(layout.dock.r * k, step / 2 - 8);
-    const dockX0 = w / 2 - (dockCount * step) / 2 + step / 2;
+    const dockW = Math.min(w - 32, layout.key === "phone" ? 420 : 640);
+    const arrows = layout.key !== "phone";
+    const step = Math.max(DOCK_MIN_STEP, layout.dock.step * Math.min(1, k));
+    const perPage = Math.max(1, Math.floor((dockW - (arrows ? 112 : 24)) / step));
+    const dockPages = Math.max(1, Math.ceil(hidden.length / perPage));
+    const page = Math.min(dockPage.index, dockPages - 1);
+    const docked = showDock ? hidden.slice(page * perPage, (page + 1) * perPage) : [];
+    const dockR = Math.min(layout.dock.r * k, step / 2 - 10);
+    const dockX0 = w / 2 - (docked.length * step) / 2 + step / 2;
+    const turnPage = (dir: 1 | -1) => {
+      const index = Math.min(dockPages - 1, Math.max(0, page + dir));
+      if (index !== page) setDockPage({ index, dir });
+    };
 
     const home = new Map<string, Body>();
     home.set(ME, me);
@@ -608,6 +620,10 @@ export function PlanetSystem({
       setDrag(null);
       if (!d.moved) return tap(d.id, d.fromDock);
       if (d.target) return connect(d.id, d.target);
+      // A sideways flick along the dock turns its page; it doesn't pull the person out.
+      const dx = d.x + d.ox - d.sx;
+      const dy = d.y + d.oy - d.sy;
+      if (d.fromDock && Math.abs(dx) > 40 && Math.abs(dy) < 36) return turnPage(dx < 0 ? 1 : -1);
       // Dropped on empty space: the planet stays there (a docked one joins the orbit there).
       if (d.fromDock && offOrbit(d.id)) return;
       const r = home.get(d.id)?.r ?? radiusOf(rankOf(d.id), k);
@@ -718,7 +734,14 @@ export function PlanetSystem({
                 : { transitionDelay: `${420 + index * 70}ms` }
             }
           >
-          <div className={cn("size-full", fromDock ? "animate-rise-in" : intro && "motion-safe:animate-fly-in")} style={fly}>
+          <div
+            className={cn(
+              "size-full",
+              // A new dock page slides in from the side it was turned to.
+              fromDock ? (dockPage.dir > 0 ? "animate-dock-next" : "animate-dock-prev") : intro && "motion-safe:animate-fly-in",
+            )}
+            style={fromDock ? { animationDelay: `${index * 0.03}s` } : fly}
+          >
             <div
               className={cn("size-full", !isDrag && !fromDock && DRIFT[index % DRIFT.length])}
               style={{ animationDelay: `${-index * 1.7}s` }}
@@ -754,7 +777,10 @@ export function PlanetSystem({
                   {/* eslint-disable-next-line @next/next/no-img-element -- local data URI */}
                   <img src={p.avatarUri} alt="" draggable={false} className="size-full" />
                 </span>
-                <span className="pointer-events-none absolute top-full left-1/2 mt-1.5 flex w-28 -translate-x-1/2 flex-col items-center">
+                <span
+                  className="pointer-events-none absolute top-full left-1/2 mt-1.5 flex w-28 -translate-x-1/2 flex-col items-center"
+                  style={fromDock ? { width: step - 8 } : undefined}
+                >
                   <span className="max-w-full truncate text-sm leading-tight font-semibold lg:text-base">{p.name}</span>
                   {!fromDock && (
                     <span className="max-w-full truncate text-xs leading-tight text-muted-foreground">{p.signName}</span>
@@ -918,6 +944,7 @@ export function PlanetSystem({
                 aria-expanded={showDock}
                 onClick={() => {
                   setSelected(null);
+                  setDockPage({ index: 0, dir: 1 });
                   setDockOpen((o) => !o);
                 }}
                 className={cn(
@@ -939,23 +966,61 @@ export function PlanetSystem({
             <div
               role="region"
               aria-label={t.dockTitle(hidden.length)}
-              className="absolute z-[15] -translate-x-1/2 animate-rise-in rounded-4xl bg-surface/85 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] backdrop-blur-md"
-              style={{ left: w / 2, top: dockY - dockR - 40, width: Math.min(w - 32, Math.max(240, dockCount * step + 48)), height: dockR * 2 + 76 }}
+              className="absolute z-[15] -translate-x-1/2 animate-rise-in touch-pan-y rounded-4xl bg-surface/85 shadow-[0_-10px_40px_rgb(0_0_0/0.14)] backdrop-blur-md"
+              style={{ left: w / 2, top: dockY - dockR - 40, width: dockW, height: dockR * 2 + (dockPages > 1 ? 96 : 76) }}
+              onPointerDown={(e) => (dockSwipe.current = e.clientX)}
+              onPointerUp={(e) => {
+                const from = dockSwipe.current;
+                dockSwipe.current = null;
+                if (from !== null && Math.abs(e.clientX - from) > 40) turnPage(e.clientX < from ? 1 : -1);
+              }}
             >
-              <p className="absolute inset-x-6 top-3.5 truncate text-center text-xs font-semibold text-highlight">
-                {t.dockTitle(hidden.length)}
-              </p>
+              <div className="absolute inset-x-5 top-3 flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-xs font-semibold text-highlight">{t.dockTitle(hidden.length)}</p>
+                <Link href="/people" scroll={false} className="shrink-0 text-xs font-semibold text-fg underline-offset-2 hover:underline">
+                  {mn.home.all} →
+                </Link>
+              </div>
+              {arrows && dockPages > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label={t.dockPrev}
+                    disabled={page === 0}
+                    onClick={() => turnPage(-1)}
+                    className="absolute top-1/2 left-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-subtle disabled:opacity-30"
+                  >
+                    <ChevronLeft className="size-5" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t.dockNext}
+                    disabled={page === dockPages - 1}
+                    onClick={() => turnPage(1)}
+                    className="absolute top-1/2 right-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-subtle disabled:opacity-30"
+                  >
+                    <ChevronRight className="size-5" aria-hidden />
+                  </button>
+                </>
+              )}
+              {dockPages > 1 && (
+                <div className="absolute inset-x-0 bottom-2 flex justify-center">
+                  {Array.from({ length: dockPages }, (_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-label={t.dockPage(i + 1, dockPages)}
+                      aria-current={i === page}
+                      onClick={() => setDockPage({ index: i, dir: i > page ? 1 : -1 })}
+                      className="flex size-6 items-center justify-center"
+                    >
+                      <span className={cn("size-1.5 rounded-full transition-colors", i === page ? "bg-fg" : "bg-border")} />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             {docked.map((p, i) => planet(p, true, i))}
-            {dockOverflow && (
-              <Link
-                href="/people"
-                className="absolute z-20 flex -translate-1/2 animate-rise-in items-center justify-center rounded-full bg-fg text-sm font-semibold text-bg"
-                style={{ left: dockX0 + docked.length * step, top: dockY, width: dockR * 2, height: dockR * 2 }}
-              >
-                {mn.home.all}
-              </Link>
-            )}
           </>
         )}
 

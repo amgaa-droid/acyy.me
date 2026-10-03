@@ -280,6 +280,8 @@
   --animate-guide-halo: guide-halo 1.8s ease-out infinite;
   --animate-guide-bob: guide-bob 2.4s ease-in-out infinite;
   --animate-share-sweep: share-sweep 2.6s ease-in-out infinite;
+  --animate-dock-next: dock-next 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
+  --animate-dock-prev: dock-prev 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
   --animate-guide-burst: guide-burst 0.9s ease-out both;
   --animate-twinkle: twinkle 3.6s ease-in-out infinite;
   --animate-ping-soft: ping-soft 2.6s ease-out infinite;
@@ -371,6 +373,19 @@
     }
     100% {
       box-shadow: 0 0 0 24px transparent;
+    }
+  }
+  /* The "+N" dock turning a page: people slide in from the side it moved to. */
+  @keyframes dock-next {
+    from {
+      opacity: 0;
+      translate: 48px 0;
+    }
+  }
+  @keyframes dock-prev {
+    from {
+      opacity: 0;
+      translate: -48px 0;
     }
   }
   /* The share tip's hand drawing a selection across the highlighted sentence. */

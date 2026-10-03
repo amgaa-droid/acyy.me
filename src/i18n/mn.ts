@@ -340,6 +340,9 @@ export const mn = {
       moreAria: (n: number) => `Бусад ${n} хүн`,
       closeDock: "Бусад хүмүүсийг хаах",
       dockTitle: (n: number) => `Бусад ${n} хүн · чирж нийцүүл`,
+      dockPrev: "Өмнөх хүмүүс",
+      dockNext: "Дараагийн хүмүүс",
+      dockPage: (n: number, of: number) => `${n}/${of}-р хуудас`,
     },
   },
   people: {
