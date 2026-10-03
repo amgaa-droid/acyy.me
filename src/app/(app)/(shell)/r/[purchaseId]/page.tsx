@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Avatar } from "@/components/app/avatar";
 import { ConstellationArt } from "@/components/app/constellation";
 import { OfferList } from "@/components/readings/offer-list";
 import { ArticleField, Teaser } from "@/components/readings/reading-body";
@@ -21,11 +22,12 @@ import { SHARE_CARD_PRODUCTS } from "@/lib/catalog-refs";
 import { sectionLabel } from "@/lib/content-keys-display";
 import { SUMMARY_FIELD_KINDS } from "@/lib/domain";
 import { relationText, relationTint } from "@/lib/people";
+import { cn } from "@/lib/utils";
 import { loadAstroRefs } from "@/server/astro/refs";
 import { requireOnboardedUser } from "@/server/auth/current";
-import { loadViewer, offersForPerson } from "@/server/catalog";
+import { loadViewer, offersForPeople } from "@/server/catalog";
 import { db } from "@/server/db";
-import { getPerson } from "@/server/persons";
+import { getPerson, type Person } from "@/server/persons";
 import { ReadingNotFoundError, getReading, readingPeople } from "@/server/reading";
 
 export const metadata: Metadata = { title: mn.reading.pageTitle };
@@ -49,15 +51,25 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
   const people = reading.snapshot.persons.map((p, i) => ({ ...p, name: live[i]?.name ?? p.name }));
   const pair = people.length === 2;
   const t = mn.reading;
-  // After the text: what else there is to read about the same person — the owner's own person,
-  // and only what isn't bought yet. (A pair, or someone else's reading, ends with the text.)
-  const subject =
-    !pair && live[0] ? await getPerson(db, user.id, live[0].id).catch(() => null) : null;
-  const more = subject
-    ? (await offersForPerson(db, await loadViewer(db, user.id), subject))
-        .filter((o) => o.purchaseId === null)
-        .slice(0, 3)
+  // After the text: what else there is to read about the same people — the owner's own, and
+  // only what isn't bought yet. A pair's reading offers each of the two their own readings
+  // (not another pair); someone else's reading (via a link) ends with the text.
+  const subjects = (
+    await Promise.all(
+      live.map((l) => (l ? getPerson(db, user.id, l.id).catch(() => null) : null)),
+    )
+  ).filter((p): p is Person => p !== null);
+  const offerLists = subjects.length
+    ? await offersForPeople(db, await loadViewer(db, user.id), subjects)
     : [];
+  const more = subjects
+    .map((person, i) => ({
+      person,
+      offers: offerLists[i]
+        .filter((o) => o.purchaseId === null && (!pair || o.product.personCount === 1))
+        .slice(0, pair ? 2 : 3),
+    }))
+    .filter((x) => x.offers.length > 0);
 
   const personProps = (i: number): PairHeroPerson => ({
     name: people[i].name,
@@ -210,21 +222,37 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
               <ShareCardButton purchaseId={reading.id} />
             </div>
           )}
-          {subject && more.length > 0 && (
+          {more.length > 0 && (
             <section className="flex flex-col gap-3">
               <h2 className="text-2xl font-semibold">{t.next}</h2>
-              <OfferList
-                personId={subject.id}
-                offers={more.map((o) => ({
-                  code: o.product.code,
-                  name: o.product.nameMn,
-                  icon: o.product.icon,
-                  tint: o.product.tint,
-                  price: o.product.price,
-                  personCount: o.product.personCount,
-                  purchaseId: o.purchaseId,
-                }))}
-              />
+              {more.map(({ person, offers }) => (
+                <div key={person.id} className="flex flex-col gap-2">
+                  {/* A pair: whose readings these are. */}
+                  {pair && (
+                    <div className="flex items-center gap-2.5 px-1">
+                      <Avatar
+                        seed={person.avatarSeed}
+                        size={32}
+                        className={cn("border-0", relationTint(person.relation))}
+                      />
+                      <span className="font-semibold">{person.name}</span>
+                      <span className="text-sm text-muted-foreground">{relationText(person)}</span>
+                    </div>
+                  )}
+                  <OfferList
+                    personId={person.id}
+                    offers={offers.map((o) => ({
+                      code: o.product.code,
+                      name: o.product.nameMn,
+                      icon: o.product.icon,
+                      tint: o.product.tint,
+                      price: o.product.price,
+                      personCount: o.product.personCount,
+                      purchaseId: o.purchaseId,
+                    }))}
+                  />
+                </div>
+              ))}
             </section>
           )}
         </div>
