@@ -13,6 +13,7 @@ import {
 } from "@/server/persons";
 import { loadProductDefs } from "@/server/products";
 import { getBalance } from "@/server/wallet";
+import { deleteAccount } from "@/server/account-deletion";
 import { createTestDb, insertUser } from "@/test/db";
 import { applyLegacyUser, legacyAvatar, legacyDate, type ApplyContext } from "./apply";
 import type { UserPlan } from "./users";
@@ -137,6 +138,15 @@ describe("applyLegacyUser", () => {
       credited: 0,
     });
     if (again.ok) expect(await getBalance(db, again.userId)).toBe(13000);
+  });
+
+  it("does not bring back an account its owner deleted", async () => {
+    const p = plan();
+    const first = await applyLegacyUser(db, p, ctx);
+    if (!first.ok) throw new Error("setup");
+    await deleteAccount(db, first.userId);
+    expect(await applyLegacyUser(db, p, ctx)).toEqual({ ok: false, reason: "account_deleted" });
+    expect(await db.select().from(account).where(eq(account.userId, first.userId))).toEqual([]);
   });
 
   it("leaves an existing account with the same email alone: an email match proves nothing", async () => {

@@ -214,7 +214,8 @@
 ## C10 — Хууль, аюулгүй байдал, нээлт (~3 өдөр)
 
 - [ ] `/terms`, `/privacy` (C0-ийн ноорог → хэрэглэгчийн баталсан хувилбар), footer, анхааруулга
-- [ ] Данс устгах (SPEC §9 anonymize), rate limit, security headers/CSP
+- [x] Данс устгах (SPEC §9 anonymize) — «Би» хуудаснаас
+- [ ] Rate limit, security headers/CSP
 - [ ] Эрхийн (IDOR) тест: бүх `[id]` route-ыг өөр хэрэглэгчээр
 - [ ] Playwright E2E: onboarding → хүн нэмэх → цэнэглэх (mock) → худалдан авах → унших → урих
 - [ ] Lighthouse mobile ≥ 90; iPhone Safari, Android Chrome, Messenger in-app тест

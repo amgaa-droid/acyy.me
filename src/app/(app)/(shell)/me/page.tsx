@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Avatar } from "@/components/app/avatar";
+import { DeleteAccountButton } from "@/components/app/delete-account-button";
 import { PageTitle } from "@/components/app/empty-state";
 import { SignOutButton } from "@/components/app/sign-out-button";
 import { LinkedAccounts } from "@/components/app/linked-accounts";
@@ -15,6 +16,7 @@ import { ageOn, formatBirthDate, parseIsoDate, todayYmd } from "@/lib/birth-date
 import { formatMnt, mn } from "@/i18n/mn";
 import { describeBirthDate, loadAstroRefs } from "@/server/astro/refs";
 import { linkedProviders } from "@/server/auth/accounts";
+import { accountDeletionSummary } from "@/server/account-deletion";
 import { requireOnboardedUser } from "@/server/auth/current";
 import { enabledSocialProviders } from "@/server/auth";
 import { adminRoleOf } from "@/server/auth/session";
@@ -31,6 +33,7 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
   const { sign } = describeBirthDate(self.birthDate, await loadAstroRefs(db));
   const role = adminRoleOf(user);
   const balance = await getBalance(db, user.id);
+  const deletion = await accountDeletionSummary(db, user.id);
   const selfAge = ageOn(parseIsoDate(self.birthDate)!, todayYmd());
   const linkedTo = await Promise.all(
     (await peopleLinkedTo(db, user.id)).map(async (p) => ({
@@ -115,8 +118,9 @@ export default async function MePage({ searchParams }: PageProps<"/me">) {
           />
         </div>
       </div>
-      <div className="mt-8">
+      <div className="mt-8 flex flex-col gap-2 lg:flex-row">
         <SignOutButton />
+        <DeleteAccountButton summary={deletion} />
       </div>
       <LegalFooter className="mt-6" />
     </>

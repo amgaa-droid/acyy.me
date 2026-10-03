@@ -36,7 +36,11 @@ export type ApplyResult =
   | {
       ok: false;
       reason:
-        "facebook_id_taken" | "user_has_other_facebook" | "legacy_id_mismatch" | "email_taken";
+        | "facebook_id_taken"
+        | "user_has_other_facebook"
+        | "legacy_id_mismatch"
+        | "email_taken"
+        | "account_deleted";
     };
 
 export class LegacyProductMissingError extends Error {
@@ -95,6 +99,8 @@ function applyInTx(db: AppDb, plan: UserPlan, ctx: ApplyContext): Promise<ApplyR
   return db.transaction(async (tx) => {
     // 1. The user.
     let [u] = await tx.select().from(user).where(eq(user.legacyUserId, plan.legacyUserId));
+    // Deleted by its owner (src/server/account-deletion.ts): a re-run must not bring it back.
+    if (u?.deletedAt) throw new LegacyConflict("account_deleted");
     let createdUser = false;
     if (!u) {
       const [byEmail] = await tx.select().from(user).where(eq(user.email, plan.email));
