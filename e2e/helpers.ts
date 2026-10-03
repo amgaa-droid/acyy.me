@@ -97,7 +97,8 @@ export async function payWithMockBank(page: Page): Promise<string> {
   await expect(bank).toHaveURL(/\/wallet\/topup\/[0-9a-f-]{36}/);
   const topupId = new URL(bank.url()).pathname.split("/").pop()!;
   await bank.close();
-  await expect(invoice.getByText("Амжилттай!")).toBeVisible({ timeout: 10_000 });
-  await expect(invoice).toBeHidden({ timeout: 10_000 });
+  // "Амжилттай!" shows for 2.5s and the popup closes itself — it may already be gone if the
+  // payment was seen while the bank tab was still open, so wait for the close, not the text.
+  await expect(invoice).toBeHidden({ timeout: 15_000 });
   return topupId;
 }
