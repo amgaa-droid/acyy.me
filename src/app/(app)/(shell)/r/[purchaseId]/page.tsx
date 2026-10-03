@@ -222,13 +222,6 @@ export default async function ReadingPage({ params }: PageProps<"/r/[purchaseId]
               {reading.linkedPersonId && <UnlinkButton personId={reading.linkedPersonId} />}
             </div>
           </article>
-          {/* Phones: the share button again, where the reading ends (on desktop the one beside
-            the text stays in view). */}
-          {SHARE_CARD.has(reading.productCode) && (
-            <div className="lg:hidden">
-              <ShareCardButton purchaseId={reading.id} />
-            </div>
-          )}
           {more.length > 0 && (
             <section className="flex flex-col gap-3">
               <h2 className="text-2xl font-semibold">{t.next}</h2>
